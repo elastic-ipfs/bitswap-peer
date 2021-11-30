@@ -1,0 +1,46 @@
+// Adapted from https://github.com/ipfs/go-bitswap/blob/master/message/pb/message.proto
+syntax = "proto3";
+
+message Message {
+  message Wantlist {
+    // Added in 1.2.0
+    enum WantType {
+      Block = 0;
+      Have = 1;
+    }
+
+    message Entry {
+      bytes block = 1;           // The block CID (v0 in 1.0.0, v1 in 1.1.0 and 1.2.0)
+      int32 priority = 2;        // The priority (normalized). Defaults to 1
+      bool cancel = 3;           // Whether this revokes an existing entry
+      WantType wantType = 4;     // The type of entry, added in 1.2.0. Defaults to WantType.Block
+      bool sendDontHave = 5;     // Added in 1.2.0, defaults to false
+    }
+
+    repeated Entry entries = 1;  // A list of Entry messages
+    bool full = 2;               // Whether this is the full wantlist. Defaults to false
+  }
+
+  message Block {
+    bytes prefix = 1;            // CID prefix (Version, Codec and Multihash prefix)
+    bytes data = 2;
+  }
+
+  // Added in 1.2.0
+  enum BlockPresenceType {
+    Have = 0;
+    DontHave = 1;
+  }
+
+  // Added in 1.2.0
+  message BlockPresence {
+    bytes cid = 1;
+    BlockPresenceType type = 2;
+  }
+
+  Wantlist wantlist = 1;
+  repeated bytes blocks = 2;     // Used in 1.0.0
+  repeated Block payload = 3;    // Used in 1.1.0  
+  repeated BlockPresence blockPresences = 4; // Added in 1.2.0
+  int32 pendingBytes = 5; // Added in 1.2.0
+}

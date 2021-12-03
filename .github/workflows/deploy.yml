@@ -1,0 +1,40 @@
+---
+name: Deploy
+on:
+  push:
+    branches: [master]
+env:
+  AWS_REGION: us-east-2
+  IMAGE: aws-ipfs/bitswap-peer
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Use Node.js Current
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16.x
+      - name: Restore cached dependencies
+        uses: actions/cache@v2
+        with:
+          path: node_modules
+          key: node-modules-${{ hashFiles('package.json') }}
+      - name: Install dependencies
+        run: |
+          npm install
+      - name: Lint code
+        run: npm run lint
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+      - name: Build image
+        run: docker build -t $ACCOUNT.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$IMAGE:latest .
+      - name: Push image to AWS ECR
+        run: docker push $ACCOUNT.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$IMAGE:latest

@@ -2,7 +2,7 @@
 name: Deploy
 on:
   push:
-    branches: [master]
+    branches: [main]
   workflow_dispatch:
 env:
   REGISTRY: ghcr.io
@@ -23,6 +23,7 @@ jobs:
           key: node-modules-${{ hashFiles('package.json') }}
       - name: Install dependencies
         run: |
+          echo IMAGE_REPOSITORY=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]') >> $GITHUB_ENV
           echo PACKAGE_VERSION=$(cat package.json | jq -r '.version') >> $GITHUB_ENV
           npm install
       - name: Lint code
@@ -41,7 +42,7 @@ jobs:
           push: true
           context: .
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository }}/app:${{ env.PACKAGE_VERSION }}
-            ${{ env.REGISTRY }}/${{ github.repository }}/app:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.PACKAGE_VERSION }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:latest
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}

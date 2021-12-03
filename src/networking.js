@@ -1,25 +1,81 @@
 'use strict'
 
+const { EventEmitter } = require('events')
 const lengthPrefixedMessage = require('it-length-prefixed')
 const pipe = require('it-pipe')
+
 const { logger, serializeError } = require('./logging')
 
-function receiveData(stream, callback) {
-  pipe(stream, lengthPrefixedMessage.decode(), async source => {
-    for await (const data of source) {
-      try {
-        callback(data.slice())
-      } catch (e) {
-        logger.error(`Callback error during receiveData: ${serializeError(e)}`)
+class Connection extends EventEmitter {
+  constructor(stream) {
+    super()
+
+    this.done = false
+    this.values = []
+    this.resolves = []
+
+    // Prepare for receiving
+    pipe(stream.source, lengthPrefixedMessage.decode(), async source => {
+      for await (const data of source) {
+        process.nextTick(() => this.emit('data', data.slice()))
+      }
+    }).catch(error => {
+      this.emit('error', error)
+      this.emit('error:receive', error)
+      logger.error({ error }, `Cannot receive data: ${serializeError(error)}`)
+    })
+
+    // Prepare for sending
+    pipe(this, lengthPrefixedMessage.encode(), stream.sink).catch(error => {
+      this.emit('error', error)
+      this.emit('error:send', error)
+
+      logger.error({ error }, `Cannot send data: ${serializeError(error)}`)
+    })
+  }
+
+  send(value) {
+    if (this.done) {
+      throw new Error('The stream is closed.')
+    }
+
+    const resolve = this.resolves.shift()
+
+    if (resolve) {
+      return resolve({ done: false, value })
+    }
+
+    this.values.push(value)
+  }
+
+  finish() {
+    this.done = true
+
+    for (const resolve of this.resolves) {
+      resolve({ done: true, value: undefined })
+    }
+  }
+
+  [Symbol.asyncIterator]() {
+    return {
+      next: () => {
+        // Marked as done, exit without processing additional values
+        if (this.done) {
+          return Promise.resolve({ done: true, value: undefined })
+        }
+
+        // There is a value in the queue, return it
+        const value = this.values.shift()
+
+        if (value) {
+          return Promise.resolve({ done: false, value })
+        }
+
+        // Return a new pending promise that it will be fulfilled as soon as value is available
+        return new Promise(resolve => this.resolves.push(resolve))
       }
     }
-  }).catch(e => {
-    logger.error(`Pipe error during receiveData: ${serializeError(e)}`)
-  })
+  }
 }
 
-async function sendData(stream, message) {
-  return pipe([message], lengthPrefixedMessage.encode(), stream)
-}
-
-module.exports = { receiveData, sendData }
+module.exports = { Connection }

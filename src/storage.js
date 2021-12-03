@@ -4,6 +4,7 @@ const { DynamoDBClient, GetItemCommand } = require('@aws-sdk/client-dynamodb')
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3')
 const { NodeHttpHandler } = require('@aws-sdk/node-http-handler')
 const { marshall: serializeDynamoItem, unmarshall: deserializeDynamoItem } = require('@aws-sdk/util-dynamodb')
+const { BufferList } = require('bl')
 const { Agent } = require('https')
 const { base58btc: base58 } = require('multiformats/bases/base58')
 const { logger, serializeError } = require('./logging')
@@ -50,12 +51,13 @@ async function fetchS3Object(bucket, key, offset, length) {
 
     // Download from S3
     const record = await s3Client.send(new GetObjectCommand({ Bucket: bucket, Key: key, Range: range }))
-    let buf = Buffer.alloc(0)
+    const buffer = new BufferList()
+
     for await (const chunk of record.Body) {
-      buf = Buffer.concat([buf, chunk])
+      buffer.append(chunk)
     }
 
-    return buf
+    return buffer.slice()
   } catch (e) {
     logger.error(`Cannot download ${key} from S3 bucket ${bucket}: ${serializeError(e)}`)
     throw e

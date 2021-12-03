@@ -6,10 +6,12 @@ const { readFile } = require('fs/promises')
 const { resolve } = require('path')
 
 const {
-  PEER_ID_JSON: peerIdJsonPath,
-  PORT: rawPort,
+  CACHE_BLOCKS_INFO: cacheBlocksInfo,
+  CONCURRENCY: rawConcurrency,
   DYNAMO_BLOCKS_TABLE: blocksTable,
-  DYNAMO_CARS_TABLE: carsTable
+  DYNAMO_CARS_TABLE: carsTable,
+  PEER_ID_JSON: peerIdJsonPath,
+  PORT: rawPort
 } = process.env
 
 async function getPeerId() {
@@ -21,15 +23,18 @@ async function getPeerId() {
   }
 }
 
+const concurrency = parseInt(rawConcurrency)
 const port = parseInt(rawPort)
 
 module.exports = {
-  getPeerId,
-  port: !isNaN(port) && port > 0 ? port : 0,
+  cacheBlocksInfo: cacheBlocksInfo !== 'false',
+  concurrency: !isNaN(concurrency) && concurrency > 0 ? concurrency : 16,
   blocksTable: blocksTable ?? 'blocks',
   carsTable: carsTable ?? 'cars',
+  getPeerId,
   primaryKeys: {
     blocks: 'multihash',
     cars: 'path'
-  }
+  },
+  port: !isNaN(port) && port > 0 ? port : 0
 }

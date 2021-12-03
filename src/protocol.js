@@ -2,11 +2,9 @@
 
 const { CID } = require('multiformats/cid')
 const { loadSync } = require('protobufjs')
-const { resolve } = require('path')
+const { join } = require('path')
 
-const maxPriority = Math.pow(2, 31) - 1
-
-const definitions = loadSync(resolve(process.cwd(), 'bitswap.proto'))
+const definitions = loadSync(join(__dirname, '../bitswap.proto'))
 const RawWantlist = definitions.lookupType('Message.Wantlist')
 const RawWantType = definitions.lookupEnum('Message.WantType')
 const RawEntry = definitions.lookupType('Message.Entry')
@@ -14,6 +12,10 @@ const RawBlock = definitions.lookupType('Message.Block')
 const RawBlockPresenceType = definitions.lookupEnum('Message.BlockPresenceType')
 const RawBlockPresence = definitions.lookupType('Message.BlockPresence')
 const RawMessage = definitions.lookupType('Message')
+
+const maxPriority = Math.pow(2, 31) - 1
+const maxBlockSize = 2 * 1024 * 1024 // 2 MB
+const maxMessageSize = 4 * 1024 * 1024 // 4 MB
 
 const BITSWAP_V_100 = '/ipfs/bitswap/1.0.0'
 const BITSWAP_V_110 = '/ipfs/bitswap/1.1.0'
@@ -40,12 +42,12 @@ class Entry {
     }
   }
 
-  static fromRaw(raw, version) {
+  static fromRaw(raw, protocol) {
     let wantType = raw.wantType
     let sendDontHave = raw.sendDontHave
     let cid = CID.decode(raw.block)
 
-    if (version === BITSWAP_V_100) {
+    if (protocol === BITSWAP_V_100) {
       cid = cid.toV0()
       wantType = RawWantType.Block
       sendDontHave = false
@@ -54,12 +56,12 @@ class Entry {
     return new Entry(cid, raw.priority, raw.cancel, wantType, sendDontHave)
   }
 
-  serialize(version) {
+  serialize(protocol) {
     const { cid, priority, cancel, wantType, sendDontHave } = this
 
-    if (version === BITSWAP_V_100 || version === BITSWAP_V_110) {
+    if (protocol === BITSWAP_V_100 || protocol === BITSWAP_V_110) {
       return {
-        block: (version === BITSWAP_V_100 && cid.version === 1 ? CID.createV0(cid.multihash) : cid).bytes,
+        block: (protocol === BITSWAP_V_100 && cid.version === 1 ? CID.createV0(cid.multihash) : cid).bytes,
         priority,
         cancel
       }
@@ -74,8 +76,8 @@ class Entry {
     }
   }
 
-  encode(version) {
-    return RawEntry.encode(this.serialize(version)).finish()
+  encode(protocol) {
+    return RawEntry.encode(this.serialize(protocol)).finish()
   }
 }
 
@@ -85,22 +87,22 @@ class WantList {
     this.full = Boolean(full)
   }
 
-  static fromRaw(raw, version) {
+  static fromRaw(raw, protocol) {
     return new WantList(
-      raw.entries.map(e => Entry.fromRaw(e, version)),
+      raw.entries.map(e => Entry.fromRaw(e, protocol)),
       raw.full
     )
   }
 
-  serialize(version) {
+  serialize(protocol) {
     return {
-      entries: this.entries.map(e => e.serialize(version)),
+      entries: this.entries.map(e => e.serialize(protocol)),
       full: this.full
     }
   }
 
-  encode(version) {
-    return RawWantlist.encode(this.serialize(version)).finish()
+  encode(protocol) {
+    return RawWantlist.encode(this.serialize(protocol)).finish()
   }
 }
 
@@ -119,23 +121,23 @@ class Block {
     this.data = data
   }
 
-  static fromRaw(raw, version) {
-    if (version === BITSWAP_V_100) {
+  static fromRaw(raw, protocol) {
+    if (protocol === BITSWAP_V_100) {
       return new Block(null, raw)
     }
 
     return new Block(raw.prefix, raw.data)
   }
 
-  serialize(version) {
+  serialize(protocol) {
     return {
       prefix: this.prefix,
       data: this.data
     }
   }
 
-  encode(version) {
-    RawBlock.encode(this.serialize(version).finish())
+  encode(protocol) {
+    RawBlock.encode(this.serialize(protocol).finish())
   }
 }
 
@@ -150,22 +152,27 @@ class BlockPresence {
     }
   }
 
-  static fromRaw(raw, version) {
+  static fromRaw(raw, protocol) {
     return new BlockPresence(CID.decode(raw.cid).toV1(), raw.type)
   }
 
-  serialize(version) {
+  serialize(protocol) {
     return {
       cid: this.cid.toV1().bytes,
       type: this.type
     }
   }
 
-  encode(version) {
-    return RawBlockPresence.encode(this.serialize(version).finish())
+  encode(protocol) {
+    return RawBlockPresence.encode(this.serialize(protocol).finish())
   }
 }
 
+/*
+  As specified in the constants above, each Message can be 4MB maximum (after serialization).
+  Each block can be at most 2 MB.
+  Each CID is roughly 40 byte.
+*/
 class Message {
   constructor(wantlist, blocks, blockPresences, pendingBytes) {
     this.wantlist = wantlist
@@ -179,22 +186,22 @@ class Message {
     }
   }
 
-  static decode(encoded, version) {
+  static decode(encoded, protocol) {
     const decoded = RawMessage.decode(encoded)
 
-    if (version === BITSWAP_V_100) {
+    if (protocol === BITSWAP_V_100) {
       return new Message(
-        WantList.fromRaw(decoded.wantlist, version),
-        decoded.blocks.map(b => Block.fromRaw(b, version)),
+        WantList.fromRaw(decoded.wantlist, protocol),
+        decoded.blocks.map(b => Block.fromRaw(b, protocol)),
         [],
         0
       )
     }
 
     return new Message(
-      WantList.fromRaw(decoded.wantlist, version),
-      decoded.payload.map(b => Block.fromRaw(b, version)),
-      decoded.blockPresences.map(b => BlockPresence.fromRaw(b, version)),
+      WantList.fromRaw(decoded.wantlist, protocol),
+      decoded.payload.map(b => Block.fromRaw(b, protocol)),
+      decoded.blockPresences.map(b => BlockPresence.fromRaw(b, protocol)),
       decoded.pendingBytes
     )
   }
@@ -203,29 +210,52 @@ class Message {
     return Boolean(this.wantlist.entries.length || this.blocks.length || this.blockPresences.length)
   }
 
-  serialize(version) {
+  serialize(protocol) {
     const { wantlist, blocks, blockPresences } = this
 
-    if (version === BITSWAP_V_100) {
+    if (protocol === BITSWAP_V_100) {
       return {
-        wantlist: wantlist.serialize(version),
+        wantlist: wantlist.serialize(protocol),
         blocks: blocks.map(b => b.data)
       }
     }
 
     return {
-      wantlist: wantlist.serialize(version),
-      payload: blocks.map(b => b.serialize(version)),
-      blockPresences: blockPresences.map(b => b.serialize(version)),
-      pendingBytes: this.pendingBytes
+      wantlist: wantlist.serialize(protocol),
+      payload: blocks.map(b => b.serialize(protocol)),
+      blockPresences: blockPresences.map(b => b.serialize(protocol)),
+      pendingBytes: this.pendingBytes * Number.MAX_SAFE_INTEGER
     }
   }
 
-  encode(version) {
-    return RawMessage.encode(this.serialize(version)).finish()
+  encode(protocol) {
+    return RawMessage.encode(this.serialize(protocol)).finish()
+  }
+
+  addBlock(block, protocol) {
+    this.blocks.push(block)
+
+    if (this.encode(protocol).length > maxMessageSize) {
+      this.blocks.pop()
+      return false
+    }
+
+    return true
+  }
+
+  addBlockPresence(presence, protocol) {
+    this.blockPresences.push(presence)
+
+    if (this.encode(protocol).length > maxMessageSize) {
+      this.blockPresences.pop()
+      return false
+    }
+
+    return true
   }
 }
 
+const emptyWantList = new WantList([], true)
 Entry.WantType = RawWantType.values
 BlockPresence.Type = RawBlockPresenceType.values
 
@@ -233,10 +263,14 @@ module.exports = {
   BITSWAP_V_100,
   BITSWAP_V_110,
   BITSWAP_V_120,
-  Entry,
-  WantList,
+  emptyWantList,
+  maxPriority,
+  maxBlockSize,
+  maxMessageSize,
   Block,
   BlockPresence,
+  Entry,
   Message,
-  RawMessage
+  RawMessage,
+  WantList
 }

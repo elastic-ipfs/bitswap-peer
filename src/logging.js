@@ -17,10 +17,10 @@ try {
   // No-op
 }
 
-if ((process.env.NODE_DEBUG ?? '').includes('aws-ipfs')) {
+if (process.env.LOG_LEVEL) {
+  level = process.env.LOG_LEVEL
+} else if ((process.env.NODE_DEBUG ?? '').includes('aws-ipfs')) {
   level = 'debug'
-} else if ('TAP_CHILD_ID' in process.env) {
-  level = 'warn'
 }
 
 const logger = pino(

@@ -1,0 +1,8 @@
+---
+bail: true
+coverage: false
+test-regex: "(?:\\.test\\.js)$"
+test-env:
+  - LOG_LEVEL=warn
+  - CACHE_BLOCKS_INFO=false
+timeout: 120

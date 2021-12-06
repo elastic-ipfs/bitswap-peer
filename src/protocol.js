@@ -21,6 +21,31 @@ const BITSWAP_V_100 = '/ipfs/bitswap/1.0.0'
 const BITSWAP_V_110 = '/ipfs/bitswap/1.1.0'
 const BITSWAP_V_120 = '/ipfs/bitswap/1.2.0'
 
+/*
+  Breakdown of the constants below:
+
+  - nonEmptyOverhead is the overhead added to the message when either block and blockPresence are non empty
+    - 2 is the size of the varint used to declare the new embedded messages
+    - 8 (4 x 2) is the size of the  varint used to declare embedded messages payload when the total message size is 4 MB
+  - newBlockOverhead is the fixed overhead added by a new block (without considering the data field size)
+    - 1 is the size of the varint which declares the new embedded message
+    - 1 is the size of the varint which declares the prefix field
+    - 4 is the size of the varint used to declare the data field message payload when the total message size is 4 MB
+    - 4 is the size of the CI prefix
+  - newPresenceSize is the fixed overhead added by a new presence (without considering the cid field size)
+    - 1 is the varint which declare the new embedded message
+    - 1 is the varint which declare the cid field
+    - 1 is the varint which declare the type field
+    - 1 is the varint of the type field value
+  - addedEstimationPercentage is arbitrary percentage added to minimize the probability of false negatives since 
+    this is an estimated algorithm
+  Note that for safety we are only considering BitSwap 1.2.0 since its overhead is the biggest.
+*/
+const nonEmptyOverhead = 2 + 8
+const newBlockOverhead = 1 + 1 + 4 + 4
+const newPresenceOverhead = 1 + 1 + 1 + 1
+const addedEstimationPercentage = 0.1
+
 class Entry {
   constructor(cid, priority, cancel, wantType, sendDontHave) {
     this.cid = cid
@@ -237,7 +262,7 @@ class Message {
   addBlock(block, protocol) {
     const newBlockSize = newBlockOverhead + block.data.length
 
-    if (this.estimatedLength + newBlockSize > maxMessageSize) {
+    if (this.estimateNewSizeAfter(newBlockSize) > maxMessageSize) {
       return false
     }
 
@@ -250,7 +275,7 @@ class Message {
   addBlockPresence(presence, protocol) {
     const newPresenceSize = newPresenceOverhead + presence.cid.byteLength
 
-    if (this.estimatedLength + newPresenceSize > maxMessageSize) {
+    if (this.estimateNewSizeAfter(newPresenceSize) > maxMessageSize) {
       return false
     }
 
@@ -259,32 +284,13 @@ class Message {
 
     return true
   }
+
+  estimateNewSizeAfter(newElement) {
+    return (this.estimatedLength + newElement) * (1 + addedEstimationPercentage)
+  }
 }
 
 const emptyWantList = new WantList([], true)
-
-/*
-  Breakdown of the constants below:
-
-  - nonEmptyOverhead is the overhead added to the message when either block and blockPresence are non empty
-    - 2 is the size of the varint used to declare the new embedded messages
-    - 8 (4 x 2) is the size of the  varint used to declare embedded messages payload when the total message size is 4 MB
-  - newBlockOverhead is the fixed overhead added by a new block (without considering the data field size)
-    - 1 is the size of the varint which declares the new embedded message
-    - 1 is the size of the varint which declares the prefix field
-    - 4 is the size of the varint used to declare the data field message payload when the total message size is 4 MB
-    - 4 is the size of the CI prefix
-  - newPresenceSize is the fixed overhead added by a new presence (without considering the cid field size)
-    - 1 is the varint which declare the new embedded message
-    - 1 is the varint which declare the cid field
-    - 1 is the varint which declare the type field
-    - 1 is the varint of the type field value
-
-  Note that for safety we are only considering BitSwap 1.2.0 since its overhead is the biggest.
-*/
-const nonEmptyOverhead = 2 + 8
-const newBlockOverhead = 1 + 1 + 4 + 4
-const newPresenceOverhead = 1 + 1 + 1 + 1
 
 Entry.WantType = RawWantType.values
 BlockPresence.Type = RawBlockPresenceType.values

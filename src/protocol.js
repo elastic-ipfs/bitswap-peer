@@ -37,7 +37,7 @@ const BITSWAP_V_120 = '/ipfs/bitswap/1.2.0'
     - 1 is the varint which declare the cid field
     - 1 is the varint which declare the type field
     - 1 is the varint of the type field value
-  - addedEstimationPercentage is arbitrary percentage added to minimize the probability of false negatives since 
+  - addedEstimationPercentage is arbitrary percentage added to minimize the probability of false negatives since
     this is an estimated algorithm
   Note that for safety we are only considering BitSwap 1.2.0 since its overhead is the biggest.
 */

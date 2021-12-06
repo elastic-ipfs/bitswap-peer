@@ -31,7 +31,6 @@
     "protobufjs": "^6.11.2"
   },
   "devDependencies": {
-    "@ipld/car": "^3.2.0",
     "@ipld/dag-pb": "^2.1.14",
     "eslint": "^7.32.0",
     "eslint-config-standard": "^16.0.3",

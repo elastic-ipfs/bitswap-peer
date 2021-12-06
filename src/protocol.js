@@ -184,6 +184,8 @@ class Message {
     if (!isNaN(this.pendingBytes) || this.pendingBytes < 0) {
       this.pendingBytes = 0
     }
+
+    this.estimatedLength = this.encode(BITSWAP_V_120).length + nonEmptyOverhead
   }
 
   static decode(encoded, protocol) {
@@ -233,29 +235,57 @@ class Message {
   }
 
   addBlock(block, protocol) {
-    this.blocks.push(block)
+    const newBlockSize = newBlockOverhead + block.data.length
 
-    if (this.encode(protocol).length > maxMessageSize) {
-      this.blocks.pop()
+    if (this.estimatedLength + newBlockSize > maxMessageSize) {
       return false
     }
+
+    this.blocks.push(block)
+    this.estimatedLength += newBlockSize
 
     return true
   }
 
   addBlockPresence(presence, protocol) {
-    this.blockPresences.push(presence)
+    const newPresenceSize = newPresenceOverhead + presence.cid.byteLength
 
-    if (this.encode(protocol).length > maxMessageSize) {
-      this.blockPresences.pop()
+    if (this.estimatedLength + newPresenceSize > maxMessageSize) {
       return false
     }
+
+    this.blockPresences.push(presence)
+    this.estimatedLength += newPresenceSize
 
     return true
   }
 }
 
 const emptyWantList = new WantList([], true)
+
+/*
+  Breakdown of the constants below:
+
+  - nonEmptyOverhead is the overhead added to the message when either block and blockPresence are non empty
+    - 2 is the size of the varint used to declare the new embedded messages
+    - 8 (4 x 2) is the size of the  varint used to declare embedded messages payload when the total message size is 4 MB
+  - newBlockOverhead is the fixed overhead added by a new block (without considering the data field size)
+    - 1 is the size of the varint which declares the new embedded message
+    - 1 is the size of the varint which declares the prefix field
+    - 4 is the size of the varint used to declare the data field message payload when the total message size is 4 MB
+    - 4 is the size of the CI prefix
+  - newPresenceSize is the fixed overhead added by a new presence (without considering the cid field size)
+    - 1 is the varint which declare the new embedded message
+    - 1 is the varint which declare the cid field
+    - 1 is the varint which declare the type field
+    - 1 is the varint of the type field value
+
+  Note that for safety we are only considering BitSwap 1.2.0 since its overhead is the biggest.
+*/
+const nonEmptyOverhead = 2 + 8
+const newBlockOverhead = 1 + 1 + 4 + 4
+const newPresenceOverhead = 1 + 1 + 1 + 1
+
 Entry.WantType = RawWantType.values
 BlockPresence.Type = RawBlockPresenceType.values
 

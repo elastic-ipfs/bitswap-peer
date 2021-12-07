@@ -9,14 +9,14 @@ const pMap = require('p-map')
 const { cacheBlocksInfo, concurrency, blocksTable, getPeerId, primaryKeys, port } = require('./config')
 const { logger, serializeError } = require('./logging')
 const {
-  emptyWantList,
-  Message,
   BITSWAP_V_100,
   BITSWAP_V_110,
   BITSWAP_V_120,
   Block,
   BlockPresence,
   Entry,
+  Message,
+  emptyWantList,
   maxBlockSize
 } = require('./protocol')
 const { Connection } = require('./networking')
@@ -26,6 +26,23 @@ const blocksCache = new LRUCache(1e6)
 
 function createEmptyMessage(blocks = [], presences = []) {
   return new Message(emptyWantList, blocks, presences, 0)
+}
+
+async function getBlockInfo(cid) {
+  const key = cidToKey(cid)
+  const cached = blocksCache.get(key)
+
+  if (cacheBlocksInfo && cached) {
+    return cached
+  }
+
+  const item = await readDynamoItem(blocksTable, primaryKeys.blocks, key)
+
+  if (item) {
+    blocksCache.set(key, item)
+  }
+
+  return item
 }
 
 async function fetchBlock(cid) {
@@ -46,23 +63,6 @@ async function fetchBlock(cid) {
   const key = car.slice(separator + 1)
 
   return fetchS3Object(bucket, key, offset, length)
-}
-
-async function getBlockInfo(cid) {
-  const key = cidToKey(cid)
-  const cached = blocksCache.get(key)
-
-  if (cacheBlocksInfo && cached) {
-    return cached
-  }
-
-  const item = await readDynamoItem(blocksTable, primaryKeys.blocks, key)
-
-  if (item) {
-    blocksCache.set(key, item)
-  }
-
-  return item
 }
 
 async function processWantlist(connection, protocol, wantlist) {
@@ -107,12 +107,12 @@ async function processWantlist(connection, protocol, wantlist) {
         In that case, we send the message without the new element and prepare a new message.
       */
       if (newBlock) {
-        if (!message.addBlock(newBlock)) {
+        if (!message.addBlock(newBlock, protocol)) {
           connection.send(message.encode(protocol))
           message = createEmptyMessage([newBlock])
         }
       } else if (newPresence) {
-        if (!message.addBlockPresence(newPresence)) {
+        if (!message.addBlockPresence(newPresence, protocol)) {
           connection.send(message.encode(protocol))
           message = createEmptyMessage([], [newPresence])
         }

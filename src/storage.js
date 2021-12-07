@@ -47,6 +47,8 @@ async function fetchS3Object(bucket, key, offset, length) {
     // Set the range
     if (offset > 0 && length > 0) {
       range = `bytes=${offset}-${offset + length - 1}`
+    } else if (length === 0) {
+      return Buffer.alloc(0)
     }
 
     // Download from S3

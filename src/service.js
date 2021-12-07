@@ -107,7 +107,7 @@ async function processWantlist(connection, protocol, wantlist) {
         In that case, we send the message without the new element and prepare a new message.
       */
       if (newBlock) {
-        if (!message.addBlock(newBlock, protocol, entry.cid)) {
+        if (!message.addBlock(newBlock, protocol)) {
           connection.send(message.encode(protocol))
           message = createEmptyMessage([newBlock])
         }

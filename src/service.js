@@ -161,6 +161,10 @@ async function startService(currentPort) {
 
       processWantlist(connection, protocol, message.wantlist)
     })
+
+    connection.on('error', error => {
+      logger.error({ error }, `Connection error: ${serializeError(error)}`)
+    })
   })
 
   await service.start()

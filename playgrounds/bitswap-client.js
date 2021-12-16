@@ -63,8 +63,8 @@ async function client() {
         current: current,
         currentSize: data.length,
         totalSize: dataReceived,
-        blocks: decoded.blocks.length,
-        presences: decoded.blockPresences.length,
+        blocks,
+        presences,
         pending: toReceive
       },
       'Received response.'

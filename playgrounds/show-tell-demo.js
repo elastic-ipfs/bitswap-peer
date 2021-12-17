@@ -2,6 +2,7 @@
 
 const { NOISE } = require('@chainsafe/libp2p-noise')
 const dagPB = require('@ipld/dag-pb')
+const dns = require('dns')
 const { writeFile } = require('fs/promises')
 const libp2p = require('libp2p')
 const Gossipsub = require('libp2p-gossipsub')
@@ -20,6 +21,21 @@ const { getPeerId } = require('../src/config')
 const { logger, serializeError } = require('../src/logging')
 const { Connection } = require('../src/networking')
 const { protocols, Entry, Message, WantList } = require('../src/protocol')
+
+// This is needed since index-provider does not use WS (and thus HTTP) which performed DNS CNAME to DNS A automatically.
+Multiaddr.resolvers.set('dns4', addr => {
+  const host = addr.stringTuples().find(t => t[0] === Multiaddr.protocols.names.dns4.code)[1]
+
+  return new Promise((resolve, reject) => {
+    dns.resolve4(host, (err, addresses) => {
+      if (err) {
+        return reject(err)
+      }
+
+      return resolve(addresses.map(a => `/ip4/${a}`))
+    })
+  })
+})
 
 async function setupBitSwap(peerId) {
   const node = await libp2p.create({

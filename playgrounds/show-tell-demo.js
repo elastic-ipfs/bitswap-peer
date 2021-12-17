@@ -19,9 +19,7 @@ const { request } = require('undici')
 const { getPeerId } = require('../src/config')
 const { logger, serializeError } = require('../src/logging')
 const { Connection } = require('../src/networking')
-const { BITSWAP_V_120, Entry, Message, WantList } = require('../src/protocol')
-
-const protocol = BITSWAP_V_120
+const { protocols, Entry, Message, WantList } = require('../src/protocol')
 
 async function setupBitSwap(peerId) {
   const node = await libp2p.create({
@@ -34,46 +32,55 @@ async function setupBitSwap(peerId) {
 
   const multiaddr = `${process.env.BITSWAP_URL}/ws/p2p/${peerId}`
   logger.info(`Connecting to BitSwap peer ${multiaddr} ...`)
-  const connection = await node.dial(multiaddr)
-  const { stream } = await connection.newStream(protocol)
-  const duplex = new Connection(stream)
+  const dialConnection = await node.dial(multiaddr)
+  const { stream, protocol } = await dialConnection.newStream(protocols)
+  const duplex = new Connection(dialConnection, stream)
   logger.info('BitSwap is ready.')
 
-  duplex.on('data', async data => {
-    const decoded = Message.decode(data)
-    const blocks = decoded.blocks.length
-    const presences = decoded.blockPresences.length
+  // Handle replies on another stream
+  node.handle(protocols, async ({ connection: dialConnection, stream, protocol }) => {
+    const connection = new Connection(dialConnection, stream)
 
-    logger.info(
-      {
-        blocks,
-        presences
-      },
-      'Received BitSwap response.'
-    )
+    connection.on('data', async data => {
+      const decoded = Message.decode(data)
+      const blocks = decoded.blocks.length
+      const presences = decoded.blockPresences.length
 
-    for (const block of decoded.blocks) {
-      let codec = 0x55
+      logger.info(
+        {
+          blocks,
+          presences
+        },
+        'Received BitSwap response.'
+      )
 
-      // Check if the content is actually a DAG-PB, in that case we adjust the codec of CID
-      try {
-        dagPB.decode(block.data)
-        codec = dagPB.code
-      } catch (e) {
-        // No-op
+      for (const block of decoded.blocks) {
+        let codec = 0x55
+
+        // Check if the content is actually a DAG-PB, in that case we adjust the codec of CID
+        try {
+          dagPB.decode(block.data)
+          codec = dagPB.code
+        } catch (e) {
+          // No-op
+        }
+
+        const c = CID.create(block.prefix[0], codec, await sha256.digest(block.data))
+
+        await writeFile(`tmp/${c.toString()}`, block.data)
+        logger.info(`Written block tmp/${c.toString()}.`)
       }
+    })
 
-      const c = CID.create(block.prefix[0], codec, await sha256.digest(block.data))
-
-      await writeFile(`tmp/${c.toString()}`, block.data)
-      logger.info(`Written block tmp/${c.toString()}.`)
-    }
+    connection.on('error', error => {
+      logger.error({ error }, `Connection error: ${serializeError(error)}`)
+    })
   })
 
-  return duplex
+  return { duplex, protocol }
 }
 
-async function setupGossipsub(peerId, bitswap) {
+async function setupGossipsub(peerId, bitswap, protocol) {
   const providerUrl = process.env.PROVIDER_URL
 
   const node = await libp2p.create({
@@ -172,9 +179,9 @@ async function setupGossipsub(peerId, bitswap) {
 
 async function client() {
   const peerId = await getPeerId()
-  const duplex = await setupBitSwap(peerId)
+  const { duplex, protocol } = await setupBitSwap(peerId)
 
-  await setupGossipsub(peerId, duplex)
+  await setupGossipsub(peerId, duplex, protocol)
 }
 
 client()

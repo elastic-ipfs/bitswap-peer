@@ -14,19 +14,13 @@ spec:
         app: {{ .Release.Name }}-{{ .Chart.Name }}
         workerType: "fargate" # TODO: Conditional based on .value
     spec:
-      service_account_name: {{ .Values.serviceAccountName }}
-      container:
-        image: ghcr.io/web3-storage/aws-ipfs-bitswap-peer/app:{{ .Values.image.version }}
-        name: {{ .Release.Name }}-{{ .Chart.Name }}
-        limits:
-          memory: {{ .Values.resources.limits.memory }}
-          cpu: {{ .Values.resources.limits.cpu }}
-        requests:
-          memory: {{ .Values.resources.requests.memory }}
-          cpu: {{ .Values.resources.requests.cpu }}
+      serviceAccountName: {{ .Values.serviceAccountName }}
+      containers:
+      - image: ghcr.io/web3-storage/aws-ipfs-bitswap-peer/app:{{ .Values.image.version }}
+        name: {{ .Release.Name }}-{{ .Chart.Name }}        
         env: 
         - name: PORT
-          value: {{ .Values.service.port }}
+          value: {{ .Values.service.port | squote }} 
         - name: NODE_ENV
           value: {{ .Values.env.nodeEnv }}        
         - name: PEER_ID_S3_BUCKET

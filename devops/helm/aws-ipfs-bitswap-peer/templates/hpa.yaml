@@ -1,5 +1,5 @@
 {{- if .Values.autoscaling.enabled }}
-apiVersion: autoscaling/v2
+apiVersion: autoscaling/v2beta2
 kind: HorizontalPodAutoscaler
 metadata:
   name: {{ .Release.Name }}-{{ .Chart.Name }}-hpa
@@ -11,7 +11,7 @@ spec:
     kind: Deployment
     name: {{ .Release.Name }}-{{ .Chart.Name }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
-  minReplicas: {{ .Values.autoscaling.maxReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:
   - type: Resource
     resource:
@@ -21,7 +21,8 @@ spec:
         averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage}}
   - type: Resource
     resource:
-      name: memory
+      name: Memory
       target:
         type: Utilization
         averageUtilization: {{ .Values.autoscaling.targetMemoryUtilizationPercentage}}
+{{- end }}

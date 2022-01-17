@@ -14,6 +14,7 @@ resources:
     memory: 256Mi
 
 autoscaling:
+  enabled: true
   minReplicas: 2
   maxReplicas: 40
   targetCPUUtilizationPercentage: 70

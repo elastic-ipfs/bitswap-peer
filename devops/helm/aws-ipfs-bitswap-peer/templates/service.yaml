@@ -5,6 +5,7 @@ metadata:
   labels:
     app: {{ .Release.Name }}-{{ .Chart.Name }}
 spec:
+  type: LoadBalancer
   selector:
     app: {{ .Release.Name }}-{{ .Chart.Name }}
   ports:

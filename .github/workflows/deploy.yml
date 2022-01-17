@@ -48,4 +48,6 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:latest
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-# TODO: Helm apply
+      # TODO: Read kubeconfig from secret
+      - name: Helm Apply Package
+        run: helm upgrade --install --force --set image.version=${{ env.PACKAGE_VERSION }} bitswap-release1 devops/helm/aws-ipfs-bitswap-peer

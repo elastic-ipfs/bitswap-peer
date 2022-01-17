@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}-{{ .Chart.Name }}
+  name: {{ .Release.Name }}
   labels:
-    app: {{ .Release.Name }}-{{ .Chart.Name }}
+    app: {{ .Release.Name }}
 spec:
   selector:
     matchLabels:
-      app: {{ .Release.Name }}-{{ .Chart.Name }}
+      app: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app: {{ .Release.Name }}-{{ .Chart.Name }}
+        app: {{ .Release.Name }}
         workerType: "fargate" # TODO: Conditional based on .value
     spec:
       serviceAccountName: {{ .Values.serviceAccountName }}
       containers:
       - image: ghcr.io/web3-storage/aws-ipfs-bitswap-peer/app:{{ .Values.image.version }}
-        name: {{ .Release.Name }}-{{ .Chart.Name }}        
+        name: {{ .Release.Name }}        
         env: 
         - name: PORT
           value: {{ .Values.service.port | squote }} 

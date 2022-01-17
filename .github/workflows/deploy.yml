@@ -48,3 +48,4 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:latest
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
+# TODO: Helm apply

@@ -1,3 +1,4 @@
 peerId.json
 .env*
 *.list
+node_modules

@@ -1,0 +1,30 @@
+image:
+  version: latest
+  pullPolicy: Always
+
+service:
+  port: 3000
+
+resources:
+  limits:
+    cpu: 1
+    memory: 1Gi
+  requests:
+    cpu: 0.5
+    memory: 256Mi
+
+env:
+  nodeEnv: production
+  peerIdS3Bucket: ipfs-peer-bitswap-config
+  peerIdFileName: peerId.json
+
+serviceAccountName: "bitswap-irsa"
+
+##############
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80

@@ -1,0 +1,9 @@
+{{- if .Values.autoscaling.enabled }}
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Release.Name }}-{{ .Chart.Name }}-hpa
+  labels:
+    {{- include "aws-ipfs-bitswap-peer.labels" . | nindent 4 }}
+spec:
+  

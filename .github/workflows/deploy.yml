@@ -2,7 +2,7 @@
 name: Deploy
 on:
   push:
-    branches: [main]
+    branches: [main, devops]
   workflow_dispatch:
 env:
   REGISTRY: ghcr.io

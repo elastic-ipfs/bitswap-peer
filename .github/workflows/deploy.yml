@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 env:
   REGISTRY: ghcr.io
+  AWS_REGION: us-west-2
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -47,7 +48,14 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.BUILD_DATE }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:latest
           labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-      # TODO: Read kubeconfig from secret
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}     
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Setup KubeConfig
+        run: aws eks --region ${{ env.AWS_REGION }} update-kubeconfig --name test-ipfs-aws-peer-subsystem-eks
       - name: Helm Apply Package
-        run: helm upgrade --install --force --set image.version=${{ env.PACKAGE_VERSION }} bitswap-release1 devops/helm/aws-ipfs-bitswap-peer
+        run: helm upgrade --install --force --set image.version=${{ env.PACKAGE_VERSION }} bitswap-release1 helm

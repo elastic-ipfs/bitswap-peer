@@ -24,5 +24,7 @@ env:
   nodeEnv: production
   peerIdS3Bucket: ipfs-peer-bitswap-config
   peerIdFileName: peerId.json
+  awsRegion: us-west-2
 
-# serviceAccountName: bitswap-irsa
+serviceAccountName: bitswap-irsa
+

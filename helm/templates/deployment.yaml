@@ -19,6 +19,8 @@ spec:
       - image: ghcr.io/web3-storage/aws-ipfs-bitswap-peer/app:{{ .Values.image.version }}
         name: {{ .Release.Name }}        
         env: 
+        - name: AWS_REGION 
+          value: {{ .Values.env.awsRegion }}
         - name: PORT
           value: {{ .Values.service.port | squote }} 
         - name: NODE_ENV

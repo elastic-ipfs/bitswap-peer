@@ -3,6 +3,7 @@ bail: true
 coverage: false
 test-regex: "(?:\\.test\\.js)$"
 test-env:
+  - ENV_FILE_PATH=test/fixtures/env
   - LOG_LEVEL=warn
   - CACHE_BLOCKS_INFO=false
-timeout: 120
+timeout: 60

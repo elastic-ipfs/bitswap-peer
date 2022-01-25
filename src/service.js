@@ -74,7 +74,7 @@ async function processWantlist(service, peer, wantlist) {
   // TODO: Eventually this might be created only if a response is needed
   const dialConnection = await service.dial(peer)
   const { stream, protocol } = await dialConnection.newStream(protocols)
-  const connection = new Connection(dialConnection, stream)
+  const connection = new Connection(stream)
 
   // For each entry in the list
   await pMap(
@@ -157,7 +157,7 @@ async function startService(currentPort) {
   })
 
   service.handle(protocols, async ({ connection: dial, stream, protocol }) => {
-    const connection = new Connection(dial, stream)
+    const connection = new Connection(stream)
 
     // Open a send connection to the peer
     connection.on('data', data => {
@@ -167,14 +167,17 @@ async function startService(currentPort) {
         message = Message.decode(data, protocol)
       } catch (error) {
         logger.error({ error }, `Invalid data received: ${serializeError(error)}`)
+        service.emit('error:receive', error)
         return
       }
 
       processWantlist(service, dial.remotePeer, message.wantlist)
     })
 
+    /* c8 ignore next 4 */
     connection.on('error', error => {
       logger.error({ error }, `Connection error: ${serializeError(error)}`)
+      service.emit('error:connection', error)
     })
   })
 

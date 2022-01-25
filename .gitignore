@@ -1,3 +1,5 @@
-peerId.json
 .env*
+coverage
+peerId.json
+*.car
 *.list

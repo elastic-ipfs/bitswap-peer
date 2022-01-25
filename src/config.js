@@ -1,9 +1,11 @@
 'use strict'
 
-require('dotenv').config()
+const { join, resolve } = require('path')
 const PeerId = require('peer-id')
 const { readFile, writeFile } = require('fs/promises')
-const { join } = require('path')
+
+/* c8 ignore next */
+require('dotenv').config({ path: process.env.ENV_FILE_PATH || resolve(process.cwd(), '.env') })
 
 const { logger } = require('./logging')
 const { fetchS3Object } = require('./storage')

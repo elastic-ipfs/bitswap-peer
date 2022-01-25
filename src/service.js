@@ -64,17 +64,18 @@ async function fetchBlock(cid) {
   return fetchS3Object(bucket, key, offset, length)
 }
 
-function sendMessage(connection, message, protocol) {
-  connection.send(message.encode(protocol))
+async function sendMessage(context, message) {
+  if (!context.connection) {
+    const dialConnection = await context.service.dial(context.peer)
+    const { stream } = await dialConnection.newStream(context.protocol)
+    context.connection = new Connection(stream)
+  }
+
+  context.connection.send(message.encode(context.protocol))
 }
 
-async function processWantlist(service, peer, wantlist) {
+async function processWantlist(wantlist, context) {
   let message = createEmptyMessage()
-
-  // TODO: Eventually this might be created only if a response is needed
-  const dialConnection = await service.dial(peer)
-  const { stream, protocol } = await dialConnection.newStream(protocols)
-  const connection = new Connection(stream)
 
   // For each entry in the list
   await pMap(
@@ -94,10 +95,10 @@ async function processWantlist(service, peer, wantlist) {
 
         if (raw) {
           newBlock = new Block(entry.cid, raw)
-        } else if (entry.sendDontHave && protocol === BITSWAP_V_120) {
+        } else if (entry.sendDontHave && context.protocol === BITSWAP_V_120) {
           newPresence = new BlockPresence(entry.cid, BlockPresence.Type.DontHave)
         }
-      } else if (entry.wantType === Entry.WantType.Have && protocol === BITSWAP_V_120) {
+      } else if (entry.wantType === Entry.WantType.Have && context.protocol === BITSWAP_V_120) {
         // Check if we have the block
         const existing = await getBlockInfo(entry.cid)
 
@@ -115,13 +116,13 @@ async function processWantlist(service, peer, wantlist) {
         In that case, we send the message without the new element and prepare a new message.
       */
       if (newBlock) {
-        if (!message.addBlock(newBlock, protocol)) {
-          sendMessage(connection, message, protocol)
+        if (!message.addBlock(newBlock, context.protocol)) {
+          await sendMessage(context, message)
           message = createEmptyMessage([newBlock])
         }
       } else if (newPresence) {
-        if (!message.addBlockPresence(newPresence, protocol)) {
-          sendMessage(connection, message, protocol)
+        if (!message.addBlockPresence(newPresence, context.protocol)) {
+          await sendMessage(context, message)
           message = createEmptyMessage([], [newPresence])
         }
       }
@@ -131,10 +132,12 @@ async function processWantlist(service, peer, wantlist) {
 
   // Once we have processed all blocks, see if there is anything else to send
   if (message.blocks.length || message.blockPresences.length) {
-    sendMessage(connection, message, protocol)
+    await sendMessage(context, message)
   }
 
-  await connection.close()
+  if (context.connection) {
+    await context.connection.close()
+  }
 }
 
 async function startService(currentPort) {
@@ -171,7 +174,7 @@ async function startService(currentPort) {
         return
       }
 
-      processWantlist(service, dial.remotePeer, message.wantlist)
+      processWantlist(message.wantlist, { service, peer: dial.remotePeer, protocol })
     })
 
     /* c8 ignore next 4 */
@@ -188,7 +191,7 @@ async function startService(currentPort) {
     `BitSwap peer started with PeerId ${service.peerId} and listening on port ${currentPort} ...`
   )
 
-  return { service, port, peerId }
+  return { service, port: currentPort, peerId }
 }
 
 module.exports = { startService }

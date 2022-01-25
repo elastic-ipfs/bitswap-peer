@@ -2,12 +2,11 @@
 
 process.env.LOG_LEVEL = 'fatal'
 
-const { once } = require('events')
 const t = require('tap')
 const { Connection } = require('../src/networking')
 const { BITSWAP_V_100: protocol } = require('../src/protocol')
 const { startService } = require('../src/service')
-const { prepare, teardown, createClient } = require('./utils/helpers')
+const { prepare, teardown, getFreePort, createClient } = require('./utils/helpers')
 const { mockAWS } = require('./utils/mock')
 
 mockAWS(t)
@@ -32,7 +31,7 @@ t.test('send - after closing behavior', async t => {
 t.test('error handling', async t => {
   t.plan(2)
 
-  const { peerId, port, service } = await startService()
+  const { peerId, port, service } = await startService(await getFreePort())
   const { connection: client, stream } = await createClient(peerId, port, protocol)
 
   stream.source[Symbol.asyncIterator] = function () {

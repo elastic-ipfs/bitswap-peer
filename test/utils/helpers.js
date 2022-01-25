@@ -55,8 +55,12 @@ async function createClient(peerId, port, protocol) {
   return { connection, stream, receiver }
 }
 
+function getFreePort() {
+  return getPort({ port: currentPort++ })
+}
+
 async function prepare(protocol) {
-  const port = await getPort({ port: currentPort++ })
+  const port = await getFreePort()
 
   const { peerId, service } = await startService(port)
   const { connection: client, stream, receiver } = await createClient(peerId, port, protocol)
@@ -171,6 +175,7 @@ module.exports = {
   cid1Content: '1234\n',
   cid2Link: 'abc',
   createClient,
+  getFreePort,
   getPresence,
   hasBlockWithHash,
   hasDAGBlock,

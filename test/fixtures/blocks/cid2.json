@@ -1,0 +1,31 @@
+{
+  "multihash": {
+    "S": "zQmarmPMyVmGUPYrupFdAa5TnmPj88sgaAtCv6R2feZYUwS"
+  },
+  "createdAt": {
+    "S": "2022-01-21T13:32:20.682Z"
+  },
+  "cars": {
+    "L": [
+      {
+        "M": {
+          "offset": {
+            "N": "96"
+          },
+          "length": {
+            "N": "52"
+          },
+          "car": {
+            "S": "test-cars/test-cid2.car"
+          }
+        }
+      }
+    ]
+  },
+  "data": {
+    "M": {}
+  },
+  "type": {
+    "S": "dag-pb"
+  }
+}

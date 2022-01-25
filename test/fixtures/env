@@ -1,0 +1,9 @@
+DYNAMO_BLOCKS_TABLE=blocks
+DYNAMO_CARS_TABLE=cars
+NODE_DEBUG=aws-ipfs
+NODE_ENV=production
+PEER_ID_FILE=test/fixtures/peerId.json
+PEER_ID_S3_BUCKET=ipfs-peer-bitswap-config
+PORT=3000
+SQS_PUBLISHING_QUEUE_URL=https://sqs.eu-west-1.amazonaws.com/505595374361/queue
+CONCURRENCY=32

@@ -3,47 +3,46 @@
 const { EventEmitter } = require('events')
 const lengthPrefixedMessage = require('it-length-prefixed')
 const pipe = require('it-pipe')
-const { setTimeout: sleep } = require('timers/promises')
 const { logger, serializeError } = require('./logging')
 
 class Connection extends EventEmitter {
-  constructor(dial, stream) {
+  constructor(stream) {
     super()
 
-    this.dial = dial
     this.done = false
     this.values = []
     this.resolves = []
+    this.shouldClose = false
 
     // Prepare for receiving
     pipe(stream.source, lengthPrefixedMessage.decode(), async source => {
       for await (const data of source) {
         process.nextTick(() => this.emit('data', data.slice()))
       }
-    }).catch(error => {
-      this.emit('error', error)
-      this.emit('error:receive', error)
-      logger.error({ error }, `Cannot receive data: ${serializeError(error)}`)
     })
+      .then(() => {
+        this.emit('end:receive')
+      })
+      .catch(error => {
+        this.emit('error', error)
+        this.emit('error:receive', error)
+        logger.error({ error }, `Cannot receive data: ${serializeError(error)}`)
+      })
 
     // Prepare for sending
     pipe(this, lengthPrefixedMessage.encode(), stream.sink)
-      // Autoclean up idle connections
-      .then(() => sleep(30000))
-      .then(() =>
-        // Closing
-        this.dial.close().catch(() => {})
-      )
+      .then(() => {
+        this.emit('end:send')
+      })
       .catch(error => {
         this.emit('error', error)
         this.emit('error:send', error)
-
         logger.error({ error }, `Cannot send data: ${serializeError(error)}`)
       })
   }
 
   send(value) {
-    if (this.done) {
+    if (this.shouldClose || this.done) {
       throw new Error('The stream is closed.')
     }
 
@@ -57,11 +56,12 @@ class Connection extends EventEmitter {
   }
 
   close() {
-    this.done = true
+    /*
+      Do not do anything immediately here, just wait for the next request for data.
+      This way we are sure we have sent everything out.
+    */
 
-    for (const resolve of this.resolves) {
-      resolve({ done: true, value: undefined })
-    }
+    this.shouldClose = true
   }
 
   [Symbol.asyncIterator]() {
@@ -77,6 +77,18 @@ class Connection extends EventEmitter {
 
         if (value) {
           return Promise.resolve({ done: false, value })
+        }
+
+        // If we should close, do not wait for new data but rather signal we're done
+        if (this.shouldClose) {
+          this.done = true
+
+          for (const resolve of this.resolves) {
+            resolve({ done: true, value: undefined })
+          }
+
+          this.resolves = []
+          return Promise.resolve({ done: true, value: undefined })
         }
 
         // Return a new pending promise that it will be fulfilled as soon as value is available

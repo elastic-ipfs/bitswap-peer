@@ -56,7 +56,7 @@ class Entry {
     this.sendDontHave = Boolean(sendDontHave)
 
     // Validate priority
-    if (!isNaN(this.priority) || this.priority < 0) {
+    if (isNaN(this.priority) || this.priority < 0) {
       this.priority = 1
     } else if (this.priority > maxPriority) {
       this.priority = maxPriority
@@ -163,7 +163,7 @@ class Block {
   }
 
   encode(protocol) {
-    RawBlock.encode(this.serialize(protocol).finish())
+    return RawBlock.encode(this.serialize(protocol)).finish()
   }
 }
 
@@ -190,7 +190,7 @@ class BlockPresence {
   }
 
   encode(protocol) {
-    return RawBlockPresence.encode(this.serialize(protocol).finish())
+    return RawBlockPresence.encode(this.serialize(protocol)).finish()
   }
 }
 
@@ -207,11 +207,12 @@ class Message {
     this.pendingBytes = pendingBytes
 
     // Validate pendingBytes
-    if (!isNaN(this.pendingBytes) || this.pendingBytes < 0) {
+    if (isNaN(this.pendingBytes) || this.pendingBytes < 0) {
       this.pendingBytes = 0
     }
 
-    this.estimatedLength = this.encode(BITSWAP_V_120).length + nonEmptyOverhead
+    // Use module.exports here so that tests can eventually override
+    this.estimatedLength = this.encode(BITSWAP_V_120).length + module.exports.nonEmptyOverhead
   }
 
   static decode(encoded, protocol) {
@@ -261,7 +262,8 @@ class Message {
   }
 
   addBlock(block, protocol) {
-    const newBlockSize = newBlockOverhead + block.data.length
+    // Use module.exports here so that tests can eventually override
+    const newBlockSize = module.exports.newBlockOverhead + block.data.length
 
     if (this.estimateNewSizeAfter(newBlockSize) > maxMessageSize) {
       return false
@@ -274,7 +276,8 @@ class Message {
   }
 
   addBlockPresence(presence, protocol) {
-    const newPresenceSize = newPresenceOverhead + presence.cid.byteLength
+    // Use module.exports here so that tests can eventually override
+    const newPresenceSize = module.exports.newPresenceOverhead + presence.cid.byteLength
 
     if (this.estimateNewSizeAfter(newPresenceSize) > maxMessageSize) {
       return false
@@ -287,7 +290,8 @@ class Message {
   }
 
   estimateNewSizeAfter(newElement) {
-    return (this.estimatedLength + newElement) * (1 + addedEstimationPercentage)
+    // Use module.exports here so that tests can eventually override
+    return (this.estimatedLength + newElement) * (1 + module.exports.addedEstimationPercentage)
   }
 }
 
@@ -300,10 +304,14 @@ module.exports = {
   BITSWAP_V_100,
   BITSWAP_V_110,
   BITSWAP_V_120,
+  addedEstimationPercentage,
   emptyWantList,
-  maxPriority,
   maxBlockSize,
   maxMessageSize,
+  maxPriority,
+  newBlockOverhead,
+  newPresenceOverhead,
+  nonEmptyOverhead,
   protocols,
   Block,
   BlockPresence,

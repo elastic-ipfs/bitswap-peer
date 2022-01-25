@@ -8,7 +8,8 @@
   "license": "(Apache-2.0 AND MIT)",
   "private": true,
   "scripts": {
-    "test": "tap --rcfile=test/config.yml",
+    "test": "c8 --reporter=text --reporter=html tap --rcfile=test/utils/config.yml",
+    "test:ci": "c8 --reporter=text --reporter=json --check-coverage --branches 90 --functions 90 --lines 90 --statements 90 tap --rcfile=test/config.yml",
     "format": "prettier -w src test",
     "lint": "eslint src test"
   },
@@ -33,6 +34,8 @@
   "devDependencies": {
     "@ipld/car": "^3.2.3",
     "@ipld/dag-pb": "^2.1.14",
+    "aws-sdk-client-mock": "^0.5.6",
+    "c8": "^7.11.0",
     "eslint": "^7.32.0",
     "eslint-config-standard": "^16.0.3",
     "eslint-plugin-import": "^2.25.3",

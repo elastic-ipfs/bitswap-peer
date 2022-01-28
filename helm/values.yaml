@@ -4,6 +4,7 @@ image:
 
 service:
   port: 3000
+  metricsPort: 9090 # TODO: Check that with Paolo
 
 resources:
   limits:
@@ -25,5 +26,5 @@ env:
   peerIdS3Bucket: ipfs-peer-bitswap-config
   peerIdFileName: peerId.json
 
+workerType: fargate
 serviceAccountName: bitswap-irsa
-

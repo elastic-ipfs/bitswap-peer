@@ -12,7 +12,7 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name }}
-        workerType: "fargate" # TODO: Conditional based on .value
+        workerType: {{ .Values.workerType }}
     spec:
       serviceAccountName: {{ .Values.serviceAccountName }}
       containers:

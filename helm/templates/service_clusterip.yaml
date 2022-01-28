@@ -1,0 +1,18 @@
+{{- if .Values.service.metricsPort -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-metrics
+  labels:
+    app: {{ .Release.Name }}
+    metricsMonitor: true
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Release.Name }}
+  ports:
+  - protocol: TCP
+    name: "http-metrics"
+    port: {{ .Values.service.metricsPort }}
+    targetPort: {{ .Values.service.metricsPort }}
+{{- end -}}

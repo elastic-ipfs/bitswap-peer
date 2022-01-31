@@ -2,11 +2,10 @@
 name: Deploy
 on:
   push:
-    branches: [main, devops]
+    branches: [main]
   workflow_dispatch:
 env:
   REGISTRY: ghcr.io
-  AWS_REGION: us-west-2
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -48,4 +47,4 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.BUILD_DATE }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:latest
           labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}     
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}

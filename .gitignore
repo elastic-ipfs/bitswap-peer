@@ -1,4 +1,6 @@
-peerId.json
 .env*
-*.list
 node_modules
+coverage
+peerId.json
+*.car
+*.list

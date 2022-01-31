@@ -17,9 +17,13 @@ const {
   hasSingleRawBlock,
   hasSingleBlockWithHash,
   prepare,
+  teardown,
   receiveMessages,
   safeGetDAGLinks
-} = require('./utils')
+} = require('./utils/helpers')
+const { mockAWS } = require('./utils/mock')
+
+mockAWS(t)
 
 t.test(`${protocol} - uses the right fields when serializing and deserializing`, async t => {
   t.plan(10)
@@ -45,8 +49,8 @@ t.test(`${protocol} - uses the right fields when serializing and deserializing`,
   const { client, service, connection, receiver } = await prepare(protocol)
   await connection.send(request.encode(protocol))
   const [response] = await receiveMessages(receiver, protocol, 5000, 1, true)
-  await client.close()
-  await service.stop()
+
+  await teardown(client, service, connection)
 
   t.equal(response.blocks.length, 2)
   t.equal(response.payload.length, 0)
@@ -63,7 +67,7 @@ t.test(`${protocol} - uses the right fields when serializing and deserializing`,
 })
 
 t.test(`${protocol} - type=Block - sendDontHave=true - 2 hits / 2 misses - 2 blocks received`, async t => {
-  t.plan(4)
+  t.plan(5)
 
   const { client, service, connection, receiver } = await prepare(protocol)
 
@@ -81,9 +85,9 @@ t.test(`${protocol} - type=Block - sendDontHave=true - 2 hits / 2 misses - 2 blo
   await connection.send(request.encode(protocol))
 
   const [response] = await receiveMessages(receiver, protocol)
-  await client.close()
-  await service.stop()
+  await teardown(client, service, connection)
 
+  t.equal(response.blocks.length, 2)
   t.equal(response.blocks.length, 2)
   t.equal(response.blockPresences.length, 0)
 
@@ -110,8 +114,7 @@ t.test(`${protocol} - type=Block - sendDontHave=false - 2 hits / 2 misses - 2 bl
   await connection.send(request.encode(protocol))
 
   const [response] = await receiveMessages(receiver, protocol)
-  await client.close()
-  await service.stop()
+  await teardown(client, service, connection)
 
   t.equal(response.blocks.length, 2)
   t.equal(response.blockPresences.length, 0)
@@ -139,8 +142,7 @@ t.test(`${protocol} - type=Have - sendDontHave=true - 2 hits / 2 misses - 2 bloc
   await connection.send(request.encode(protocol))
 
   const [response] = await receiveMessages(receiver, protocol)
-  await client.close()
-  await service.stop()
+  await teardown(client, service, connection)
 
   t.equal(response.blocks.length, 2)
   t.equal(response.blockPresences.length, 0)
@@ -168,8 +170,7 @@ t.test(`${protocol} - type=Have - sendDontHave=false - 2 hits / 2 misses - 2 blo
   await connection.send(request.encode(protocol))
 
   const [response] = await receiveMessages(receiver, protocol)
-  await client.close()
-  await service.stop()
+  await teardown(client, service, connection)
 
   t.equal(response.blocks.length, 2)
   t.equal(response.blockPresences.length, 0)
@@ -197,8 +198,7 @@ t.test(`${protocol} - type=Mixed - sendDontHave=true - 2 blocks received`, async
   await connection.send(request.encode(protocol))
 
   const [response] = await receiveMessages(receiver, protocol)
-  await client.close()
-  await service.stop()
+  await teardown(client, service, connection)
 
   t.equal(response.blocks.length, 2)
   t.equal(response.blockPresences.length, 0)
@@ -226,8 +226,7 @@ t.test(`${protocol} - type=Mixed - sendDontHave=false - 2 blocks received`, asyn
   await connection.send(request.encode(protocol))
 
   const [response] = await receiveMessages(receiver, protocol)
-  await client.close()
-  await service.stop()
+  await teardown(client, service, connection)
 
   t.equal(response.blocks.length, 2)
   t.equal(response.blockPresences.length, 0)
@@ -255,8 +254,7 @@ t.test(`${protocol} - type=Mixed - cancel=true - no response received`, async t 
   await connection.send(request.encode(protocol))
 
   const responses = await receiveMessages(receiver, protocol)
-  await client.close()
-  await service.stop()
+  await teardown(client, service, connection)
 
   t.equal(responses.length, 0)
 })
@@ -278,11 +276,9 @@ t.test(`${protocol} - large blocks skipping`, async t => {
 
   const request = new Message(wantList, [], [], 0)
   await connection.send(request.encode(protocol))
-  await connection.send(request.encode(protocol))
 
   const responses = await receiveMessages(receiver, protocol, 30000, 2)
-  await client.close()
-  await service.stop()
+  await teardown(client, service, connection)
 
   const blocks = [...responses[0].blocks, ...responses[1].blocks]
 

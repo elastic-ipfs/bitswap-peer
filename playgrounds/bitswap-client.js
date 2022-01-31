@@ -37,7 +37,7 @@ async function client() {
   logger.info(`Connected in ${elapsed(start)} ms.`)
 
   const { stream, protocol } = await dialConnection.newStream(protocols)
-  const duplex = new Connection(dialConnection, stream)
+  const duplex = new Connection(stream)
 
   let dataReceived = 0
   let toReceive = allCids.length
@@ -49,7 +49,7 @@ async function client() {
   let current = 0
 
   node.handle(protocols, async ({ connection: dialConnection, stream, protocol }) => {
-    const connection = new Connection(dialConnection, stream)
+    const connection = new Connection(stream)
 
     connection.on('data', async data => {
       const decoded = Message.decode(data)

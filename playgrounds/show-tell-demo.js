@@ -50,12 +50,12 @@ async function setupBitSwap(peerId) {
   logger.info(`Connecting to BitSwap peer ${multiaddr} ...`)
   const dialConnection = await node.dial(multiaddr)
   const { stream, protocol } = await dialConnection.newStream(protocols)
-  const duplex = new Connection(dialConnection, stream)
+  const duplex = new Connection(stream)
   logger.info('BitSwap is ready.')
 
   // Handle replies on another stream
   node.handle(protocols, async ({ connection: dialConnection, stream, protocol }) => {
-    const connection = new Connection(dialConnection, stream)
+    const connection = new Connection(stream)
 
     connection.on('data', async data => {
       const decoded = Message.decode(data)

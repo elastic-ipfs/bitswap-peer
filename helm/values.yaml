@@ -1,0 +1,30 @@
+image:
+  version: latest
+  pullPolicy: Always
+
+service:
+  port: 3000
+  metricsPort: 9090 # TODO: Check that with Paolo
+
+resources:
+  limits:
+    cpu: 1
+    memory: 1Gi
+  requests:
+    cpu: 0.5
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 40
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 70
+
+env:
+  nodeEnv: production
+  peerIdS3Bucket: ipfs-peer-bitswap-config
+  peerIdFileName: peerId.json
+
+workerType: fargate
+serviceAccountName: bitswap-irsa

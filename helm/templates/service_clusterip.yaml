@@ -5,7 +5,7 @@ metadata:
   name: {{ .Release.Name }}-metrics
   labels:
     app: {{ .Release.Name }}
-    metricsMonitor: true
+    metricsMonitor: "true"
 spec:
   type: ClusterIP
   selector:

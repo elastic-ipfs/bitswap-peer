@@ -26,5 +26,5 @@ env:
   peerIdS3Bucket: ipfs-peer-bitswap-config
   peerIdFileName: peerId.json
 
-workerType: fargate
+workerType: workerNode
 serviceAccountName: bitswap-irsa

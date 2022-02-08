@@ -13,4 +13,3 @@ spec:
     name: "ws"
     port: {{ .Values.service.port }}
     targetPort: {{ .Values.service.port }}
-

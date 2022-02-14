@@ -15,15 +15,17 @@ const {
   CONCURRENCY: rawConcurrency,
   DYNAMO_BLOCKS_TABLE: blocksTable,
   DYNAMO_CARS_TABLE: carsTable,
-  PEER_ID_FILE: peerIdJsonPath,
+  PEER_ID_DIRECTORY: peerIdJsonDirectory,
+  PEER_ID_FILE: peerIdJsonFile,
   PORT: rawPort
 } = process.env
 
 async function downloadPeerIdFile() {
-  logger.info(`Downloading PeerId from s3://${process.env.PEER_ID_S3_BUCKET}/${process.env.PEER_ID_FILE}`)
+  const file = peerIdJsonFile ?? 'peerId.json'
+  logger.info(`Downloading PeerId from s3://${process.env.PEER_ID_S3_BUCKET}/${file}`)
 
-  const contents = await fetchS3Object(process.env.PEER_ID_S3_BUCKET, process.env.PEER_ID_FILE)
-  return writeFile(join(__dirname, '..', process.env.PEER_ID_FILE), contents)
+  const contents = await fetchS3Object(process.env.PEER_ID_S3_BUCKET, file)
+  return writeFile(module.exports.peerIdJsonPath, contents)
 }
 
 async function getPeerId() {
@@ -32,7 +34,7 @@ async function getPeerId() {
   }
 
   try {
-    const peerIdJson = JSON.parse(await readFile(join(__dirname, '..', peerIdJsonPath), 'utf-8'))
+    const peerIdJson = JSON.parse(await readFile(module.exports.peerIdJsonPath, 'utf-8'))
     return await PeerId.createFromJSON(peerIdJson)
   } catch (e) {
     return PeerId.create()
@@ -43,11 +45,12 @@ const concurrency = parseInt(rawConcurrency)
 const port = parseInt(rawPort)
 
 module.exports = {
-  cacheBlocksInfo: cacheBlocksInfo !== 'false',
-  concurrency: !isNaN(concurrency) && concurrency > 0 ? concurrency : 16,
   blocksTable: blocksTable ?? 'blocks',
+  cacheBlocksInfo: cacheBlocksInfo !== 'false',
   carsTable: carsTable ?? 'cars',
+  concurrency: !isNaN(concurrency) && concurrency > 0 ? concurrency : 16,
   getPeerId,
+  peerIdJsonPath: join(peerIdJsonDirectory ?? '/tmp', peerIdJsonFile ?? 'peerId.json'),
   primaryKeys: {
     blocks: 'multihash',
     cars: 'path'

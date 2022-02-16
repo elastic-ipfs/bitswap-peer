@@ -2,7 +2,9 @@
 
 require('make-promises-safe')
 
+const { telemetryPort } = require('./config')
 const { logger } = require('./logging')
 const { startService } = require('./service')
+const { startTelemetry } = require('./telemetry')
 
-startService().catch(logger.error.bind(logger))
+Promise.all([startService(), startTelemetry(telemetryPort)]).catch(logger.error.bind(logger))

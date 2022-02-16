@@ -12,11 +12,21 @@ const { logger, elapsed, serializeError } = require('../src/logging')
 const { Connection } = require('../src/networking')
 const { protocols, Entry, Message, WantList } = require('../src/protocol')
 
+const durationUnits = {
+  milliseconds: 1e6,
+  seconds: 1e9
+}
+
 const allCids = readFileSync(process.argv[3], 'utf-8')
   .split('\n')
   .map(c => c.trim())
   .filter(c => c)
   .map(c => CID.parse(c))
+
+function elapsed(startTime, precision = 3, unit = 'milliseconds') {
+  const dividend = durationUnits[unit] ?? durationUnits.milliseconds
+  return (Number(process.hrtime.bigint() - startTime) / dividend).toFixed(precision)
+}
 
 async function client() {
   let start = process.hrtime.bigint()

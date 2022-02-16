@@ -1,4 +1,4 @@
-./peerId.json
+peerId.json
 .env*
 *.car
 *.list

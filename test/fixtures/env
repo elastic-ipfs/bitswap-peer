@@ -4,3 +4,4 @@ DYNAMO_CARS_TABLE=cars
 PEER_ID_FILE=peerId.json
 PEER_ID_S3_BUCKET=ipfs-peer-bitswap-config
 PORT=3000
+TELEMETRY_PORT=3001

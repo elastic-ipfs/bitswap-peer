@@ -8,6 +8,7 @@ const { BufferList } = require('bl')
 const { Agent } = require('https')
 const { base58btc: base58 } = require('multiformats/bases/base58')
 const { logger, serializeError } = require('./logging')
+const { metrics } = require('./telemetry')
 
 const agent = new Agent({ keepAlive: true, keepAliveMsecs: 60000 })
 
@@ -23,11 +24,19 @@ function cidToKey(cid) {
   return base58.encode(cid.multihash.bytes)
 }
 
+function trackDuration(metric, startTime) {
+  metric.record(Number(process.hrtime.bigint() - startTime) / 1e6)
+}
+
 async function readDynamoItem(table, keyName, keyValue) {
   try {
+    metrics.dynamoReads.add(1)
+
+    const startTime = process.hrtime.bigint()
     const record = await dynamoClient.send(
       new GetItemCommand({ TableName: table, Key: serializeDynamoItem({ [keyName]: keyValue }) })
     )
+    trackDuration(metrics.dynamoReadDurations, startTime)
 
     if (!record.Item) {
       return null
@@ -42,6 +51,8 @@ async function readDynamoItem(table, keyName, keyValue) {
 
 async function fetchS3Object(bucket, key, offset, length) {
   try {
+    metrics.s3Fetchs.add(1)
+
     let range
 
     // Set the range
@@ -52,7 +63,10 @@ async function fetchS3Object(bucket, key, offset, length) {
     }
 
     // Download from S3
+    const startTime = process.hrtime.bigint()
     const record = await s3Client.send(new GetObjectCommand({ Bucket: bucket, Key: key, Range: range }))
+    trackDuration(metrics.s3FetchsDurations, startTime)
+
     const buffer = new BufferList()
 
     for await (const chunk of record.Body) {

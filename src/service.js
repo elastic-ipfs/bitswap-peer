@@ -20,6 +20,7 @@ const {
 } = require('./protocol')
 const { Connection } = require('./networking')
 const { cidToKey, fetchS3Object, readDynamoItem } = require('./storage')
+const { metrics } = require('./telemetry')
 
 const blocksCache = new LRUCache(1e6)
 
@@ -71,11 +72,15 @@ async function sendMessage(context, message) {
     context.connection = new Connection(stream)
   }
 
+  metrics.bitSwapTotalConnections.add(1)
+  metrics.bitSwapActiveConnections.add(1)
   context.connection.send(message.encode(context.protocol))
 }
 
 async function processWantlist(wantlist, context) {
   let message = createEmptyMessage()
+  metrics.bitSwapTotalEntries.add(wantlist.entries.length)
+  metrics.bitSwapPendingEntries.add(wantlist.entries.length)
 
   // For each entry in the list
   await pMap(
@@ -94,8 +99,11 @@ async function processWantlist(wantlist, context) {
         const raw = await fetchBlock(entry.cid)
 
         if (raw) {
+          metrics.bitSwapBlockHits.add(1)
+          metrics.bitSwapSentData.add(raw.length)
           newBlock = new Block(entry.cid, raw)
         } else if (entry.sendDontHave && context.protocol === BITSWAP_V_120) {
+          metrics.bitSwapBlockMisses.add(1)
           newPresence = new BlockPresence(entry.cid, BlockPresence.Type.DontHave)
         }
       } else if (entry.wantType === Entry.WantType.Have && context.protocol === BITSWAP_V_120) {
@@ -103,8 +111,10 @@ async function processWantlist(wantlist, context) {
         const existing = await getBlockInfo(entry.cid)
 
         if (existing) {
+          metrics.bitSwapBlockHits.add(1)
           newPresence = new BlockPresence(entry.cid, BlockPresence.Type.Have)
         } else if (entry.sendDontHave) {
+          metrics.bitSwapBlockMisses.add(1)
           newPresence = new BlockPresence(entry.cid, BlockPresence.Type.DontHave)
         }
       }
@@ -130,12 +140,15 @@ async function processWantlist(wantlist, context) {
     { concurrency }
   )
 
+  metrics.bitSwapPendingEntries.add(-wantlist.entries.length)
+
   // Once we have processed all blocks, see if there is anything else to send
   if (message.blocks.length || message.blockPresences.length) {
     await sendMessage(context, message)
   }
 
   if (context.connection) {
+    metrics.bitSwapActiveConnections.add(-1)
     await context.connection.close()
   }
 }
@@ -182,6 +195,15 @@ async function startService(currentPort) {
       logger.error({ error }, `Connection error: ${serializeError(error)}`)
       service.emit('error:connection', error)
     })
+  })
+
+  service.connectionManager.on('peer:connect', connection => {
+    metrics.bitSwapTotalConnections.add(1)
+    metrics.bitSwapActiveConnections.add(1)
+  })
+
+  service.connectionManager.on('peer:disconnect', connection => {
+    metrics.bitSwapActiveConnections.add(-1)
   })
 
   await service.start()

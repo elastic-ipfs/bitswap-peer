@@ -17,7 +17,8 @@ const {
   DYNAMO_CARS_TABLE: carsTable,
   PEER_ID_DIRECTORY: peerIdJsonDirectory,
   PEER_ID_FILE: peerIdJsonFile,
-  PORT: rawPort
+  PORT: rawPort,
+  TELEMETRY_PORT: rawTelemetryPort
 } = process.env
 
 async function downloadPeerIdFile() {
@@ -55,5 +56,6 @@ module.exports = {
     blocks: 'multihash',
     cars: 'path'
   },
-  port: !isNaN(port) && port > 0 ? port : 0
+  port: !isNaN(port) && port > 0 ? port : 3000,
+  telemetryPort: !isNaN(rawTelemetryPort) && rawTelemetryPort > 0 ? rawTelemetryPort : 3001
 }

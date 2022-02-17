@@ -11,7 +11,7 @@ const { resolve } = require('path')
 const { createFromJSON } = require('peer-id')
 const { Readable } = require('stream')
 const t = require('tap')
-const { getPeerId, concurrency, blocksTable, carsTable, port } = require('../src/config')
+const { getPeerId, concurrency, blocksTable, carsTable, port, telemetryPort } = require('../src/config')
 const { serializeError } = require('../src/logging')
 const { s3Mock } = require('./utils/mock')
 
@@ -46,12 +46,13 @@ t.test('config - creates a new PeerId if download fails', async t => {
 })
 
 t.test('config - it exports reasonable defaults', t => {
-  t.plan(4)
+  t.plan(5)
 
   t.equal(concurrency, 16)
   t.equal(blocksTable, 'blocks')
   t.equal(carsTable, 'cars')
-  t.equal(port, 0)
+  t.equal(port, 3000)
+  t.equal(telemetryPort, 3001)
 })
 
 t.test('logging - an error is properly serialized', t => {

@@ -8,7 +8,7 @@ const Websockets = require('libp2p-websockets')
 const { CID } = require('multiformats/cid')
 
 const { getPeerId, port } = require('../src/config')
-const { logger, elapsed, serializeError } = require('../src/logging')
+const { logger, serializeError } = require('../src/logging')
 const { Connection } = require('../src/networking')
 const { protocols, Entry, Message, WantList } = require('../src/protocol')
 

@@ -1,61 +1,78 @@
 'use strict'
 
+const { readFileSync } = require('fs')
+const { join } = require('path')
+const { load } = require('js-yaml')
 const { PrometheusExporter } = require('@opentelemetry/exporter-prometheus')
-
-const { logger } = require('./logging')
 const { MeterProvider } = require('@opentelemetry/sdk-metrics-base')
 
-const exporter = new PrometheusExporter({ preventServerStart: true })
-const meters = {}
-const metrics = {}
+const { logger } = require('./logging')
 
-// Create all the metrics
-meters.bitswapMeter = new MeterProvider({ exporter, interval: 1000 }).getMeter('bitswap')
-metrics.bitSwapTotalConnections = meters.bitswapMeter.createCounter('bitswap-total-connections', {
-  description: 'Total received BitSwap Connections'
-})
-metrics.bitSwapActiveConnections = meters.bitswapMeter.createUpDownCounter('bitswap-active-connections', {
-  description: 'Total active BitSwap Connections'
-})
-metrics.bitSwapTotalEntries = meters.bitswapMeter.createCounter('bitswap-total-entries', {
-  description: 'Total received BitSwap want list entries'
-})
-metrics.bitSwapPendingEntries = meters.bitswapMeter.createUpDownCounter('bitswap-pending-entries', {
-  description: 'Pending BitSwap want list entries'
-})
-metrics.bitSwapBlockHits = meters.bitswapMeter.createCounter('bitswap-hits', {
-  description: 'Total number of BitSwap blocks found'
-})
-metrics.bitSwapBlockMisses = meters.bitswapMeter.createCounter('bitswap-misses', {
-  description: 'Total number of BitSwap blocks not found'
-})
-metrics.bitSwapSentData = meters.bitswapMeter.createCounter('bitswap-sent-data', {
-  description: 'Total number of blocks data sent, in bytes'
-})
+class Telemetry {
+  constructor() {
+    const { component, interval, metrics } = load(readFileSync(join(process.cwd(), 'metrics.yml'), 'utf-8'))
 
-meters.dynamoMeter = new MeterProvider({ exporter, interval: 1000 }).getMeter('dynamodb')
-metrics.dynamoReads = meters.dynamoMeter.createCounter('dynamo-read', { description: 'Reads on DynamoDB' })
-metrics.dynamoReadDurations = meters.dynamoMeter.createHistogram('dynamo-reads-durations', {
-  description: 'Reads durations on DynamoDB'
-})
+    this.component = component
+    this.logger = logger
+    this.exporter = new PrometheusExporter({ preventServerStart: true })
+    this.meter = new MeterProvider({ exporter: this.exporter, interval }).getMeter(component)
+    this.metrics = {}
+    for (const [category, description] of Object.entries(metrics)) {
+      this.createMetric(
+        category,
+        description,
+        'count',
+        category.match(/-(active|pending)-/) ? 'createUpDownCounter' : 'createCounter'
+      )
 
-meters.s3Meter = new MeterProvider({ exporter, interval: 1000 }).getMeter('s3')
-metrics.s3Fetchs = meters.s3Meter.createCounter('s3-fetchs', { description: 'Fetchs on S3' })
-metrics.s3FetchsDurations = meters.s3Meter.createHistogram('s3-fetchs-durations', {
-  description: 'Fetchs durations on S3'
-})
+      this.createMetric(category, description, 'durations', 'createHistogram')
+    }
+  }
 
-/* c8 ignore next 7 */
-async function startTelemetry(port) {
-  exporter._port = port
+  increaseCount(category, amount = 1) {
+    const metric = this.ensureMetric(category, 'count')
+    metric.add(amount)
+  }
 
-  // Start the server
-  await exporter.startServer()
-  logger.info(`OpenTelemetry server and listening on port ${port} ...`)
+  decreaseCount(category, amount = 1) {
+    const metric = this.ensureMetric(category, 'count')
+    metric.add(-1 * amount)
+  }
+
+  async trackDuration(category, promise) {
+    const metric = this.ensureMetric(category, 'durations')
+    const startTime = process.hrtime.bigint()
+
+    try {
+      return await promise
+    } finally {
+      metric.record(Number(process.hrtime.bigint() - startTime) / 1e6)
+    }
+  }
+
+  /* c8 ignore next 7 */
+  async start(port) {
+    this.exporter._port = port
+
+    // Start the server
+    await this.exporter.startServer()
+    this.logger.info(`OpenTelemetry server and listening on port ${port} ...`)
+  }
+
+  createMetric(category, description, metric, creator = 'createCounter') {
+    const tag = `${category}-${metric}`
+    this.metrics[tag] = this.meter[creator](tag, { description: `${description} (${metric})` })
+  }
+
+  ensureMetric(category, metric) {
+    const metricObject = this.metrics[`${category}-${metric}`]
+
+    if (!metricObject) {
+      throw new Error(`Metric ${category} not found`)
+    }
+
+    return metricObject
+  }
 }
 
-module.exports = {
-  meters,
-  metrics,
-  startTelemetry
-}
+module.exports = new Telemetry()

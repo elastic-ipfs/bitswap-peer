@@ -1,0 +1,13 @@
+---
+component: bitswap-peer
+interval: 1000
+metrics:
+  bitswap-total-connections: BitSwap Total Connections
+  bitswap-active-connections: BitSwap Active Connections
+  bitswap-total-entries: BitSwap Total Entries served
+  bitswap-pending-entries: BitSwap Pending Entries to serve
+  bitswap-block-hits: BitSwap Blocks found in DynamoDB
+  bitswap-block-misses: BitSwap Blocks not found in DynamoDB
+  bitswap-sent-data: BitSwap Sent Data, in bytes
+  s3-fetchs: AWS S3 GetObject
+  dynamo-reads: AWS DynamoDB GetItem

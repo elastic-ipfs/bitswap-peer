@@ -3,7 +3,7 @@ ENV NODE_ENV production
 
 WORKDIR /app
 COPY src /app/src
-COPY bitswap.proto package.json /app/
+COPY bitswap.proto metrics.yml package.json /app/
 RUN npm install --production
 
 CMD [ "node", "src/index.js" ]

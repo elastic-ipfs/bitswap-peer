@@ -20,7 +20,7 @@ const {
 } = require('./protocol')
 const { Connection } = require('./networking')
 const { cidToKey, fetchS3Object, readDynamoItem } = require('./storage')
-const { metrics } = require('./telemetry')
+const telemetry = require('./telemetry')
 
 const blocksCache = new LRUCache(1e6)
 
@@ -36,7 +36,8 @@ async function getBlockInfo(cid) {
     return cached
   }
 
-  const item = await readDynamoItem(blocksTable, primaryKeys.blocks, key)
+  telemetry.increaseCount('dynamo-reads')
+  const item = await telemetry.trackDuration('dynamo-reads', readDynamoItem(blocksTable, primaryKeys.blocks, key))
 
   if (item) {
     blocksCache.set(key, item)
@@ -72,15 +73,15 @@ async function sendMessage(context, message) {
     context.connection = new Connection(stream)
   }
 
-  metrics.bitSwapTotalConnections.add(1)
-  metrics.bitSwapActiveConnections.add(1)
+  telemetry.increaseCount('bitswap-total-connections')
+  telemetry.increaseCount('bitswap-active-connections')
   context.connection.send(message.encode(context.protocol))
 }
 
 async function processWantlist(wantlist, context) {
   let message = createEmptyMessage()
-  metrics.bitSwapTotalEntries.add(wantlist.entries.length)
-  metrics.bitSwapPendingEntries.add(wantlist.entries.length)
+  telemetry.increaseCount('bitswap-total-entries', wantlist.entries.length)
+  telemetry.increaseCount('bitswap-pending-entries', wantlist.entries.length)
 
   // For each entry in the list
   await pMap(
@@ -99,11 +100,11 @@ async function processWantlist(wantlist, context) {
         const raw = await fetchBlock(entry.cid)
 
         if (raw) {
-          metrics.bitSwapBlockHits.add(1)
-          metrics.bitSwapSentData.add(raw.length)
+          telemetry.increaseCount('bitswap-block-hits')
+          telemetry.increaseCount('bitswap-sent-data', raw.length)
           newBlock = new Block(entry.cid, raw)
         } else if (entry.sendDontHave && context.protocol === BITSWAP_V_120) {
-          metrics.bitSwapBlockMisses.add(1)
+          telemetry.increaseCount('bitswap-block-misses')
           newPresence = new BlockPresence(entry.cid, BlockPresence.Type.DontHave)
         }
       } else if (entry.wantType === Entry.WantType.Have && context.protocol === BITSWAP_V_120) {
@@ -111,10 +112,10 @@ async function processWantlist(wantlist, context) {
         const existing = await getBlockInfo(entry.cid)
 
         if (existing) {
-          metrics.bitSwapBlockHits.add(1)
+          telemetry.increaseCount('bitswap-block-hits')
           newPresence = new BlockPresence(entry.cid, BlockPresence.Type.Have)
         } else if (entry.sendDontHave) {
-          metrics.bitSwapBlockMisses.add(1)
+          telemetry.increaseCount('bitswap-block-misses')
           newPresence = new BlockPresence(entry.cid, BlockPresence.Type.DontHave)
         }
       }
@@ -140,7 +141,7 @@ async function processWantlist(wantlist, context) {
     { concurrency }
   )
 
-  metrics.bitSwapPendingEntries.add(-wantlist.entries.length)
+  telemetry.decreaseCount('bitswap-pending-entries', wantlist.entries.length)
 
   // Once we have processed all blocks, see if there is anything else to send
   if (message.blocks.length || message.blockPresences.length) {
@@ -148,7 +149,7 @@ async function processWantlist(wantlist, context) {
   }
 
   if (context.connection) {
-    metrics.bitSwapActiveConnections.add(-1)
+    telemetry.decreaseCount('bitswap-active-connections')
     await context.connection.close()
   }
 }
@@ -198,12 +199,12 @@ async function startService(currentPort) {
   })
 
   service.connectionManager.on('peer:connect', connection => {
-    metrics.bitSwapTotalConnections.add(1)
-    metrics.bitSwapActiveConnections.add(1)
+    telemetry.increaseCount('bitswap-total-connections')
+    telemetry.increaseCount('bitswap-active-connections')
   })
 
   service.connectionManager.on('peer:disconnect', connection => {
-    metrics.bitSwapActiveConnections.add(-1)
+    telemetry.decreaseCount('bitswap-active-connections')
   })
 
   await service.start()

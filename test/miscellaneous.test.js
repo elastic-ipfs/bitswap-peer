@@ -13,6 +13,7 @@ const { Readable } = require('stream')
 const t = require('tap')
 const { getPeerId, concurrency, blocksTable, carsTable, port, telemetryPort } = require('../src/config')
 const { serializeError } = require('../src/logging')
+const telemetry = require('../src/telemetry')
 const { s3Mock } = require('./utils/mock')
 
 t.test('config - download the peerId from S3', async t => {
@@ -65,4 +66,9 @@ t.test('logging - an error is properly serialized', t => {
 
   t.equal(serializeError(error), '[Error] FAILED')
   t.equal(serializeError(errorWithCode), '[CODE] FAILED')
+})
+
+t.test('telemetry - ensure all metrics are defined in YAML file', t => {
+  t.plan(1)
+  t.throws(() => telemetry.decreaseCount('unknown'), 'Metrics unknown not found.')
 })

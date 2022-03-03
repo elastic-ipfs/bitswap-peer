@@ -75,7 +75,7 @@ t.test('telemetry - ensure all metrics are defined in YAML file', t => {
   t.throws(() => telemetry.decreaseCount('unknown'), 'Metrics unknown not found.')
 })
 
-t.only('telemetry - export', async t => {
+t.test('telemetry - export', async t => {
   t.plan(13)
 
   function requestMetrics(url) {

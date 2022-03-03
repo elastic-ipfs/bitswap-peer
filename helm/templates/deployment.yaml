@@ -16,7 +16,7 @@ spec:
     spec:
       serviceAccountName: {{ .Values.serviceAccountName }}
       containers:
-      - image: ghcr.io/web3-storage/aws-ipfs-bitswap-peer/app:{{ .Values.image.version }}
+      - image: ghcr.io/web3-storage/ipfs-elastic-provider-bitswap-peer/app:{{ .Values.image.version }}
         name: {{ .Release.Name }}        
         env: 
         - name: PORT

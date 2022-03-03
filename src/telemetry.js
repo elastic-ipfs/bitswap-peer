@@ -87,7 +87,10 @@ class Telemetry {
     this.metrics = new Map()
     for (const [category, description] of Object.entries(metrics)) {
       this.createMetric(category, description, 'count')
-      this.createMetric(category, description, 'durations')
+
+      if (!category.match(/active|pending/)) {
+        this.createMetric(category, description, 'durations')
+      }
     }
   }
 

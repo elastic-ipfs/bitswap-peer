@@ -7,4 +7,4 @@ const { logger } = require('./logging')
 const { startService } = require('./service')
 const telemetry = require('./telemetry')
 
-Promise.all([startService(), telemetry.start(telemetryPort)]).catch(logger.error.bind(logger))
+Promise.all([startService(), telemetry.startServer(telemetryPort)]).catch(logger.error.bind(logger))

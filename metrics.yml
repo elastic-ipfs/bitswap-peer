@@ -1,6 +1,5 @@
 ---
 component: bitswap-peer
-interval: 1000
 metrics:
   bitswap-total-connections: BitSwap Total Connections
   bitswap-active-connections: BitSwap Active Connections

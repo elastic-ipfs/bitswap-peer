@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 'use strict'
 
 const { base58btc: base58 } = require('multiformats/bases/base58')

@@ -77,11 +77,12 @@ class Aggregator {
 
 class Telemetry {
   constructor() {
-    const { component, metrics } = load(readFileSync(join(process.cwd(), 'metrics.yml'), 'utf-8'))
+    const { component, metrics, version } = load(readFileSync(join(process.cwd(), 'metrics.yml'), 'utf-8'))
 
     // Setup
     this.component = component
     this.logger = logger
+    this.version = version ?? 'development'
 
     // Create metrics
     this.metrics = new Map()
@@ -100,7 +101,12 @@ class Telemetry {
     }
 
     this.server = createServer((_, res) => {
-      res.writeHead(200, { connection: 'close', 'content-type': 'text/plain' })
+      res.writeHead(200, {
+        connection: 'close',
+        'content-type': 'text/plain',
+        'x-ipfs-bitswap-peer-version': this.version
+      })
+
       res.end(this.export())
     })
 

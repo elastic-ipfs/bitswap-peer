@@ -27,6 +27,8 @@ jobs:
           echo PACKAGE_VERSION=$(cat package.json | jq -r '.version') >> $GITHUB_ENV
           echo BUILD_DATE=$(date +%Y%m%d.%H%M) >> $GITHUB_ENV
           npm install
+          npm install -g dotenv-cli
+          dotenv -e $GITHUB_ENV -- yq -i ".version = \"$PACKAGE_VERSION-$BUILD-DATE\"" metrics.yml
       - name: Lint code
         run: npm run lint
       - name: Set up Docker Buildx

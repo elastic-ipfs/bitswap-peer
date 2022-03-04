@@ -1,5 +1,5 @@
 {{- if .Values.autoscaling.enabled }}
-apiVersion: autoscaling/v2beta1
+apiVersion: autoscaling/v2beta2
 kind: HorizontalPodAutoscaler
 metadata:
   name: {{ .Release.Name }}-hpa
@@ -17,10 +17,14 @@ spec:
   metrics:
   - type: Resource
     resource:
-      name: memory
-      targetAverageUtilization: {{ .Values.autoscaling.targetMemoryUtilizationPercentage}}
+      name: Memory
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.autoscaling.targetMemoryUtilizationPercentage}}
   - type: Resource
     resource:
       name: cpu
-      targetAverageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage}}
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage}}
 {{- end }}

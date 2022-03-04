@@ -1,3 +1,7 @@
+#!/usr/bin/env node
+
+'use strict'
+
 const { packToFs } = require('ipfs-car/pack/fs')
 const { FsBlockStore } = require('ipfs-car/blockstore/fs')
 

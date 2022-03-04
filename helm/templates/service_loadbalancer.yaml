@@ -10,6 +10,10 @@ spec:
     app: {{ .Release.Name }}
   ports:
   - protocol: TCP
+    name: "temporary-metrics"
+    port: {{ .Values.service.metricsPort }}
+    targetPort: {{ .Values.service.metricsPort }}
+  - protocol: TCP
     name: "ws"
     port: {{ .Values.service.port }}
     targetPort: {{ .Values.service.port }}

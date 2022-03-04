@@ -17,14 +17,10 @@ spec:
   metrics:
   - type: Resource
     resource:
-      name: Memory
-      target:
-        type: Utilization
-        targetAverageUtilization: {{ .Values.autoscaling.targetMemoryUtilizationPercentage}}
+      name: memory
+      targetAverageUtilization: {{ .Values.autoscaling.targetMemoryUtilizationPercentage}}
   - type: Resource
     resource:
       name: cpu
-      target:
-        type: Utilization
-        targetAverageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage}}
+      targetAverageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage}}
 {{- end }}

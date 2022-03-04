@@ -17,7 +17,12 @@ class Connection extends EventEmitter {
     // Prepare for receiving
     pipe(stream.source, lengthPrefixedMessage.decode(), async source => {
       for await (const data of source) {
-        process.nextTick(() => this.emit('data', data.slice()))
+        /*
+          This variable declaration is important
+          If you use data.slice() within the nextTick you will always emit the last received packet
+        */
+        const payload = data.slice()
+        process.nextTick(() => this.emit('data', payload))
       }
     })
       .then(() => {

@@ -23,12 +23,12 @@ jobs:
           key: node-modules-${{ hashFiles('package.json') }}
       - name: Install dependencies
         run: |
-          mkdir yq && wget https://github.com/mikefarah/yq/releases/download/v4.21.1/yq_linux_amd64.tar.gz -O - | tar xz -C yq && sudo mv yq/yq_linux_amd64 /usr/bin/yq
+          mkdir yq && wget https://github.com/mikefarah/yq/releases/download/v4.21.1/yq_linux_amd64.tar.gz -q -O - | tar xz -C yq && sudo mv yq/yq_linux_amd64 /usr/bin/yq
+          yq -i ".version = \"$(yq .version package.json)\", .buildDate = \"$(date +%Y%m%d.%H%M)\"" metrics.yml
           echo IMAGE_REPOSITORY=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]') >> $GITHUB_ENV
-          echo PACKAGE_VERSION=$(yq .version package.json) >> $GITHUB_ENV
-          echo BUILD_DATE=$(date +%Y%m%d.%H%M) >> $GITHUB_ENV
+          echo PACKAGE_VERSION=$(yq .version metrics.yml) >> $GITHUB_ENV
+          echo BUILD_DATE=$(yq .buildDate metrics.yml) >> $GITHUB_ENV
           npm install
-          PACKAGE_VERSION=$(yq .version package.json) BUILD_DATE=$(date +%Y%m%d.%H%M) yq -i ".version = \"$PACKAGE_VERSION-$BUILD_DATE\"" metrics.yml
       - name: Lint code
         run: npm run lint
       - name: Set up Docker Buildx
@@ -50,3 +50,10 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:latest
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
+      - name: Deploy new image
+        run: |
+          git clone git@github.com:web3-storage/ipfs-elastic-provider-bitswap-peer-deployment.git
+          cd ipfs-elastic-provider-bitswap-peer-deployment
+          yq -iP ".image.version=\"${{ env.BUILD_DATE }}\"" helm/values.yaml
+          git commit -am "feat: Deployed version ${{ env.PACKAGE_VERSION }}-${{ env.BUILD_DATE }}."
+          git push origin

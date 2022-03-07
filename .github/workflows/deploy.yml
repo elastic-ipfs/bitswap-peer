@@ -58,6 +58,8 @@ jobs:
       - name: Deploy new image
         run: |
           cd deployment
+          git config user.name ${{ github.actor }}
+          git config user.email ${{ github.actor }}@users.noreply.github.com
           yq -iP ".image.version=\"${{ env.BUILD_DATE }}\"" helm/values.yaml
           git commit -am "feat: Deployed version ${{ env.PACKAGE_VERSION }}-${{ env.BUILD_DATE }}."
           git push

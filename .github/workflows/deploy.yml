@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Use Node.js Current
         uses: actions/setup-node@v2
         with:
@@ -50,10 +50,15 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:latest
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
+      - name: Checkout deployment repository
+        uses: actions/checkout@v3
+        with:
+          repository: web3-storage/ipfs-elastic-provider-bitswap-peer-deployment
+          path: deployment
       - name: Deploy new image
         run: |
-          git clone git@github.com:web3-storage/ipfs-elastic-provider-bitswap-peer-deployment.git
-          cd ipfs-elastic-provider-bitswap-peer-deployment
+          git config user.name github-actions
+          git config user.email github-actions@github.com
           yq -iP ".image.version=\"${{ env.BUILD_DATE }}\"" helm/values.yaml
           git commit -am "feat: Deployed version ${{ env.PACKAGE_VERSION }}-${{ env.BUILD_DATE }}."
-          git push origin
+          git push

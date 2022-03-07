@@ -1,7 +1,7 @@
 namespace: bitswap-peer
 
 image:
-  version: "20220304.2125"
+  version: "20220307.1305"
   pullPolicy: Always
 
 service:

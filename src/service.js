@@ -66,7 +66,7 @@ async function fetchBlock(cid) {
   return fetchS3Object(bucket, key, offset, length)
 }
 
-async function sendMessage(context, message) {
+async function sendMessage(context, encodedMessage) {
   if (!context.connection) {
     const dialConnection = await context.service.dial(context.peer)
     const { stream } = await dialConnection.newStream(context.protocol)
@@ -75,7 +75,7 @@ async function sendMessage(context, message) {
 
   telemetry.increaseCount('bitswap-total-connections')
   telemetry.increaseCount('bitswap-active-connections')
-  context.connection.send(message.encode(context.protocol))
+  context.connection.send(encodedMessage)
 }
 
 async function processWantlist(wantlist, context) {
@@ -125,16 +125,23 @@ async function processWantlist(wantlist, context) {
         the element would make the serialized message exceed the maximum allowed size.
 
         In that case, we send the message without the new element and prepare a new message.
+
+        The reason why don't encode the message to send in sendMessage is because we need to
+        create a new message before sending is actually tried.
+        This is to avoid a race condition (and duplicate data sent) in environments when remote peer download
+        speed is comparable to Dynamo+S3 read time. (e.g. inter AWS peers).
       */
       if (newBlock) {
         if (!message.addBlock(newBlock, context.protocol)) {
-          await sendMessage(context, message)
+          const toSend = message.encode(context.protocol)
           message = createEmptyMessage([newBlock])
+          await sendMessage(context, toSend)
         }
       } else if (newPresence) {
         if (!message.addBlockPresence(newPresence, context.protocol)) {
-          await sendMessage(context, message)
+          const toSend = message.encode(context.protocol)
           message = createEmptyMessage([], [newPresence])
+          await sendMessage(context, toSend)
         }
       }
     },
@@ -145,7 +152,7 @@ async function processWantlist(wantlist, context) {
 
   // Once we have processed all blocks, see if there is anything else to send
   if (message.blocks.length || message.blockPresences.length) {
-    await sendMessage(context, message)
+    await sendMessage(context, message.encode(context.protocol))
   }
 
   if (context.connection) {

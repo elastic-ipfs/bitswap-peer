@@ -23,12 +23,12 @@ jobs:
           key: node-modules-${{ hashFiles('package.json') }}
       - name: Install dependencies
         run: |
+          mkdir yq && wget https://github.com/mikefarah/yq/releases/download/v4.21.1/yq_linux_amd64.tar.gz -O - | tar xz -C yq && sudo mv yq/yq_linux_amd64 /usr/bin/yq
           echo IMAGE_REPOSITORY=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]') >> $GITHUB_ENV
-          echo PACKAGE_VERSION=$(cat package.json | jq -r '.version') >> $GITHUB_ENV
+          echo PACKAGE_VERSION=$(yq .version package.json) >> $GITHUB_ENV
           echo BUILD_DATE=$(date +%Y%m%d.%H%M) >> $GITHUB_ENV
           npm install
-          npm install -g dotenv-cli
-          dotenv -e $GITHUB_ENV -- yq -i ".version = \"$PACKAGE_VERSION-$BUILD-DATE\"" metrics.yml
+          PACKAGE_VERSION=$(yq .version package.json) BUILD_DATE=$(date +%Y%m%d.%H%M) yq -i ".version = \"$PACKAGE_VERSION-$BUILD_DATE\"" metrics.yml
       - name: Lint code
         run: npm run lint
       - name: Set up Docker Buildx

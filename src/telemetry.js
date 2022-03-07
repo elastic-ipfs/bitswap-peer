@@ -77,12 +77,13 @@ class Aggregator {
 
 class Telemetry {
   constructor() {
-    const { component, metrics, version } = load(readFileSync(join(process.cwd(), 'metrics.yml'), 'utf-8'))
+    const { component, metrics, version, buildDate } = load(readFileSync(join(process.cwd(), 'metrics.yml'), 'utf-8'))
 
     // Setup
     this.component = component
     this.logger = logger
-    this.version = version ?? 'development'
+    /* c8 ignore next */
+    this.version = version && buildDate ? `${version}-build.${buildDate}` : 'development'
 
     // Create metrics
     this.metrics = new Map()

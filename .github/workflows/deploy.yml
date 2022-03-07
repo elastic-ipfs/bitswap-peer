@@ -55,6 +55,7 @@ jobs:
         with:
           repository: web3-storage/ipfs-elastic-provider-bitswap-peer-deployment
           path: deployment
+          token: ${{ secrets.DEPLOYMENT_PERSONAL_ACCESS_TOKEN }}
       - name: Deploy new image
         run: |
           cd deployment

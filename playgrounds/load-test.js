@@ -11,7 +11,7 @@ const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
 const { CID } = require('multiformats/cid')
 const { sha256 } = require('multiformats/hashes/sha2')
-const { join, basename } = require('path')
+const { join, basename, resolve } = require('path')
 
 const { logger, serializeError } = require('../src/logging')
 const { Connection } = require('../src/networking')
@@ -118,8 +118,8 @@ async function client() {
   }
 
   // Parse the configuration
-  const configurationFile = join(process.cwd(), process.argv[2])
-  const configuration = load(readFileSync(join(process.cwd(), process.argv[2]), 'utf-8'))
+  const configurationFile = resolve(process.cwd(), process.argv[2])
+  const configuration = load(readFileSync(configurationFile, 'utf-8'))
   const cids = new Set(configuration.cids)
 
   const node = await libp2p.create({

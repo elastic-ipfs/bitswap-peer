@@ -3,7 +3,7 @@
 'use strict'
 
 const { NOISE } = require('@chainsafe/libp2p-noise')
-const { readFileSync } = require('fs')
+const { readFileSync, writeFileSync } = require('fs')
 const { load } = require('js-yaml')
 const { build: buildHistogram } = require('hdr-histogram-js')
 const libp2p = require('libp2p')
@@ -11,7 +11,7 @@ const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
 const { CID } = require('multiformats/cid')
 const { sha256 } = require('multiformats/hashes/sha2')
-const { join } = require('path')
+const { join, basename } = require('path')
 
 const { logger, serializeError } = require('../src/logging')
 const { Connection } = require('../src/networking')
@@ -41,23 +41,26 @@ function finalizeResults(blocks, context) {
 
   const { minNonZeroValue: min, maxValue: max, mean, stdDeviation: stdDev, totalCount: count } = histogram
 
-  logger.info(
-    {
-      results: {
-        count,
-        min,
-        max,
-        mean,
-        stdDev,
-        stdError: stdDev / Math.sqrt(count),
-        percentiles: percentiles.reduce((accu, percentile) => {
-          accu[percentile] = histogram.getValueAtPercentile(percentile)
-          return accu
-        }, {})
-      }
-    },
-    `All blocks received in ${Number(process.hrtime.bigint() - context.start) / 1e6} ms.`
+  const results = {
+    count,
+    min,
+    max,
+    mean,
+    stdDev,
+    stdError: stdDev / Math.sqrt(count),
+    percentiles: percentiles.reduce((accu, percentile) => {
+      accu[percentile] = histogram.getValueAtPercentile(percentile)
+      return accu
+    }, {})
+  }
+
+  writeFileSync(
+    join(process.cwd(), `load-test-${basename(context.configurationFile, '.yml')}-${Date.now}.json`),
+    JSON.stringify({ configurationFile: context.configurationFile, results }, null, 2),
+    'utf-8'
   )
+
+  logger.info({ results }, `All blocks received in ${Number(process.hrtime.bigint() - context.start) / 1e6} ms.`)
 }
 
 function handleResponse(context) {
@@ -115,6 +118,7 @@ async function client() {
   }
 
   // Parse the configuration
+  const configurationFile = join(process.cwd(), process.argv[2])
   const configuration = load(readFileSync(join(process.cwd(), process.argv[2]), 'utf-8'))
   const cids = new Set(configuration.cids)
 
@@ -137,7 +141,14 @@ async function client() {
   const { stream, protocol } = await dialConnection.newStream(protocols)
   const duplex = new Connection(stream)
 
-  const responseContext = { node, start: 0, cids, verify: configuration.verify ?? process.env.VERIFY === 'true' }
+  const responseContext = {
+    configurationFile,
+    node,
+    start: 0,
+    cids,
+    verify: configuration.verify ?? process.env.VERIFY === 'true'
+  }
+
   handleResponse(responseContext)
 
   // Send the only request

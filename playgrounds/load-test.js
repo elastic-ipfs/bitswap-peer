@@ -11,7 +11,7 @@ const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
 const { CID } = require('multiformats/cid')
 const { sha256 } = require('multiformats/hashes/sha2')
-const { join, basename, resolve } = require('path')
+const { resolve } = require('path')
 
 const { logger, serializeError } = require('../src/logging')
 const { Connection } = require('../src/networking')
@@ -55,7 +55,7 @@ function finalizeResults(blocks, context) {
   }
 
   writeFileSync(
-    join(process.cwd(), `load-test-${basename(context.configurationFile, '.yml')}-${Date.now}.json`),
+    context.outputFile,
     JSON.stringify({ configurationFile: context.configurationFile, results }, null, 2),
     'utf-8'
   )
@@ -143,6 +143,7 @@ async function client() {
 
   const responseContext = {
     configurationFile,
+    outputFile: resolve(process.cwd(), process.argv[3]),
     node,
     start: 0,
     cids,

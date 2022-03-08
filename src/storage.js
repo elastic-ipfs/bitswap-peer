@@ -7,10 +7,11 @@ const { marshall: serializeDynamoItem, unmarshall: deserializeDynamoItem } = req
 const { BufferList } = require('bl')
 const { Agent } = require('https')
 const { base58btc: base58 } = require('multiformats/bases/base58')
+const { concurrency } = require('./config')
 const { logger, serializeError } = require('./logging')
 const telemetry = require('./telemetry')
 
-const agent = new Agent({ keepAlive: true, keepAliveMsecs: 60000 })
+const agent = new Agent({ keepAlive: true, keepAliveMsecs: 60000, maxTotalSockets: concurrency })
 
 const dynamoClient = new DynamoDBClient({
   requestHandler: new NodeHttpHandler({ httpsAgent: agent })

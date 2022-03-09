@@ -68,13 +68,14 @@ async function fetchBlock(cid) {
 
 async function sendMessage(context, encodedMessage) {
   if (!context.connection) {
+    telemetry.increaseCount('bitswap-total-connections')
+    telemetry.increaseCount('bitswap-active-connections')
+
     const dialConnection = await context.service.dial(context.peer)
     const { stream } = await dialConnection.newStream(context.protocol)
     context.connection = new Connection(stream)
   }
 
-  telemetry.increaseCount('bitswap-total-connections')
-  telemetry.increaseCount('bitswap-active-connections')
   context.connection.send(encodedMessage)
 }
 

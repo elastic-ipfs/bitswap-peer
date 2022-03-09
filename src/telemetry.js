@@ -60,10 +60,9 @@ class Aggregator {
               mean,
               stdDev,
               stdError: stdDev / Math.sqrt(count),
-              percentiles: percentiles.reduce((accu, percentile) => {
-                accu[percentile] = this.histogram.getValueAtPercentile(percentile)
-                return accu
-              }, {})
+              percentiles: Object.fromEntries(
+                percentiles.map(percentile => [percentile, this.histogram.getValueAtPercentile(percentile)])
+              )
             }
           : undefined,
       timestamp: Date.now()
@@ -160,8 +159,9 @@ class Telemetry {
         output += `${metric.exportName}_count ${current.histogram.count} ${timestamp}\n`
         output += `${metric.exportName}_sum ${current.sum} ${timestamp}\n`
 
-        for (const [bucket, bucketValue] of Object.entries(current.histogram.percentiles)) {
-          output += `${metric.exportName}_bucket{le="${bucket}"} ${bucketValue} ${timestamp}\n`
+        const percentilesValues = current.histogram.percentiles
+        for (const percentile of percentiles) {
+          output += `${metric.exportName}_bucket{le="${percentile}"} ${percentilesValues[percentile]} ${timestamp}\n`
         }
       } else {
         output += `${metric.exportName} ${current.sum} ${timestamp}\n`

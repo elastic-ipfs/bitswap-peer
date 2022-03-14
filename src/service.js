@@ -20,7 +20,7 @@ const {
   emptyWantList,
   maxBlockSize
 } = require('./protocol')
-const { cidToKey, fetchS3Object, readDynamoItem } = require('./storage')
+const { cidToKey, fetchBlockFromS3, searchCarInDynamo } = require('./storage')
 const telemetry = require('./telemetry')
 
 const blocksCache = new LRUCache(1e6)
@@ -38,7 +38,7 @@ async function getBlockInfo(cid) {
   }
 
   telemetry.increaseCount('dynamo-reads')
-  const item = await telemetry.trackDuration('dynamo-reads', readDynamoItem(blocksTable, primaryKeys.blocks, key))
+  const item = await telemetry.trackDuration('dynamo-reads', searchCarInDynamo(blocksTable, primaryKeys.blocks, key))
 
   if (item) {
     blocksCache.set(key, item)
@@ -54,7 +54,7 @@ async function fetchBlock(cid) {
     return null
   }
 
-  const { offset, length, car } = info.cars[0]
+  const { offset, length, car } = info
 
   if (length > maxBlockSize) {
     return null
@@ -64,7 +64,7 @@ async function fetchBlock(cid) {
   const bucket = car.slice(0, separator)
   const key = car.slice(separator + 1)
 
-  return fetchS3Object(bucket, key, offset, length)
+  return fetchBlockFromS3(bucket, key, offset, length)
 }
 
 async function sendMessage(context, encodedMessage) {

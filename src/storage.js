@@ -16,6 +16,7 @@ const unsignedPayload = 'UNSIGNED-PAYLOAD'
 const region = process.env.AWS_REGION
 let keyId = ''
 let accessKey = ''
+let sessionToken = ''
 
 const dynamoClient = new Pool(`https://dynamodb.${region}.amazonaws.com/`, {
   keepAliveTimeout: 60000,
@@ -83,6 +84,7 @@ async function refreshAwsCredentials(role) {
   const response = xml2js(buffer.slice().toString('utf-8'), { compact: true }).AssumeRoleWithWebIdentityResponse
   keyId = response.AssumeRoleWithWebIdentityResult.Credentials.AccessKeyId._text
   accessKey = response.AssumeRoleWithWebIdentityResult.Credentials.SecretAccessKey._text
+  sessionToken = response.AssumeRoleWithWebIdentityResult.Credentials.SessionToken._text
 }
 
 // TODO@PI: Shall we add a LRU?
@@ -98,6 +100,10 @@ function getAWSSignedHeaders(service, method, rawUrl, additionalHeaders = {}, pa
       .replace(/[:-]/g, ''),
     host: url.host,
     ...additionalHeaders
+  }
+
+  if (sessionToken) {
+    headers['x-amz-security-token'] = sessionToken
   }
 
   if (!payload) {

@@ -158,18 +158,18 @@ c2_active_count 2 now
 # TYPE c3_durations histogram
 c3_durations_count 1 now
 c3_durations_sum 3 now
+c3_durations_bucket{le="0.001"} 3 now
+c3_durations_bucket{le="0.01"} 3 now
+c3_durations_bucket{le="0.1"} 3 now
 c3_durations_bucket{le="1"} 3 now
+c3_durations_bucket{le="2.5"} 3 now
 c3_durations_bucket{le="10"} 3 now
 c3_durations_bucket{le="25"} 3 now
 c3_durations_bucket{le="50"} 3 now
 c3_durations_bucket{le="75"} 3 now
 c3_durations_bucket{le="90"} 3 now
-c3_durations_bucket{le="99"} 3 now
-c3_durations_bucket{le="0.001"} 3 now
-c3_durations_bucket{le="0.01"} 3 now
-c3_durations_bucket{le="0.1"} 3 now
-c3_durations_bucket{le="2.5"} 3 now
 c3_durations_bucket{le="97.5"} 3 now
+c3_durations_bucket{le="99"} 3 now
 c3_durations_bucket{le="99.9"} 3 now
 c3_durations_bucket{le="99.99"} 3 now
 c3_durations_bucket{le="99.999"} 3 now

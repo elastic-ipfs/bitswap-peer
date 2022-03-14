@@ -44,6 +44,7 @@ async function getPeerId() {
 
 const concurrency = parseInt(rawConcurrency)
 const port = parseInt(rawPort)
+const telemetryPort = parseInt(rawTelemetryPort)
 
 module.exports = {
   blocksTable: blocksTable ?? 'blocks',
@@ -57,5 +58,5 @@ module.exports = {
     cars: 'path'
   },
   port: !isNaN(port) && port > 0 ? port : 3000,
-  telemetryPort: !isNaN(rawTelemetryPort) && rawTelemetryPort > 0 ? rawTelemetryPort : 3001
+  telemetryPort: !isNaN(telemetryPort) && telemetryPort > 0 ? telemetryPort : 3001
 }

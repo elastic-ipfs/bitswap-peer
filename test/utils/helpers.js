@@ -1,6 +1,6 @@
 'use strict'
 
-const { NOISE } = require('@chainsafe/libp2p-noise')
+const { Noise } = require('@web3-storage/libp2p-noise')
 const dagPB = require('@ipld/dag-pb')
 const { EventEmitter } = require('events')
 const libp2p = require('libp2p')
@@ -10,9 +10,10 @@ const { CID } = require('multiformats/cid')
 const { equals } = require('multiformats/hashes/digest')
 const { sha256 } = require('multiformats/hashes/sha2')
 const getPort = require('get-port')
-const { startService } = require('../../src/service')
-const { RawMessage, Message } = require('../../src/protocol')
 const { Connection } = require('../../src/networking')
+const noiseCrypto = require('../../src/noise-crypto')
+const { RawMessage, Message } = require('../../src/protocol')
+const { startService } = require('../../src/service')
 
 // cid1 and cid2 exists, the other two don't, cid1 is a raw block, cid2 is a dag-pb
 const cid1 = CID.parse('bafkreifiqpnpysanizxoatqnnwuynply5mp52ily2bdjg4r5uoupsxkc6q')
@@ -36,7 +37,7 @@ async function createClient(peerId, port, protocol) {
     modules: {
       transport: [Websockets],
       streamMuxer: [Multiplex],
-      connEncryption: [NOISE]
+      connEncryption: [new Noise(null, null, noiseCrypto)]
     }
   })
 

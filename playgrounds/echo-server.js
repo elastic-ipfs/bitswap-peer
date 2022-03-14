@@ -2,7 +2,7 @@
 
 'use strict'
 
-const { NOISE } = require('@chainsafe/libp2p-noise')
+const { Noise } = require('@web3-storage/libp2p-noise')
 const libp2p = require('libp2p')
 const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
@@ -10,6 +10,7 @@ const Websockets = require('libp2p-websockets')
 const { getPeerId, port } = require('../src/config')
 const { logger } = require('../src/logging')
 const { Connection } = require('../src/networking')
+const noiseCrypto = require('../src/noise-crypto')
 
 async function startServer() {
   const peerId = await getPeerId()
@@ -22,7 +23,7 @@ async function startServer() {
     modules: {
       transport: [Websockets],
       streamMuxer: [Multiplex],
-      connEncryption: [NOISE]
+      connEncryption: [new Noise(null, null, noiseCrypto)]
     }
   })
 

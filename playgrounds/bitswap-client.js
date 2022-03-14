@@ -2,16 +2,16 @@
 
 'use strict'
 
-const { NOISE } = require('@chainsafe/libp2p-noise')
+const { Noise } = require('@web3-storage/libp2p-noise')
 const { readFileSync } = require('fs')
 const libp2p = require('libp2p')
 const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
 const { CID } = require('multiformats/cid')
 
-const { getPeerId, port } = require('../src/config')
 const { logger, serializeError } = require('../src/logging')
 const { Connection } = require('../src/networking')
+const noiseCrypto = require('../src/noise-crypto')
 const { protocols, Entry, Message, WantList } = require('../src/protocol')
 
 const durationUnits = {
@@ -32,18 +32,17 @@ function elapsed(startTime, precision = 3, unit = 'milliseconds') {
 
 async function client() {
   let start = process.hrtime.bigint()
-  const peerId = await getPeerId()
 
   const node = await libp2p.create({
     modules: {
       transport: [Websockets],
       streamMuxer: [Multiplex],
-      connEncryption: [NOISE]
+      connEncryption: [new Noise(null, null, noiseCrypto)]
     }
   })
 
   // Connect to the BitSwap peer
-  const multiaddr = `/dns4/${process.argv[2]}/tcp/${port}/ws/p2p/${peerId}`
+  const multiaddr = process.argv[2]
   logger.info(`Connecting to ${multiaddr} ...`)
   const dialConnection = await node.dial(multiaddr)
   logger.info(`Connected in ${elapsed(start)} ms.`)

@@ -1,6 +1,6 @@
 'use strict'
 
-const { NOISE } = require('@chainsafe/libp2p-noise')
+const { Noise } = require('@web3-storage/libp2p-noise')
 const libp2p = require('libp2p')
 const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
@@ -8,6 +8,8 @@ const LRUCache = require('mnemonist/lru-cache')
 const pMap = require('p-map')
 const { cacheBlocksInfo, concurrency, blocksTable, getPeerId, primaryKeys, port } = require('./config')
 const { logger, serializeError } = require('./logging')
+const { Connection } = require('./networking')
+const noiseCrypto = require('./noise-crypto')
 const {
   BITSWAP_V_120,
   Block,
@@ -18,7 +20,6 @@ const {
   emptyWantList,
   maxBlockSize
 } = require('./protocol')
-const { Connection } = require('./networking')
 const { cidToKey, fetchS3Object, readDynamoItem } = require('./storage')
 const telemetry = require('./telemetry')
 
@@ -177,7 +178,7 @@ async function startService(currentPort) {
     modules: {
       transport: [Websockets],
       streamMuxer: [Multiplex],
-      connEncryption: [NOISE]
+      connEncryption: [new Noise(null, null, noiseCrypto)]
     }
   })
 

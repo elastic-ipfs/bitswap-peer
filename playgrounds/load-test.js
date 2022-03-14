@@ -2,7 +2,7 @@
 
 'use strict'
 
-const { NOISE } = require('@chainsafe/libp2p-noise')
+const { Noise } = require('@web3-storage/libp2p-noise')
 const { readFileSync, writeFileSync } = require('fs')
 const { load } = require('js-yaml')
 const { build: buildHistogram } = require('hdr-histogram-js')
@@ -13,8 +13,9 @@ const { CID } = require('multiformats/cid')
 const { sha256 } = require('multiformats/hashes/sha2')
 const { resolve } = require('path')
 
-const { logger, serializeError } = require('../src/logging')
 const { Connection } = require('../src/networking')
+const noiseCrypto = require('../src/noise-crypto')
+const { logger, serializeError } = require('../src/logging')
 const { protocols, Entry, Message, WantList, BlockPresence } = require('../src/protocol')
 
 const percentiles = [0.001, 0.01, 0.1, 1, 2.5, 10, 25, 50, 75, 90, 97.5, 99, 99.9, 99.99, 99.999]
@@ -126,7 +127,7 @@ async function client() {
     modules: {
       transport: [Websockets],
       streamMuxer: [Multiplex],
-      connEncryption: [NOISE]
+      connEncryption: [new Noise(null, null, noiseCrypto)]
     }
   })
 
@@ -143,7 +144,7 @@ async function client() {
 
   const responseContext = {
     configurationFile,
-    outputFile: resolve(process.cwd(), process.argv[3]),
+    outputFile: resolve(process.cwd(), process.argv[3] ?? 'result.json'),
     node,
     start: 0,
     cids,

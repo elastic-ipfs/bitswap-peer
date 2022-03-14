@@ -8,7 +8,7 @@ const { readFile, writeFile } = require('fs/promises')
 require('dotenv').config({ path: process.env.ENV_FILE_PATH || resolve(process.cwd(), '.env') })
 
 const { logger } = require('./logging')
-const { fetchS3Object } = require('./storage')
+const { fetchBlockFromS3 } = require('./storage')
 
 const {
   CACHE_BLOCKS_INFO: cacheBlocksInfo,
@@ -25,7 +25,7 @@ async function downloadPeerIdFile() {
   const file = peerIdJsonFile ?? 'peerId.json'
   logger.info(`Downloading PeerId from s3://${process.env.PEER_ID_S3_BUCKET}/${file}`)
 
-  const contents = await fetchS3Object(process.env.PEER_ID_S3_BUCKET, file)
+  const contents = await fetchBlockFromS3(process.env.PEER_ID_S3_BUCKET, file)
   return writeFile(module.exports.peerIdJsonPath, contents)
 }
 

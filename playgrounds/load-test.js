@@ -19,6 +19,7 @@ const { logger, serializeError } = require('../src/logging')
 const { protocols, Entry, Message, WantList, BlockPresence } = require('../src/protocol')
 
 const percentiles = [0.001, 0.01, 0.1, 1, 2.5, 10, 25, 50, 75, 90, 97.5, 99, 99.9, 99.99, 99.999]
+let iterationsLeft = process.env.ITERATIONS ? Number.parseInt(process.env.ITERATIONS, 10) : 1
 
 function finalizeResults(blocks, context) {
   const histogram = buildHistogram({
@@ -62,6 +63,12 @@ function finalizeResults(blocks, context) {
   )
 
   logger.info({ results }, `All blocks received in ${Number(process.hrtime.bigint() - context.start) / 1e6} ms.`)
+
+  iterationsLeft--
+  if (iterationsLeft > 0) {
+    logger.info('Starting another iteration ...')
+    client()
+  }
 }
 
 function handleResponse(context) {

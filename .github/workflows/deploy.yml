@@ -28,7 +28,7 @@ jobs:
           echo IMAGE_REPOSITORY=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]') >> $GITHUB_ENV
           echo PACKAGE_VERSION=$(yq .version metrics.yml) >> $GITHUB_ENV
           echo BUILD_DATE=$(yq .buildDate metrics.yml) >> $GITHUB_ENV
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.DEPLOYMENT_PERSONAL_ACCESS_TOKEN }}" >> .npmrc
           npm install
       - name: Lint code
         run: npm run lint

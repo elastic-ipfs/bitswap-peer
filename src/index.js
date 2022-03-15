@@ -11,10 +11,12 @@ const telemetry = require('./telemetry')
 async function boot() {
   try {
     await ensureAwsCredentials()
-    await Promise.all([startService(), telemetry.startServer(telemetryPort)])
+    await telemetry.startServer(telemetryPort)
   } catch (error) {
     logger.error(error)
   }
 }
 
 boot()
+  .then(() => startService())
+  .catch(logger.error.bind(logger))

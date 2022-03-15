@@ -7,9 +7,9 @@ const { base58btc: base58 } = require('multiformats/bases/base58')
 const { resolve } = require('path')
 const { Pool, request } = require('undici')
 const { xml2js } = require('xml-js')
+const { concurrency, pipelining } = require('./config')
 const { logger, serializeError } = require('./logging')
 const telemetry = require('./telemetry')
-const { concurrency } = require('./config')
 
 // Setup AWS credentials handling
 const unsignedPayload = 'UNSIGNED-PAYLOAD'
@@ -20,11 +20,13 @@ let sessionToken = ''
 
 const dynamoClient = new Pool(`https://dynamodb.${region}.amazonaws.com/`, {
   keepAliveTimeout: 60000,
-  connections: concurrency
+  connections: concurrency,
+  pipelining: pipelining
 })
 const s3Client = new Pool(`https://s3.${region}.amazonaws.com/`, {
   keepAliveTimeout: 60000,
-  connections: concurrency
+  connections: concurrency,
+  pipelining: pipelining
 })
 
 function sha256(contents) {

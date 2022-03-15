@@ -5,11 +5,11 @@ const libp2p = require('libp2p')
 const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
 const LRUCache = require('mnemonist/lru-cache')
-const pMap = require('p-map')
-const { cacheBlocksInfo, concurrency, blocksTable, getPeerId, primaryKeys, port } = require('./config')
+const { cacheBlocksInfo, blocksTable, primaryKeys, port } = require('./config')
 const { logger, serializeError } = require('./logging')
 const { Connection } = require('./networking')
 const noiseCrypto = require('./noise-crypto')
+const getPeerId = require('../src/peer-id')
 const {
   BITSWAP_V_120,
   Block,
@@ -80,87 +80,109 @@ async function sendMessage(context, encodedMessage) {
   context.connection.send(encodedMessage)
 }
 
-async function processWantlist(wantlist, context) {
-  let message = createEmptyMessage()
-  telemetry.increaseCount('bitswap-total-entries', wantlist.entries.length)
-  telemetry.increaseCount('bitswap-pending-entries', wantlist.entries.length)
-
-  // For each entry in the list
-  await pMap(
-    wantlist.entries,
-    async entry => {
-      // We don't care about canceling wantlist since we don't maintain state
-      if (entry.cancel) {
-        return
-      }
-
-      let newBlock
-      let newPresence
-
-      if (entry.wantType === Entry.WantType.Block) {
-        // Fetch the block and eventually append to the list of blocks
-        const raw = await fetchBlock(entry.cid)
-
-        if (raw) {
-          telemetry.increaseCount('bitswap-block-hits')
-          telemetry.increaseCount('bitswap-sent-data', raw.length)
-          newBlock = new Block(entry.cid, raw)
-        } else if (entry.sendDontHave && context.protocol === BITSWAP_V_120) {
-          telemetry.increaseCount('bitswap-block-misses')
-          newPresence = new BlockPresence(entry.cid, BlockPresence.Type.DontHave)
-        }
-      } else if (entry.wantType === Entry.WantType.Have && context.protocol === BITSWAP_V_120) {
-        // Check if we have the block
-        const existing = await getBlockInfo(entry.cid)
-
-        if (existing) {
-          telemetry.increaseCount('bitswap-block-hits')
-          newPresence = new BlockPresence(entry.cid, BlockPresence.Type.Have)
-        } else if (entry.sendDontHave) {
-          telemetry.increaseCount('bitswap-block-misses')
-          newPresence = new BlockPresence(entry.cid, BlockPresence.Type.DontHave)
-        }
-      }
-
-      /*
-        In the if-else below, addBlock and addPresence returns false if adding
-        the element would make the serialized message exceed the maximum allowed size.
-
-        In that case, we send the message without the new element and prepare a new message.
-
-        The reason why don't encode the message to send in sendMessage is because we need to
-        create a new message before sending is actually tried.
-        This is to avoid a race condition (and duplicate data sent) in environments when remote peer download
-        speed is comparable to Dynamo+S3 read time. (e.g. inter AWS peers).
-      */
-      if (newBlock) {
-        if (!message.addBlock(newBlock, context.protocol)) {
-          const toSend = message.encode(context.protocol)
-          message = createEmptyMessage([newBlock])
-          await sendMessage(context, toSend)
-        }
-      } else if (newPresence) {
-        if (!message.addBlockPresence(newPresence, context.protocol)) {
-          const toSend = message.encode(context.protocol)
-          message = createEmptyMessage([], [newPresence])
-          await sendMessage(context, toSend)
-        }
-      }
-    },
-    { concurrency }
-  )
-
-  telemetry.decreaseCount('bitswap-pending-entries', wantlist.entries.length)
+async function finalizeWantlist(context) {
+  telemetry.decreaseCount('bitswap-pending-entries', context.total)
 
   // Once we have processed all blocks, see if there is anything else to send
-  if (message.blocks.length || message.blockPresences.length) {
-    await sendMessage(context, message.encode(context.protocol))
+  if (context.message.blocks.length || context.message.blockPresences.length) {
+    await sendMessage(context, context.message.encode(context.protocol))
   }
 
   if (context.connection) {
     telemetry.decreaseCount('bitswap-active-connections')
     await context.connection.close()
   }
+}
+
+async function processEntry(entry, context) {
+  try {
+    let newBlock
+    let newPresence
+
+    if (entry.wantType === Entry.WantType.Block) {
+      // Fetch the block and eventually append to the list of blocks
+      const raw = await fetchBlock(entry.cid)
+
+      if (raw) {
+        telemetry.increaseCount('bitswap-block-hits')
+        telemetry.increaseCount('bitswap-sent-data', raw.length)
+        newBlock = new Block(entry.cid, raw)
+      } else if (entry.sendDontHave && context.protocol === BITSWAP_V_120) {
+        telemetry.increaseCount('bitswap-block-misses')
+        newPresence = new BlockPresence(entry.cid, BlockPresence.Type.DontHave)
+      }
+    } else if (entry.wantType === Entry.WantType.Have && context.protocol === BITSWAP_V_120) {
+      // Check if we have the block
+      const existing = await getBlockInfo(entry.cid)
+
+      if (existing) {
+        telemetry.increaseCount('bitswap-block-hits')
+        newPresence = new BlockPresence(entry.cid, BlockPresence.Type.Have)
+      } else if (entry.sendDontHave) {
+        telemetry.increaseCount('bitswap-block-misses')
+        newPresence = new BlockPresence(entry.cid, BlockPresence.Type.DontHave)
+      }
+    }
+
+    /*
+    In the if-else below, addBlock and addPresence returns false if adding
+    the element would make the serialized message exceed the maximum allowed size.
+
+    In that case, we send the message without the new element and prepare a new message.
+
+    The reason why don't encode the message to send in sendMessage is because we need to
+    create a new message before sending is actually tried.
+    This is to avoid a race condition (and duplicate data sent) in environments when remote peer download
+    speed is comparable to Dynamo+S3 read time. (e.g. inter AWS peers).
+  */
+    if (newBlock) {
+      if (!context.message.addBlock(newBlock, context.protocol)) {
+        const toSend = context.message.encode(context.protocol)
+        context.message = createEmptyMessage([newBlock])
+        await sendMessage(context, toSend)
+      }
+    } else if (newPresence) {
+      if (!context.message.addBlockPresence(newPresence, context.protocol)) {
+        const toSend = context.message.encode(context.protocol)
+        context.message = createEmptyMessage([], [newPresence])
+        await sendMessage(context, toSend)
+      }
+    }
+
+    context.pending--
+
+    if (context.pending === 0) {
+      await finalizeWantlist(context)
+    }
+  } catch (error) {
+    logger.error({ error }, `Cannot process an entry: ${serializeError(error)}`)
+  }
+}
+
+function processWantlist(context) {
+  if (!context.wantlist.entries.length) {
+    return
+  }
+
+  // Every tick we schedule up to 100 entries, this is not to block the Event Loop too long
+  const batch = context.wantlist.entries.splice(0, 100)
+
+  for (let i = 0, length = batch.length; i < length; i++) {
+    if (batch[i].cancel) {
+      context.pending--
+      continue
+    }
+
+    processEntry(batch[i], context)
+  }
+
+  // The list only contains cancels
+  if (context.pending === 0) {
+    finalizeWantlist(context)
+    return
+  }
+
+  process.nextTick(processWantlist, context)
 }
 
 async function startService(currentPort) {
@@ -197,7 +219,20 @@ async function startService(currentPort) {
         return
       }
 
-      processWantlist(message.wantlist, { service, peer: dial.remotePeer, protocol })
+      const entries = message.wantlist.entries.length
+      const context = {
+        wantlist: message.wantlist,
+        service,
+        peer: dial.remotePeer,
+        protocol,
+        message: createEmptyMessage(),
+        total: entries,
+        pending: entries
+      }
+
+      telemetry.increaseCount('bitswap-total-entries', context.total)
+      telemetry.increaseCount('bitswap-pending-entries', context.total)
+      process.nextTick(processWantlist, context)
     })
 
     /* c8 ignore next 4 */

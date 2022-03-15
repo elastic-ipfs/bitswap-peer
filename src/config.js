@@ -1,14 +1,9 @@
 'use strict'
 
 const { join, resolve } = require('path')
-const PeerId = require('peer-id')
-const { readFile, writeFile } = require('fs/promises')
 
 /* c8 ignore next */
 require('dotenv').config({ path: process.env.ENV_FILE_PATH || resolve(process.cwd(), '.env') })
-
-const { logger } = require('./logging')
-const { fetchBlockFromS3 } = require('./storage')
 
 const {
   CACHE_BLOCKS_INFO: cacheBlocksInfo,
@@ -17,32 +12,13 @@ const {
   DYNAMO_CARS_TABLE: carsTable,
   PEER_ID_DIRECTORY: peerIdJsonDirectory,
   PEER_ID_FILE: peerIdJsonFile,
+  PIPELINING: rawPipelining,
   PORT: rawPort,
   TELEMETRY_PORT: rawTelemetryPort
 } = process.env
 
-async function downloadPeerIdFile() {
-  const file = peerIdJsonFile ?? 'peerId.json'
-  logger.info(`Downloading PeerId from s3://${process.env.PEER_ID_S3_BUCKET}/${file}`)
-
-  const contents = await fetchBlockFromS3(process.env.PEER_ID_S3_BUCKET, file)
-  return writeFile(module.exports.peerIdJsonPath, contents)
-}
-
-async function getPeerId() {
-  if (process.env.PEER_ID_S3_BUCKET) {
-    await downloadPeerIdFile()
-  }
-
-  try {
-    const peerIdJson = JSON.parse(await readFile(module.exports.peerIdJsonPath, 'utf-8'))
-    return await PeerId.createFromJSON(peerIdJson)
-  } catch (e) {
-    return PeerId.create()
-  }
-}
-
 const concurrency = parseInt(rawConcurrency)
+const pipelining = parseInt(rawPipelining)
 const port = parseInt(rawPort)
 const telemetryPort = parseInt(rawTelemetryPort)
 
@@ -50,9 +26,10 @@ module.exports = {
   blocksTable: blocksTable ?? 'blocks',
   cacheBlocksInfo: cacheBlocksInfo !== 'false',
   carsTable: carsTable ?? 'cars',
-  concurrency: !isNaN(concurrency) && concurrency > 0 ? concurrency : 16,
-  getPeerId,
+  concurrency: !isNaN(concurrency) && concurrency > 0 ? concurrency : 128,
+  peerIdJsonFile,
   peerIdJsonPath: join(peerIdJsonDirectory ?? '/tmp', peerIdJsonFile ?? 'peerId.json'),
+  pipelining: !isNaN(pipelining) && pipelining > 0 ? pipelining : 16,
   primaryKeys: {
     blocks: 'multihash',
     cars: 'path'

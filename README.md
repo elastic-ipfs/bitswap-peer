@@ -10,7 +10,7 @@ _Variables in bold are required._
 | AWS_REGION            |               | The AWS region.                                                          |
 | AWS_SECRET_ACCESS_KEY |               | The AWS access key.                                                      |
 | CACHE_BLOCKS_INFO     | `false`       | Set to `true` to cache block informations with in a in-memory LRU cache. |
-| CONCURRENCY           | `16`          | The maximum concurrency when searching CIDs.                             |
+| CONCURRENCY           | `128`         | The maximum concurrency when searching CIDs.                             |
 | DYNAMO_BLOCKS_TABLE   | `blocks`      | The DynamoDB table where store CIDs informations to.                     |
 | DYNAMO_CARS_TABLE     | `cars`        | The DynamoDB table where store CAR files informations to.                |
 | ENV_FILE_PATH         | `$PWD/.env`   | The environment file to load.                                            |
@@ -19,5 +19,7 @@ _Variables in bold are required._
 | PEER_ID_DIRECTORY     | `/tmp`        | The directory of the file containing the BitSwap PeerID in JSON format.  |
 | PEER_ID_FILE          | `peerId.json` | The filename of the file containing the BitSwap PeerID in JSON format.   |
 | PEER_ID_S3_BUCKET     |               | The S3 bucket to download the BitSwap PeerID in JSON format.             |
-| PORT                  | `3000`        | The port number to listen on.                                            |
-| TELEMETRY_PORT        | `3001`        | The telemetry port number for the OpenTelemetry server to listen on.     |
+| PIPELINING            | `16`          | The maximum request to pipeline in a single HTTP connections in AWS.     |
+
+| PORT | `3000` | The port number to listen on. |
+| TELEMETRY_PORT | `3001` | The telemetry port number for the OpenTelemetry server to listen on. |

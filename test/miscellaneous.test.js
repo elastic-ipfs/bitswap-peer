@@ -13,9 +13,10 @@ const { resolve } = require('path')
 const { createFromJSON } = require('peer-id')
 const { Readable } = require('stream')
 const t = require('tap')
-const { getPeerId, concurrency, blocksTable, carsTable, port, telemetryPort } = require('../src/config')
+const { concurrency, blocksTable, carsTable, port, telemetryPort } = require('../src/config')
 const { logger, serializeError } = require('../src/logging')
 const telemetry = require('../src/telemetry')
+const getPeerId = require('../src/peer-id')
 const { s3Mock } = require('./utils/mock')
 
 t.test('config - download the peerId from S3', async t => {

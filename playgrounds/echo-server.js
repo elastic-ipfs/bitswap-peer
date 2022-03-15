@@ -7,10 +7,11 @@ const libp2p = require('libp2p')
 const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
 
-const { getPeerId, port } = require('../src/config')
+const { port } = require('../src/config')
 const { logger } = require('../src/logging')
 const { Connection } = require('../src/networking')
 const noiseCrypto = require('../src/noise-crypto')
+const getPeerId = require('../src/peer-id')
 
 async function startServer() {
   const peerId = await getPeerId()

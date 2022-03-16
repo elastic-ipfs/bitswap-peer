@@ -64,11 +64,13 @@ function finalizeResults(blocks, context) {
 
   logger.info({ results }, `All blocks received in ${Number(process.hrtime.bigint() - context.start) / 1e6} ms.`)
 
-  iterationsLeft--
-  if (iterationsLeft > 0) {
-    logger.info('Starting another iteration ...')
-    client()
-  }
+  context.node.stop().then(() => {
+    iterationsLeft--
+    if (iterationsLeft > 0) {
+      logger.info('Starting another iteration ...')
+      client()
+    }
+  })
 }
 
 function handleResponse(context) {

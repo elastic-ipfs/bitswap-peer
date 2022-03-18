@@ -190,86 +190,91 @@ function processWantlist(context) {
 }
 
 async function startService(peerId, currentPort, dispatcher) {
-  if (!peerId) {
-    peerId = await getPeerId()
-  }
-
-  if (!dispatcher) {
-    dispatcher = defaultDispatcher
-  }
-
-  if (!currentPort) {
-    currentPort = port
-  }
-
-  const service = await libp2p.create({
-    peerId,
-    addresses: {
-      listen: [`/ip4/0.0.0.0/tcp/${currentPort}/ws`]
-    },
-    modules: {
-      transport: [Websockets],
-      streamMuxer: [Multiplex],
-      connEncryption: [new Noise(null, null, noiseCrypto)]
+  try {
+    if (!peerId) {
+      peerId = await getPeerId()
     }
-  })
 
-  service.handle(protocols, async ({ connection: dial, stream, protocol }) => {
-    const connection = new Connection(stream)
+    if (!dispatcher) {
+      dispatcher = defaultDispatcher
+    }
 
-    // Open a send connection to the peer
-    connection.on('data', data => {
-      let message
+    if (!currentPort) {
+      currentPort = port
+    }
 
-      try {
-        message = Message.decode(data, protocol)
-      } catch (error) {
-        logger.error({ error }, `Invalid data received: ${serializeError(error)}`)
-        service.emit('error:receive', error)
-        return
+    const service = await libp2p.create({
+      peerId,
+      addresses: {
+        listen: [`/ip4/0.0.0.0/tcp/${currentPort}/ws`]
+      },
+      modules: {
+        transport: [Websockets],
+        streamMuxer: [Multiplex],
+        connEncryption: [new Noise(null, null, noiseCrypto)]
       }
-
-      const entries = message.wantlist.entries.length
-      const context = {
-        service,
-        dispatcher,
-        peer: dial.remotePeer,
-        protocol,
-        wantlist: message.wantlist,
-        total: entries,
-        pending: entries,
-        message: createEmptyMessage()
-      }
-
-      telemetry.increaseCount('bitswap-total-entries', context.total)
-      telemetry.increaseCount('bitswap-pending-entries', context.total)
-      process.nextTick(processWantlist, context)
     })
 
-    /* c8 ignore next 4 */
-    connection.on('error', error => {
-      logger.error({ error }, `Connection error: ${serializeError(error)}`)
-      service.emit('error:connection', error)
+    service.handle(protocols, async ({ connection: dial, stream, protocol }) => {
+      const connection = new Connection(stream)
+
+      // Open a send connection to the peer
+      connection.on('data', data => {
+        let message
+
+        try {
+          message = Message.decode(data, protocol)
+        } catch (error) {
+          logger.error({ error }, `Invalid data received: ${serializeError(error)}`)
+          service.emit('error:receive', error)
+          return
+        }
+
+        const entries = message.wantlist.entries.length
+        const context = {
+          service,
+          dispatcher,
+          peer: dial.remotePeer,
+          protocol,
+          wantlist: message.wantlist,
+          total: entries,
+          pending: entries,
+          message: createEmptyMessage()
+        }
+
+        telemetry.increaseCount('bitswap-total-entries', context.total)
+        telemetry.increaseCount('bitswap-pending-entries', context.total)
+        process.nextTick(processWantlist, context)
+      })
+
+      /* c8 ignore next 4 */
+      connection.on('error', error => {
+        logger.error({ error }, `Connection error: ${serializeError(error)}`)
+        service.emit('error:connection', error)
+      })
     })
-  })
 
-  service.connectionManager.on('peer:connect', connection => {
-    telemetry.increaseCount('bitswap-total-connections')
-    telemetry.increaseCount('bitswap-active-connections')
-  })
+    service.connectionManager.on('peer:connect', connection => {
+      telemetry.increaseCount('bitswap-total-connections')
+      telemetry.increaseCount('bitswap-active-connections')
+    })
 
-  service.connectionManager.on('peer:disconnect', connection => {
-    telemetry.decreaseCount('bitswap-active-connections')
-  })
+    service.connectionManager.on('peer:disconnect', connection => {
+      telemetry.decreaseCount('bitswap-active-connections')
+    })
 
-  await service.start()
+    await service.start()
 
-  logger.info(
-    { address: service.transportManager.getAddrs() },
-    `BitSwap peer started with PeerId ${service.peerId} and listening on port ${currentPort} ...`
-  )
+    logger.info(
+      { address: service.transportManager.getAddrs() },
+      `BitSwap peer started with PeerId ${service.peerId} and listening on port ${currentPort} ...`
+    )
 
-  return { service, port: currentPort, peerId }
+    return { service, port: currentPort, peerId }
+    /* c8 ignore next 3 */
+  } catch (error) {
+    logger.error(error)
+  }
 }
 
 module.exports = { startService }

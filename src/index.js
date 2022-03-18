@@ -12,11 +12,11 @@ async function boot() {
   try {
     await ensureAwsCredentials()
     await telemetry.startServer(telemetryPort)
+
+    process.nextTick(startService)
   } catch (error) {
     logger.error(error)
   }
 }
 
 boot()
-  .then(() => startService())
-  .catch(logger.error.bind(logger))

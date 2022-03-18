@@ -3,6 +3,7 @@
 const { EventEmitter } = require('events')
 const lengthPrefixedMessage = require('it-length-prefixed')
 const pipe = require('it-pipe')
+
 const { logger, serializeError } = require('./logging')
 
 class Connection extends EventEmitter {

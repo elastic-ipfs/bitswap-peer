@@ -5,23 +5,24 @@ const libp2p = require('libp2p')
 const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
 const LRUCache = require('mnemonist/lru-cache')
-const { cacheBlocksInfo, blocksTable, primaryKeys, port } = require('./config')
+
+const { cacheBlocksInfo, blocksTable, port, primaryKeys } = require('./config')
 const { logger, serializeError } = require('./logging')
 const { Connection } = require('./networking')
-const noiseCrypto = require('./noise-crypto')
-const getPeerId = require('../src/peer-id')
+const { noiseCrypto } = require('./noise-crypto')
+const { getPeerId } = require('../src/peer-id')
 const {
   BITSWAP_V_120,
   Block,
   BlockPresence,
-  Entry,
-  Message,
-  protocols,
   emptyWantList,
-  maxBlockSize
+  Entry,
+  maxBlockSize,
+  Message,
+  protocols
 } = require('./protocol')
-const { cidToKey, fetchBlockFromS3, searchCarInDynamo } = require('./storage')
-const telemetry = require('./telemetry')
+const { cidToKey, defaultDispatcher, fetchBlockFromS3, searchCarInDynamo } = require('./storage')
+const { telemetry } = require('./telemetry')
 
 const blocksCache = new LRUCache(1e6)
 
@@ -29,7 +30,7 @@ function createEmptyMessage(blocks = [], presences = []) {
   return new Message(emptyWantList, blocks, presences, 0)
 }
 
-async function getBlockInfo(cid) {
+async function getBlockInfo(dispatcher, cid) {
   const key = cidToKey(cid)
   const cached = blocksCache.get(key)
 
@@ -38,7 +39,10 @@ async function getBlockInfo(cid) {
   }
 
   telemetry.increaseCount('dynamo-reads')
-  const item = await telemetry.trackDuration('dynamo-reads', searchCarInDynamo(blocksTable, primaryKeys.blocks, key))
+  const item = await telemetry.trackDuration(
+    'dynamo-reads',
+    searchCarInDynamo(dispatcher, blocksTable, primaryKeys.blocks, key)
+  )
 
   if (item) {
     blocksCache.set(key, item)
@@ -47,8 +51,8 @@ async function getBlockInfo(cid) {
   return item
 }
 
-async function fetchBlock(cid) {
-  const info = await getBlockInfo(cid)
+async function fetchBlock(dispatcher, cid) {
+  const info = await getBlockInfo(dispatcher, cid)
 
   if (!info) {
     return null
@@ -64,7 +68,7 @@ async function fetchBlock(cid) {
   const bucket = car.slice(0, separator)
   const key = car.slice(separator + 1)
 
-  return fetchBlockFromS3(bucket, key, offset, length)
+  return fetchBlockFromS3(dispatcher, bucket, key, offset, length)
 }
 
 async function sendMessage(context, encodedMessage) {
@@ -101,7 +105,7 @@ async function processEntry(entry, context) {
 
     if (entry.wantType === Entry.WantType.Block) {
       // Fetch the block and eventually append to the list of blocks
-      const raw = await fetchBlock(entry.cid)
+      const raw = await fetchBlock(context.dispatcher, entry.cid)
 
       if (raw) {
         telemetry.increaseCount('bitswap-block-hits')
@@ -113,7 +117,7 @@ async function processEntry(entry, context) {
       }
     } else if (entry.wantType === Entry.WantType.Have && context.protocol === BITSWAP_V_120) {
       // Check if we have the block
-      const existing = await getBlockInfo(entry.cid)
+      const existing = await getBlockInfo(context.dispatcher, entry.cid)
 
       if (existing) {
         telemetry.increaseCount('bitswap-block-hits')
@@ -185,8 +189,14 @@ function processWantlist(context) {
   process.nextTick(processWantlist, context)
 }
 
-async function startService(currentPort) {
-  const peerId = await getPeerId()
+async function startService(peerId, currentPort, dispatcher) {
+  if (!peerId) {
+    peerId = await getPeerId()
+  }
+
+  if (!dispatcher) {
+    dispatcher = defaultDispatcher
+  }
 
   if (!currentPort) {
     currentPort = port
@@ -221,13 +231,14 @@ async function startService(currentPort) {
 
       const entries = message.wantlist.entries.length
       const context = {
-        wantlist: message.wantlist,
         service,
+        dispatcher,
         peer: dial.remotePeer,
         protocol,
-        message: createEmptyMessage(),
+        wantlist: message.wantlist,
         total: entries,
-        pending: entries
+        pending: entries,
+        message: createEmptyMessage()
       }
 
       telemetry.increaseCount('bitswap-total-entries', context.total)

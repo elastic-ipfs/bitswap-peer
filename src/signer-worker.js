@@ -1,3 +1,5 @@
+'use strict'
+
 const { createHash, createHmac } = require('crypto')
 
 // Setup AWS credentials handling

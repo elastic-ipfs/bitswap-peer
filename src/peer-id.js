@@ -1,21 +1,22 @@
 'use strict'
 
-const PeerId = require('peer-id')
 const { readFile, writeFile } = require('fs/promises')
+const PeerId = require('peer-id')
+
 const { peerIdJsonFile, peerIdJsonPath } = require('./config')
 const { logger } = require('./logging')
+const { defaultDispatcher, fetchBlockFromS3 } = require('./storage')
 
-async function downloadPeerIdFile() {
-  const file = peerIdJsonFile ?? 'peerId.json'
-  logger.info(`Downloading PeerId from s3://${process.env.PEER_ID_S3_BUCKET}/${file}`)
+async function downloadPeerIdFile(dispatcher) {
+  logger.info(`Downloading PeerId from s3://${process.env.PEER_ID_S3_BUCKET}/${peerIdJsonFile}`)
 
-  const contents = await require('./storage').fetchBlockFromS3(process.env.PEER_ID_S3_BUCKET, file)
+  const contents = await fetchBlockFromS3(dispatcher, process.env.PEER_ID_S3_BUCKET, peerIdJsonFile)
   return writeFile(peerIdJsonPath, contents)
 }
 
-async function getPeerId() {
+async function getPeerId(dispatcher = defaultDispatcher) {
   if (process.env.PEER_ID_S3_BUCKET) {
-    await downloadPeerIdFile()
+    await downloadPeerIdFile(dispatcher)
   }
 
   try {
@@ -26,4 +27,4 @@ async function getPeerId() {
   }
 }
 
-module.exports = getPeerId
+module.exports = { getPeerId }

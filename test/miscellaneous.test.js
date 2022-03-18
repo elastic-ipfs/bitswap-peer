@@ -1,58 +1,70 @@
 'use strict'
 
 process.env.ENV_FILE_PATH = '/dev/null'
+
+process.env.AWS_ACCESS_KEY_ID = 'FOO'
+process.env.AWS_REGION = 'us-west-2'
+process.env.AWS_SECRET_ACCESS_KEY = 'BAR'
+process.env.CONCURRENCY = '128'
 process.env.LOG_LEVEL = 'error'
 process.env.NODE_DEBUG = 'aws-ipfs-bitswap-peer'
-process.env.PEER_ID_S3_BUCKET = 'idBucket'
 process.env.NOW = 'now'
+process.env.PEER_ID_FILE = 'peerId.json'
+process.env.PEER_ID_S3_BUCKET = 'idBucket'
+process.env.PIPELINING = '16'
+process.env.PORT = '3000'
+process.env.TELEMETRY_PORT = '3001'
 
-const { GetObjectCommand } = require('@aws-sdk/client-s3')
 const { readFile } = require('fs/promises')
 const { get } = require('http')
 const { resolve } = require('path')
 const { createFromJSON } = require('peer-id')
-const { Readable } = require('stream')
 const t = require('tap')
+
 const { concurrency, blocksTable, carsTable, port, telemetryPort } = require('../src/config')
 const { logger, serializeError } = require('../src/logging')
-const telemetry = require('../src/telemetry')
-const getPeerId = require('../src/peer-id')
-const { s3Mock } = require('./utils/mock')
+const { ensureAwsCredentials } = require('../src/storage')
+const signerWorker = require('../src/signer-worker')
+const { telemetry } = require('../src/telemetry')
+const { getPeerId } = require('../src/peer-id')
+const { createMockAgent } = require('./utils/mock')
+
+t.before(ensureAwsCredentials)
 
 t.test('config - download the peerId from S3', async t => {
-  t.plan(3)
+  t.plan(1)
 
-  const rawPeer = await readFile(resolve(process.cwd(), 'test/fixtures/peerId.json'))
+  const rawPeer = await readFile(resolve(process.cwd(), 'test/fixtures/peerId.json'), 'utf-8')
 
-  s3Mock.on(GetObjectCommand).callsFake(async params => {
-    t.equal(params.Bucket, 'idBucket')
-    t.equal(params.Key, 'peerId.json')
+  const mockAgent = createMockAgent()
 
-    return { Body: Readable.from(rawPeer) }
-  })
+  mockAgent
+    .get('https://idbucket.s3.us-west-2.amazonaws.com')
+    .intercept({ method: 'GET', path: '/peerId.json' })
+    .reply(200, rawPeer)
 
-  t.equal((await getPeerId()).toB58String(), (await createFromJSON(JSON.parse(rawPeer))).toB58String())
+  t.equal((await getPeerId(mockAgent)).toB58String(), (await createFromJSON(JSON.parse(rawPeer))).toB58String())
 })
 
 t.test('config - creates a new PeerId if download fails', async t => {
-  t.plan(3)
+  t.plan(1)
 
   const rawPeer = await readFile(resolve(process.cwd(), 'test/fixtures/peerId.json'))
 
-  s3Mock.on(GetObjectCommand).callsFake(async params => {
-    t.equal(params.Bucket, 'idBucket')
-    t.equal(params.Key, 'peerId.json')
+  const mockAgent = createMockAgent()
 
-    return { Body: Readable.from('INVALID', 'utf-8') }
-  })
+  mockAgent
+    .get('https://idbucket.s3.us-west-2.amazonaws.com')
+    .intercept({ method: 'GET', path: '/peerId.json' })
+    .reply(200, 'INVALID')
 
-  t.not((await getPeerId()).toB58String(), (await createFromJSON(JSON.parse(rawPeer))).toB58String())
+  t.not((await getPeerId(mockAgent)).toB58String(), (await createFromJSON(JSON.parse(rawPeer))).toB58String())
 })
 
 t.test('config - it exports reasonable defaults', t => {
   t.plan(5)
 
-  t.equal(concurrency, 16)
+  t.equal(concurrency, 128)
   t.equal(blocksTable, 'blocks')
   t.equal(carsTable, 'cars')
   t.equal(port, 3000)
@@ -69,6 +81,35 @@ t.test('logging - an error is properly serialized', t => {
 
   t.equal(serializeError(error), '[Error] FAILED')
   t.equal(serializeError(errorWithCode), '[CODE] FAILED')
+})
+
+t.test('signer-worker - can handle both session and session-less signing', t => {
+  t.plan(2)
+
+  t.notOk(
+    signerWorker({
+      region: 'us-west-2',
+      keyId: 'keyId',
+      accessKey: 'accessKey',
+      service: 's3',
+      method: 'POST',
+      url: 'https://bucket.s3.us-west-2.amazonaws.com',
+      headers: {}
+    })['x-amz-security-token']
+  )
+
+  t.ok(
+    signerWorker({
+      region: 'us-west-2',
+      keyId: 'keyId',
+      accessKey: 'accessKey',
+      sessionToken: 'token',
+      service: 's3',
+      method: 'POST',
+      url: 'https://bucket.s3.us-west-2.amazonaws.com',
+      headers: {}
+    })['x-amz-security-token']
+  )
 })
 
 t.test('telemetry - ensure all metrics are defined in YAML file', t => {

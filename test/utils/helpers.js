@@ -3,32 +3,19 @@
 const { Noise } = require('@web3-storage/libp2p-noise')
 const dagPB = require('@ipld/dag-pb')
 const { EventEmitter } = require('events')
+const getPort = require('get-port')
 const libp2p = require('libp2p')
 const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
-const { CID } = require('multiformats/cid')
 const { equals } = require('multiformats/hashes/digest')
 const { sha256 } = require('multiformats/hashes/sha2')
-const getPort = require('get-port')
+const PeerId = require('peer-id')
+
 const { Connection } = require('../../src/networking')
-const noiseCrypto = require('../../src/noise-crypto')
-const { RawMessage, Message } = require('../../src/protocol')
+const { noiseCrypto } = require('../../src/noise-crypto')
+const { Message, RawMessage } = require('../../src/protocol')
 const { startService } = require('../../src/service')
-
-// cid1 and cid2 exists, the other two don't, cid1 is a raw block, cid2 is a dag-pb
-const cid1 = CID.parse('bafkreifiqpnpysanizxoatqnnwuynply5mp52ily2bdjg4r5uoupsxkc6q')
-const cid2 = CID.parse('bafybeif2am3yngj2faybsxggkh2twyxe52ijzg7orb2ofsngpebpurbkde')
-const cid3 = CID.parse('bafybeiccfclkdtucu6y4yc5cpr6y3yuinr67svmii46v5cfcrkp47ihehy')
-const cid4 = CID.parse('bafybeihfg3d7rdltd43u3tfvncx7n5loqofbsobojcadtmokrljfthuc7y')
-
-// cid5, cid6 and cid7 are raw blocks of 1.5MB each so they will be splitted, cid8 is over 2 MB so it's never sent back
-const cid5 = CID.parse('bafkreih3qyek7a5z7oxdumyzxzsgn42h6ixikv5tp6ae6brrnzjjsai7tq')
-const cid6 = CID.parse('bafkreiazgnbcngapyt5biagk4ckxbwxxlfpaef2ml6msei465352nkyoka')
-const cid7 = CID.parse('bafkreicxxkhmz75hzusvw5ouryqidnhlek2ixrlqlghjzp724p4xq3unti')
-const cid8 = CID.parse('bafkreigf7cgkeki5favqpdyrxosouw6jw3bo4bsfag6qxx3v2gc5jag46m')
-
-// cid9 is 500 byte less than the block limit
-const cid9 = CID.parse('bafkreieezcbuz6d2otuscqyv6xhmhd5walvwehvat7uk66nb6k2rksc7ia')
+const { mockAWS } = require('./mock')
 
 let currentPort = 53000 + parseInt(process.env.TAP_CHILD_ID) * 100
 
@@ -53,27 +40,32 @@ async function createClient(peerId, port, protocol) {
     })
   })
 
-  return { connection, stream, receiver }
+  return { connection, stream, receiver, node }
 }
 
 function getFreePort() {
   return getPort({ port: currentPort++ })
 }
 
-async function prepare(protocol) {
+async function prepare(t, protocol, dispatcher) {
+  const peerId = await PeerId.create()
   const port = await getFreePort()
 
-  const { peerId, service } = await startService(port)
-  const { connection: client, stream, receiver } = await createClient(peerId, port, protocol)
+  if (!dispatcher) {
+    dispatcher = await mockAWS(t)
+  }
+
+  const { service } = await startService(peerId, port, dispatcher)
+  const { stream, receiver, node } = await createClient(peerId, port, protocol)
 
   const connection = new Connection(stream)
 
-  return { service, client, connection, receiver }
+  return { service, client: node, connection, receiver }
 }
 
-async function teardown(client, service, connection) {
+async function teardown(t, client, service, connection) {
   await connection.close()
-  await client.close()
+  await client.stop()
   await service.stop()
 }
 
@@ -164,17 +156,6 @@ function safeGetDAGLinks(block) {
 }
 
 module.exports = {
-  cid1,
-  cid2,
-  cid3,
-  cid4,
-  cid5,
-  cid6,
-  cid7,
-  cid8,
-  cid9,
-  cid1Content: '1234\n',
-  cid2Link: 'abc',
   createClient,
   getFreePort,
   getPresence,

@@ -5,11 +5,12 @@ const { readFileSync } = require('fs')
 const { base58btc: base58 } = require('multiformats/bases/base58')
 const { resolve } = require('path')
 const { Piscina } = require('piscina')
-const { Pool, request } = require('undici')
+const { Agent, request } = require('undici')
 const { xml2js } = require('xml-js')
-const { concurrency, pipelining } = require('./config')
+
+const { concurrency: connections, pipelining } = require('./config')
 const { logger, serializeError } = require('./logging')
-const telemetry = require('./telemetry')
+const { telemetry } = require('./telemetry')
 
 // Setup AWS credentials handling
 const region = process.env.AWS_REGION
@@ -17,21 +18,11 @@ let keyId = ''
 let accessKey = ''
 let sessionToken = ''
 
+const defaultDispatcher = new Agent({ keepAliveTimeout: 60000, connections, pipelining })
+
 const signerWorker = new Piscina({
   filename: resolve(process.cwd(), 'src/signer-worker.js'),
   idleTimeout: Math.pow(2, 31) - 1
-})
-
-const dynamoClient = new Pool(`https://dynamodb.${region}.amazonaws.com/`, {
-  keepAliveTimeout: 60000,
-  connections: concurrency,
-  pipelining: pipelining
-})
-
-const s3Client = new Pool(`https://s3.${region}.amazonaws.com/`, {
-  keepAliveTimeout: 60000,
-  connections: concurrency,
-  pipelining: pipelining
 })
 
 function cidToKey(cid) {
@@ -39,12 +30,14 @@ function cidToKey(cid) {
 }
 
 function ensureAwsCredentials() {
+  /* c8 ignore next 1 */
   if (!process.env.AWS_ROLE_ARN || !process.env.AWS_WEB_IDENTITY_TOKEN_FILE) {
     keyId = process.env.AWS_ACCESS_KEY_ID
     accessKey = process.env.AWS_SECRET_ACCESS_KEY
 
     return Promise.resolve()
   }
+  /* c8 ignore next 7 */
 
   // Every 50 minutes we rotate the keys using STS
   setInterval(() => {
@@ -54,17 +47,26 @@ function ensureAwsCredentials() {
   return refreshAwsCredentials(process.env.AWS_ROLE_ARN)
 }
 
-async function refreshAwsCredentials(role) {
-  const identityFile = readFileSync(resolve(process.cwd(), process.env.AWS_WEB_IDENTITY_TOKEN_FILE))
+async function refreshAwsCredentials(role, identity, dispatcher) {
+  /* c8 ignore next 3 */
+  if (!dispatcher) {
+    dispatcher = defaultDispatcher
+  }
+
+  /* c8 ignore next 3 */
+  if (!identity) {
+    identity = readFileSync(resolve(process.cwd(), process.env.AWS_WEB_IDENTITY_TOKEN_FILE))
+  }
+
   const url = new URL('https://sts.amazonaws.com/')
 
   url.searchParams.append('Version', '2011-06-15')
   url.searchParams.append('Action', 'AssumeRoleWithWebIdentity')
   url.searchParams.append('RoleArn', role)
   url.searchParams.append('RoleSessionName', 'bitswap-peer')
-  url.searchParams.append('WebIdentityToken', identityFile)
+  url.searchParams.append('WebIdentityToken', identity)
 
-  const { statusCode, body } = await request(url)
+  const { statusCode, body } = await request(url, { dispatcher })
 
   const buffer = new BufferList()
 
@@ -76,7 +78,7 @@ async function refreshAwsCredentials(role) {
     throw new Error(
       `Cannot refresh AWS credentials: AssumeRoleWithWebIdentity failed with HTTP error ${statusCode} and body: ${buffer
         .slice()
-        .toString('utf-8')} `
+        .toString('utf-8')}`
     )
   }
 
@@ -84,11 +86,11 @@ async function refreshAwsCredentials(role) {
   keyId = response.AssumeRoleWithWebIdentityResult.Credentials.AccessKeyId._text
   accessKey = response.AssumeRoleWithWebIdentityResult.Credentials.SecretAccessKey._text
   sessionToken = response.AssumeRoleWithWebIdentityResult.Credentials.SessionToken._text
+
+  return { keyId, accessKey, sessionToken }
 }
 
-async function searchCarInDynamo(table, keyName, keyValue) {
-  const region = process.env.AWS_REGION
-
+async function searchCarInDynamo(dispatcher, table, keyName, keyValue) {
   try {
     telemetry.increaseCount('dynamo-reads')
 
@@ -115,11 +117,11 @@ async function searchCarInDynamo(table, keyName, keyValue) {
     // Download from S3
     const { statusCode, body } = await telemetry.trackDuration(
       'dynamo-reads',
-      dynamoClient.request({
+      request(url, {
         method: 'POST',
-        path: '/',
         headers: { ...headers, 'content-type': 'application/x-amz-json-1.0' },
-        body: payload
+        body: payload,
+        dispatcher
       })
     )
 
@@ -135,6 +137,11 @@ async function searchCarInDynamo(table, keyName, keyValue) {
     }
 
     const record = JSON.parse(buffer.slice())
+
+    if (!record || !record.Item) {
+      return undefined
+    }
+
     const car = record.Item.cars.L[0].M
 
     return { offset: Number.parseInt(car.offset.N, 10), length: Number.parseInt(car.length.N, 10), car: car.car.S }
@@ -144,9 +151,7 @@ async function searchCarInDynamo(table, keyName, keyValue) {
   }
 }
 
-async function fetchBlockFromS3(bucket, key, offset, length) {
-  const region = process.env.AWS_REGION
-
+async function fetchBlockFromS3(dispatcher, bucket, key, offset, length) {
   try {
     telemetry.increaseCount('s3-fetchs')
 
@@ -170,7 +175,7 @@ async function fetchBlockFromS3(bucket, key, offset, length) {
     // Download from S3
     const { statusCode, body } = await telemetry.trackDuration(
       's3-fetchs',
-      s3Client.request({ method: 'GET', path: `/${key}`, headers })
+      request(url, { method: 'GET', headers, dispatcher })
     )
 
     // Read the response
@@ -193,7 +198,9 @@ async function fetchBlockFromS3(bucket, key, offset, length) {
 
 module.exports = {
   cidToKey,
-  searchCarInDynamo,
+  defaultDispatcher,
+  ensureAwsCredentials,
   fetchBlockFromS3,
-  ensureAwsCredentials
+  refreshAwsCredentials,
+  searchCarInDynamo
 }

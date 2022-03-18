@@ -11,7 +11,7 @@ const { CID } = require('multiformats/cid')
 
 const { logger, serializeError } = require('../src/logging')
 const { Connection } = require('../src/networking')
-const noiseCrypto = require('../src/noise-crypto')
+const { noiseCrypto } = require('../src/noise-crypto')
 const { protocols, Entry, Message, WantList } = require('../src/protocol')
 
 const durationUnits = {

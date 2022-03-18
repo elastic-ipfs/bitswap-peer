@@ -10,8 +10,7 @@ const { CID } = require('multiformats/cid')
 const { code: rawCode } = require('multiformats/codecs/raw')
 const { sha256 } = require('multiformats/hashes/sha2')
 const { Readable } = require('stream')
-const { cid1Content, cid2Link } = require('../test/utils')
-
+const { cid1Content, cid2Link } = require('../test/fixtures/cids')
 const { maxBlockSize } = require('../src/protocol')
 
 /*

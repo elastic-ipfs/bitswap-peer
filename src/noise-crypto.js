@@ -130,11 +130,13 @@ function chaCha20Poly1305Decrypt(ciphertext, nonce, ad, k) {
 /* c8 ignore stop */
 
 module.exports = {
-  hashSHA256,
-  getHKDF,
-  generateX25519KeyPair,
-  generateX25519KeyPairFromSeed,
-  generateX25519SharedKey,
-  chaCha20Poly1305Encrypt,
-  chaCha20Poly1305Decrypt
+  noiseCrypto: {
+    chaCha20Poly1305Decrypt,
+    chaCha20Poly1305Encrypt,
+    generateX25519KeyPair,
+    generateX25519KeyPairFromSeed,
+    generateX25519SharedKey,
+    getHKDF,
+    hashSHA256
+  }
 }

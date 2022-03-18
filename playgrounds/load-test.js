@@ -14,9 +14,9 @@ const { sha256 } = require('multiformats/hashes/sha2')
 const { resolve } = require('path')
 
 const { Connection } = require('../src/networking')
-const noiseCrypto = require('../src/noise-crypto')
+const { noiseCrypto } = require('../src/noise-crypto')
 const { logger, serializeError } = require('../src/logging')
-const { protocols, Entry, Message, WantList, BlockPresence } = require('../src/protocol')
+const { BlockPresence, Entry, Message, WantList, protocols } = require('../src/protocol')
 
 const percentiles = [0.001, 0.01, 0.1, 1, 2.5, 10, 25, 50, 75, 90, 97.5, 99, 99.9, 99.99, 99.999]
 let iterationsLeft = process.env.ITERATIONS ? Number.parseInt(process.env.ITERATIONS, 10) : 1

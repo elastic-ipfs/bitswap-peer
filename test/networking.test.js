@@ -2,17 +2,16 @@
 
 process.env.LOG_LEVEL = 'fatal'
 
+const PeerId = require('peer-id')
 const t = require('tap')
+
 const { Connection } = require('../src/networking')
 const { BITSWAP_V_100: protocol } = require('../src/protocol')
 const { startService } = require('../src/service')
-const { prepare, teardown, getFreePort, createClient } = require('./utils/helpers')
-const { mockAWS } = require('./utils/mock')
-
-mockAWS(t)
+const { getFreePort, createClient, prepare, teardown } = require('./utils/helpers')
 
 t.test('send - after closing behavior', async t => {
-  const { client, service, connection } = await prepare(protocol)
+  const { client, service, connection } = await prepare(t, protocol)
 
   connection.close()
 
@@ -25,14 +24,15 @@ t.test('send - after closing behavior', async t => {
   // Nothing is returned
   t.strictSame(await connection[Symbol.asyncIterator]().next(), { done: true, value: undefined })
 
-  await teardown(client, service, connection)
+  await teardown(t, client, service, connection)
 })
 
 t.test('error handling', async t => {
   t.plan(2)
 
-  const { peerId, port, service } = await startService(await getFreePort())
-  const { connection: client, stream } = await createClient(peerId, port, protocol)
+  const peerId = await PeerId.create()
+  const { port, service } = await startService(peerId, await getFreePort())
+  const { stream, node: client } = await createClient(peerId, port, protocol)
 
   stream.source[Symbol.asyncIterator] = function () {
     return {
@@ -59,10 +59,8 @@ t.test('error handling', async t => {
 
   connection.send('ANYTHING')
 
-  client.close()
-  connection.close()
-  service.stop()
-
   t.equal((await receiveError).message, 'SOURCE ERROR')
   t.equal((await sendError).message, 'SINK ERROR')
+
+  await teardown(t, client, service, connection)
 })

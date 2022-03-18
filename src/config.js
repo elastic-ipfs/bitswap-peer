@@ -30,10 +30,10 @@ module.exports = {
   peerIdJsonFile,
   peerIdJsonPath: join(peerIdJsonDirectory ?? '/tmp', peerIdJsonFile ?? 'peerId.json'),
   pipelining: !isNaN(pipelining) && pipelining > 0 ? pipelining : 16,
+  port: !isNaN(port) && port > 0 ? port : 3000,
   primaryKeys: {
     blocks: 'multihash',
     cars: 'path'
   },
-  port: !isNaN(port) && port > 0 ? port : 3000,
   telemetryPort: !isNaN(telemetryPort) && telemetryPort > 0 ? telemetryPort : 3001
 }

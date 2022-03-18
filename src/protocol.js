@@ -301,22 +301,22 @@ Entry.WantType = RawWantType.values
 BlockPresence.Type = RawBlockPresenceType.values
 
 module.exports = {
+  addedEstimationPercentage,
   BITSWAP_V_100,
   BITSWAP_V_110,
   BITSWAP_V_120,
-  addedEstimationPercentage,
+  Block,
+  BlockPresence,
   emptyWantList,
+  Entry,
   maxBlockSize,
   maxMessageSize,
   maxPriority,
+  Message,
   newBlockOverhead,
   newPresenceOverhead,
   nonEmptyOverhead,
   protocols,
-  Block,
-  BlockPresence,
-  Entry,
-  Message,
   RawMessage,
   WantList
 }

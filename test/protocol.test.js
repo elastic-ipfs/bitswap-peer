@@ -1,17 +1,18 @@
 'use strict'
 
 const t = require('tap')
+
 const {
-  maxMessageSize,
+  BITSWAP_V_120,
   Block,
   BlockPresence,
   Entry,
+  maxMessageSize,
+  maxPriority,
   Message,
-  WantList,
-  BITSWAP_V_120,
-  maxPriority
+  WantList
 } = require('../src/protocol')
-const { cid3 } = require('./utils/helpers')
+const { cid3 } = require('./fixtures/cids')
 
 t.test('protocol - safety checks', t => {
   t.plan(7)

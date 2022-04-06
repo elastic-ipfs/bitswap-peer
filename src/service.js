@@ -65,10 +65,11 @@ async function fetchBlock(dispatcher, cid) {
   }
 
   const separator = car.indexOf('/')
-  const bucket = car.slice(0, separator)
-  const key = car.slice(separator + 1)
+  const bucketRegion = car.slice(0, separator)
+  const bucket = car.slice(separator + 1)
+  const key = car.slice(separator + 2)
 
-  return fetchBlockFromS3(dispatcher, bucket, key, offset, length)
+  return fetchBlockFromS3(dispatcher, bucketRegion, bucket, key, offset, length)
 }
 
 async function sendMessage(context, encodedMessage) {

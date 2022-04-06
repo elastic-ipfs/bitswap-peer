@@ -163,7 +163,7 @@ async function fetchBlockFromS3(dispatcher, bucketRegion, bucketName, key, offse
 
     // Create the request and sign it
     const headers = await signerWorker.run({
-      region: dynamoRegion,
+      region: bucketRegion,
       keyId,
       accessKey,
       sessionToken,

@@ -13,7 +13,7 @@ const { logger, serializeError } = require('./logging')
 const { telemetry } = require('./telemetry')
 
 // Setup AWS credentials handling
-const region = process.env.AWS_REGION
+const dynamoRegion = process.env.AWS_REGION
 let keyId = ''
 let accessKey = ''
 let sessionToken = ''
@@ -95,7 +95,7 @@ async function searchCarInDynamo(dispatcher, table, keyName, keyValue) {
     telemetry.increaseCount('dynamo-reads')
 
     // Create the request and sign it
-    const url = `https://dynamodb.${region}.amazonaws.com/`
+    const url = `https://dynamodb.${dynamoRegion}.amazonaws.com/`
     const payload = JSON.stringify({
       TableName: table,
       Key: { [keyName]: { S: keyValue } },
@@ -103,7 +103,7 @@ async function searchCarInDynamo(dispatcher, table, keyName, keyValue) {
     })
 
     const headers = await signerWorker.run({
-      region,
+      region: dynamoRegion,
       keyId,
       accessKey,
       sessionToken,
@@ -151,8 +151,10 @@ async function searchCarInDynamo(dispatcher, table, keyName, keyValue) {
   }
 }
 
-async function fetchBlockFromS3(dispatcher, bucket, key, offset, length) {
+async function fetchBlockFromS3(dispatcher, bucketRegion, bucketName, key, offset, length) {
+  let url;
   try {
+    url = `https://${bucketName}.s3.${bucketRegion}.amazonaws.com/${key}`
     telemetry.increaseCount('s3-fetchs')
 
     if (length === 0) {
@@ -160,9 +162,8 @@ async function fetchBlockFromS3(dispatcher, bucket, key, offset, length) {
     }
 
     // Create the request and sign it
-    const url = `https://${bucket}.s3.${region}.amazonaws.com/${key}`
     const headers = await signerWorker.run({
-      region,
+      region: dynamoRegion,
       keyId,
       accessKey,
       sessionToken,
@@ -191,7 +192,7 @@ async function fetchBlockFromS3(dispatcher, bucket, key, offset, length) {
 
     return buffer.slice()
   } catch (e) {
-    logger.error(`Cannot download ${key} from S3 bucket ${bucket}: ${serializeError(e)}`)
+    logger.error(`Cannot download from S3 URL "${url}": ${serializeError(e)}`)
     throw e
   }
 }

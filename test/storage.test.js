@@ -6,6 +6,7 @@ const t = require('tap')
 
 const { fetchBlockFromS3, refreshAwsCredentials, searchCarInDynamo } = require('../src/storage')
 const { createMockAgent } = require('./utils/mock')
+const bucketRegion = process.env.AWS_REGION
 
 t.test('refreshAwsCredentials - signing', async t => {
   t.plan(3)
@@ -102,7 +103,7 @@ t.test('fetchBlockFromS3 - safety checks', async t => {
   t.plan(2)
 
   const mockAgent = createMockAgent()
-  const empty = await fetchBlockFromS3(mockAgent, 'bucket', 'key', 12345, 0)
+  const empty = await fetchBlockFromS3(mockAgent, bucketRegion, 'bucket', 'key', 12345, 0)
   t.ok(Buffer.isBuffer(empty))
   t.equal(empty.length, 0)
 })
@@ -116,7 +117,7 @@ t.test('fetchBlockFromS3 - HTTP error handling', async t => {
     .intercept({ method: 'GET', path: '/error' })
     .reply(400, { message: 'FOO' })
 
-  await t.rejects(fetchBlockFromS3(mockAgent, 'bucket', 'error'), {
+  await t.rejects(fetchBlockFromS3(mockAgent, bucketRegion, 'bucket', 'error'), {
     message: 'Fetch failed with HTTP error 400 and body: {"message":"FOO"}'
   })
 })
@@ -132,5 +133,5 @@ t.test('fetchBlockFromS3 - error handling', async t => {
     .intercept({ method: 'GET', path: '/error' })
     .replyWithError(error)
 
-  await t.rejects(fetchBlockFromS3(mockAgent, 'bucket', 'error'), 'FAILED')
+  await t.rejects(fetchBlockFromS3(mockAgent, bucketRegion, 'bucket', 'error'), 'FAILED')
 })

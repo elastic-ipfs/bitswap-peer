@@ -10,7 +10,7 @@ const { defaultDispatcher, fetchBlockFromS3 } = require('./storage')
 async function downloadPeerIdFile(dispatcher) {
   logger.info(`Downloading PeerId from s3://${process.env.PEER_ID_S3_BUCKET}/${peerIdJsonFile}`)
 
-  const contents = await fetchBlockFromS3(dispatcher, process.env.PEER_ID_S3_BUCKET, peerIdJsonFile)
+  const contents = await fetchBlockFromS3(dispatcher, process.env.AWS_REGION, process.env.PEER_ID_S3_BUCKET, peerIdJsonFile)
   return writeFile(peerIdJsonPath, contents)
 }
 

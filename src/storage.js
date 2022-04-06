@@ -152,7 +152,7 @@ async function searchCarInDynamo(dispatcher, table, keyName, keyValue) {
 }
 
 async function fetchBlockFromS3(dispatcher, bucketRegion, bucketName, key, offset, length) {
-  let url;
+  let url
   try {
     url = `https://${bucketName}.s3.${bucketRegion}.amazonaws.com/${key}`
     telemetry.increaseCount('s3-fetchs')

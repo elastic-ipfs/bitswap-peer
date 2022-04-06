@@ -64,13 +64,7 @@ async function fetchBlock(dispatcher, cid) {
     return null
   }
 
-  const bucketSeparator = car.indexOf('/')
-  const keySeparator = car.lastIndexOf('/')
-
-  const bucketRegion = car.slice(0, bucketSeparator)
-  const bucketName = car.slice(bucketSeparator + 1, keySeparator)
-  const key = car.slice(keySeparator + 1)
-
+  const [, bucketRegion, bucketName, key] = car.match(/([^/]+)\/([^/]+)\/(.+)/)
   return fetchBlockFromS3(dispatcher, bucketRegion, bucketName, key, offset, length)
 }
 

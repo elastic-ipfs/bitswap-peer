@@ -191,7 +191,7 @@ async function fetchBlockFromS3(dispatcher, bucketRegion, bucketName, key, offse
 
     return buffer.slice()
   } catch (e) {
-    logger.error(`Cannot download ${key} from S3 bucket ${bucketName}: ${serializeError(e)}`)
+    logger.error(`Cannot download from S3 URL "${url}": ${serializeError(e)}`)
     throw e
   }
 }

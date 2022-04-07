@@ -1,6 +1,6 @@
 peerId.json
 .env*
-*.car
+./*.car
 *.list
 coverage
 node_modules

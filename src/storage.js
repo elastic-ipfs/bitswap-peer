@@ -133,7 +133,7 @@ async function searchCarInDynamo(dispatcher, table, keyName, keyValue) {
     }
 
     if (statusCode >= 400) {
-      throw new Error(`GetItem failed with HTTP error ${statusCode} and body: ${buffer.slice().toString('utf-8')} `)
+      throw new Error(`GetItem from DynamoDB table ${table} with key ${keyValue} failed with HTTP error ${statusCode} and body: ${buffer.slice().toString('utf-8')} `)
     }
 
     const record = JSON.parse(buffer.slice())
@@ -146,7 +146,7 @@ async function searchCarInDynamo(dispatcher, table, keyName, keyValue) {
 
     return { offset: Number.parseInt(car.offset.N, 10), length: Number.parseInt(car.length.N, 10), car: car.car.S }
   } catch (e) {
-    logger.error(`Cannot get item from DynamoDB table ${table}: ${serializeError(e)}`)
+    logger.error(`Cannot get item from DynamoDB table ${table} with key ${keyValue}: ${serializeError(e)}`)
     throw e
   }
 }

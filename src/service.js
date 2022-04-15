@@ -213,42 +213,50 @@ async function startService(peerId, currentPort, dispatcher) {
     })
 
     service.handle(protocols, async ({ connection: dial, stream, protocol }) => {
-      const connection = new Connection(stream)
+      try {
+        const connection = new Connection(stream)
 
-      // Open a send connection to the peer
-      connection.on('data', data => {
-        let message
+        // Open a send connection to the peer
+        connection.on('data', data => {
+          let message
 
-        try {
-          message = Message.decode(data, protocol)
-        } catch (error) {
-          logger.error({ error }, `Invalid data received: ${serializeError(error)}`)
-          service.emit('error:receive', error)
-          return
-        }
+          try {
+            message = Message.decode(data, protocol)
+          } catch (error) {
+            logger.error({ error }, `Invalid data received: ${serializeError(error)}`)
+            service.emit('error:receive', error)
+            return
+          }
 
-        const entries = message.wantlist.entries.length
-        const context = {
-          service,
-          dispatcher,
-          peer: dial.remotePeer,
-          protocol,
-          wantlist: message.wantlist,
-          total: entries,
-          pending: entries,
-          message: createEmptyMessage()
-        }
+          try {
+            const entries = message.wantlist.entries.length
+            const context = {
+              service,
+              dispatcher,
+              peer: dial.remotePeer,
+              protocol,
+              wantlist: message.wantlist,
+              total: entries,
+              pending: entries,
+              message: createEmptyMessage()
+            }
 
-        telemetry.increaseCount('bitswap-total-entries', context.total)
-        telemetry.increaseCount('bitswap-pending-entries', context.total)
-        process.nextTick(processWantlist, context)
-      })
+            telemetry.increaseCount('bitswap-total-entries', context.total)
+            telemetry.increaseCount('bitswap-pending-entries', context.total)
+            process.nextTick(processWantlist, context)
+          } catch (error) {
+            logger.error({ error }, `Error while preparing wantList context: ${serializeError(error)}`)
+          }
+        })
 
-      /* c8 ignore next 4 */
-      connection.on('error', error => {
-        logger.error({ error }, `Connection error: ${serializeError(error)}`)
-        service.emit('error:connection', error)
-      })
+        /* c8 ignore next 4 */
+        connection.on('error', error => {
+          logger.error({ error }, `Connection error: ${serializeError(error)}`)
+          service.emit('error:connection', error)
+        })
+      } catch (error) {
+        logger.error({ error }, `Error while creating connection: ${serializeError(error)}`)
+      }
     })
 
     service.connectionManager.on('peer:connect', connection => {

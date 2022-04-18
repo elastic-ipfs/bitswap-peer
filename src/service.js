@@ -252,7 +252,7 @@ async function startService(peerId, currentPort, dispatcher) {
         /* c8 ignore next 4 */
         connection.on('error', error => {
           logger.error({ error }, `Connection error: ${serializeError(error)}`)
-          // service.emit('error:connection', error)
+          service.emit('error:connection', error)
         })
       } catch (error) {
         logger.error({ error }, `Error while creating connection: ${serializeError(error)}`)

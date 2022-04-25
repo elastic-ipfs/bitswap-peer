@@ -262,9 +262,6 @@ async function startService(peerId, currentPort, dispatcher) {
 
     service.connectionManager.on('peer:connect', connection => {
       try {
-        //TODO: Delete this, just for testing
-        logger.info('** peer connected')
-        //
         startKeepAlive(connection.remotePeer, service)
         telemetry.increaseCount('bitswap-total-connections')
         telemetry.increaseCount('bitswap-active-connections')
@@ -275,9 +272,6 @@ async function startService(peerId, currentPort, dispatcher) {
 
     service.connectionManager.on('peer:disconnect', connection => {
       try {
-        //TODO: Delete this, just for testing
-        logger.info('** peer disconnected')
-        //
         stopKeepAlive(connection.remotePeer)
         telemetry.decreaseCount('bitswap-active-connections')
       } catch (error) {

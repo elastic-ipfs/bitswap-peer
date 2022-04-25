@@ -8,12 +8,15 @@ This was written based on:
 https://github.com/status-im/js-waku/issues/185
 */
 
-import PingService from 'libp2p/src/ping'
+const { PingService } = require('libp2p/src/ping')
+const { logger, serializeError } = require('./logging')
 
 const pingKeepAliveTimers = {}
-const relayKeepAliveTimers = {}
+// const relayKeepAliveTimers = {}
+const pingPeriodSecs = process.env.PING_PERIOD_SECONDS ?? 10
+// export const DefaultRelayKeepAliveValueSecs = 5 * 60
 
-function startKeepAlive(peerId, pingPeriodSecs, relayPeriodSecs) {
+function startKeepAlive(peerId) {
   // Just in case a timer already exist for this peer
   this.stopKeepAlive(peerId)
 
@@ -22,18 +25,18 @@ function startKeepAlive(peerId, pingPeriodSecs, relayPeriodSecs) {
   if (pingPeriodSecs !== 0) {
     const pingService = new PingService(this.libp2p)
     pingKeepAliveTimers[peerIdStr] = setInterval(() => {
-      pingService.ping(peerId).catch(e => {
-        dbg(`Ping failed (${peerIdStr})`, e)
+      pingService.ping(peerId).catch(error => {
+        logger.error({ error }, `Ping failed (${peerIdStr})${serializeError(error)}`)
       })
     }, pingPeriodSecs * 1000)
   }
 
-  if (relayPeriodSecs !== 0) { // TODO: What exactly is the purpose of that?
-    relayKeepAliveTimers[peerIdStr] = setInterval(() => {
-      // TODO: Convert this wakuMessage to something more meaningful to us
-      WakuMessage.fromBytes(new Uint8Array(), RelayPingContentTopic).then(wakuMsg => this.relay.send(wakuMsg))
-    }, relayPeriodSecs * 1000)
-  }
+  // if (relayPeriodSecs !== 0) { // TODO: What exactly is the purpose of that?
+  //   relayKeepAliveTimers[peerIdStr] = setInterval(() => {
+  //     // TODO: Convert this wakuMessage to something more meaningful to us
+  //     WakuMessage.fromBytes(new Uint8Array(), RelayPingContentTopic).then(wakuMsg => this.relay.send(wakuMsg))
+  //   }, relayPeriodSecs * 1000)
+  // }
 }
 
 function stopKeepAlive(peerId) {

@@ -8,22 +8,21 @@ This was written based on:
 https://github.com/status-im/js-waku/issues/185
 */
 
-const { PingService } = require('libp2p/src/ping')
+const { libp2p } = require('libp2p')
 const { logger, serializeError } = require('./logging')
 const { pingPeriodSecs } = require('./config')
 
 const pingKeepAliveTimers = {}
 
-function startKeepAlive(peerId, libp2p) {
+function startKeepAlive(peerId, currentNode) {
   // Just in case a timer already exist for this peer
-  this.stopKeepAlive(peerId)
+  stopKeepAlive(peerId)
 
   const peerIdStr = peerId.toB58String()
 
   if (pingPeriodSecs !== 0) {
-    const pingService = new PingService(libp2p)
     pingKeepAliveTimers[peerIdStr] = setInterval(() => {
-      pingService.ping(peerId).catch(error => {
+      currentNode.ping(peerId).catch(error => {
         logger.error({ error }, `Ping failed (${peerIdStr})${serializeError(error)}`)
       })
     }, pingPeriodSecs * 1000)
@@ -33,9 +32,9 @@ function startKeepAlive(peerId, libp2p) {
 function stopKeepAlive(peerId) {
   const peerIdStr = peerId.toB58String()
 
-  if (this.pingKeepAliveTimers[peerIdStr]) {
-    clearInterval(this.pingKeepAliveTimers[peerIdStr])
-    delete this.pingKeepAliveTimers[peerIdStr]
+  if (pingKeepAliveTimers[peerIdStr]) {
+    clearInterval(pingKeepAliveTimers[peerIdStr])
+    delete pingKeepAliveTimers[peerIdStr]
   }
 }
 

@@ -16,14 +16,14 @@ const pingKeepAliveTimers = {}
 const pingPeriodSecs = process.env.PING_PERIOD_SECONDS ?? 10
 // export const DefaultRelayKeepAliveValueSecs = 5 * 60
 
-function startKeepAlive(peerId) {
+function startKeepAlive(peerId, libp2p) {
   // Just in case a timer already exist for this peer
   this.stopKeepAlive(peerId)
 
   const peerIdStr = peerId.toB58String()
 
   if (pingPeriodSecs !== 0) {
-    const pingService = new PingService(this.libp2p)
+    const pingService = new PingService(libp2p)
     pingKeepAliveTimers[peerIdStr] = setInterval(() => {
       pingService.ping(peerId).catch(error => {
         logger.error({ error }, `Ping failed (${peerIdStr})${serializeError(error)}`)

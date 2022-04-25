@@ -8,7 +8,6 @@ This was written based on:
 https://github.com/status-im/js-waku/issues/185
 */
 
-const { libp2p } = require('libp2p')
 const { logger, serializeError } = require('./logging')
 const { pingPeriodSecs } = require('./config')
 

@@ -22,7 +22,6 @@ function startKeepAlive(peerId, currentNode) {
 
   if (pingPeriodSecs !== 0) {
     pingKeepAliveTimers[peerIdStr] = setInterval(() => {
-      logger.info('** Hit interval, time to ping!')
       currentNode.ping(peerId).catch(error => {
         logger.error({ error }, `Ping failed (${peerIdStr})${serializeError(error)}`)
       })

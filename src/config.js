@@ -14,7 +14,8 @@ const {
   PEER_ID_FILE: peerIdJsonFile,
   PIPELINING: rawPipelining,
   PORT: rawPort,
-  TELEMETRY_PORT: rawTelemetryPort
+  TELEMETRY_PORT: rawTelemetryPort,
+  PING_PERIOD_SECONDS: pingPeriodSecs
 } = process.env
 
 const concurrency = parseInt(rawConcurrency)
@@ -26,6 +27,7 @@ module.exports = {
   blocksTable: blocksTable ?? 'blocks',
   cacheBlocksInfo: cacheBlocksInfo !== 'false',
   carsTable: carsTable ?? 'cars',
+  pingPeriodSecs: pingPeriodSecs ?? 10,
   concurrency: !isNaN(concurrency) && concurrency > 0 ? concurrency : 128,
   peerIdJsonFile,
   peerIdJsonPath: join(peerIdJsonDirectory ?? '/tmp', peerIdJsonFile ?? 'peerId.json'),

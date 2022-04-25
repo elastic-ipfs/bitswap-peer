@@ -10,11 +10,9 @@ https://github.com/status-im/js-waku/issues/185
 
 const { PingService } = require('libp2p/src/ping')
 const { logger, serializeError } = require('./logging')
+const { pingPeriodSecs } = require('./config')
 
 const pingKeepAliveTimers = {}
-// const relayKeepAliveTimers = {}
-const pingPeriodSecs = process.env.PING_PERIOD_SECONDS ?? 10
-// export const DefaultRelayKeepAliveValueSecs = 5 * 60
 
 function startKeepAlive(peerId, libp2p) {
   // Just in case a timer already exist for this peer
@@ -30,13 +28,6 @@ function startKeepAlive(peerId, libp2p) {
       })
     }, pingPeriodSecs * 1000)
   }
-
-  // if (relayPeriodSecs !== 0) { // TODO: What exactly is the purpose of that?
-  //   relayKeepAliveTimers[peerIdStr] = setInterval(() => {
-  //     // TODO: Convert this wakuMessage to something more meaningful to us
-  //     WakuMessage.fromBytes(new Uint8Array(), RelayPingContentTopic).then(wakuMsg => this.relay.send(wakuMsg))
-  //   }, relayPeriodSecs * 1000)
-  // }
 }
 
 function stopKeepAlive(peerId) {
@@ -45,11 +36,6 @@ function stopKeepAlive(peerId) {
   if (this.pingKeepAliveTimers[peerIdStr]) {
     clearInterval(this.pingKeepAliveTimers[peerIdStr])
     delete this.pingKeepAliveTimers[peerIdStr]
-  }
-
-  if (this.relayKeepAliveTimers[peerIdStr]) {
-    clearInterval(this.relayKeepAliveTimers[peerIdStr])
-    delete this.relayKeepAliveTimers[peerIdStr]
   }
 }
 

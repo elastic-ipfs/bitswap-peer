@@ -261,14 +261,28 @@ async function startService(peerId, currentPort, dispatcher) {
     })
 
     service.connectionManager.on('peer:connect', connection => {
-      // p2pKeepAlive.startKeepAlive(connection.remotePeer)
-      telemetry.increaseCount('bitswap-total-connections')
-      telemetry.increaseCount('bitswap-active-connections')
+      try {
+        //TODO: Delete this, just for testing
+        logger.info("** peer connected")
+        //
+        p2pKeepAlive.startKeepAlive(connection.remotePeer, libp2p)
+        telemetry.increaseCount('bitswap-total-connections')
+        telemetry.increaseCount('bitswap-active-connections')
+      } catch (error) {
+        logger.error({ error }, `Error while peer connecting: ${serializeError(error)}`)
+      }
     })
 
     service.connectionManager.on('peer:disconnect', connection => {
-      // p2pKeepAlive.stopKeepAlive(connection.remotePeer)
-      telemetry.decreaseCount('bitswap-active-connections')
+      try {
+        //TODO: Delete this, just for testing
+        logger.info("** peer disconnected")
+        //
+        p2pKeepAlive.stopKeepAlive(connection.remotePeer)
+        telemetry.decreaseCount('bitswap-active-connections')
+      } catch (error) {
+        logger.error({ error }, `Error while peer disconnecting: ${serializeError(error)}`)
+      }
     })
 
     await service.start()

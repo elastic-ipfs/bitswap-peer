@@ -20,9 +20,16 @@ function startKeepAlive(peerId, libp2p) {
 
   const peerIdStr = peerId.toB58String()
 
+  //TODO: Delete this, just for testing
+  logger.info(('** peerId' = peerId))
+  logger.info(('** libp2p' = libp2p))
+  logger.info(('** pingPeriodSecs' = pingPeriodSecs))
+  //
   if (pingPeriodSecs !== 0) {
     const pingService = new PingService(libp2p)
+    logger.info(('** started pingService' = pingPeriodSecs))
     pingKeepAliveTimers[peerIdStr] = setInterval(() => {
+      logger.info(('** Hit interval, time to ping!'))
       pingService.ping(peerId).catch(error => {
         logger.error({ error }, `Ping failed (${peerIdStr})${serializeError(error)}`)
       })

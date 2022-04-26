@@ -20,6 +20,7 @@ _Variables in bold are required._
 | PEER_ID_FILE          | `peerId.json` | The filename of the file containing the BitSwap PeerID in JSON format.   |
 | PEER_ID_S3_BUCKET     |               | The S3 bucket to download the BitSwap PeerID in JSON format.             |
 | PIPELINING            | `16`          | The maximum request to pipeline in a single HTTP connections in AWS.     |
+| PING_PERIOD_SECONDS   | `10`          | Wait interval for ping connected peer (Keep Alive)                       |             
+| PORT                  | `3000`        | The port number to listen on.                                            |
+| TELEMETRY_PORT        | `3001`        | The telemetry port number for the OpenTelemetry server to listen on.     |
 
-| PORT | `3000` | The port number to listen on. |
-| TELEMETRY_PORT | `3001` | The telemetry port number for the OpenTelemetry server to listen on. |

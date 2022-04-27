@@ -213,6 +213,10 @@ async function startService(peerId, currentPort, dispatcher) {
       }
     })
 
+    service.on('error', error => {
+      logger.error({ error }, `libp2p error: ${serializeError(error)}`)
+    })
+
     service.handle(protocols, async ({ connection: dial, stream, protocol }) => {
       try {
         const connection = new Connection(stream)

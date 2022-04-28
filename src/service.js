@@ -283,6 +283,10 @@ async function startService(peerId, currentPort, dispatcher) {
       }
     })
 
+    service.connectionManager.on('error', error => {
+      logger.error({ error }, `libp2p connection manager error: ${serializeError(error)}`)
+    })
+
     await service.start()
 
     logger.info(

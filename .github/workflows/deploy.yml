@@ -54,7 +54,7 @@ jobs:
       - name: Checkout deployment repository
         uses: actions/checkout@v3
         with:
-          repository: web3-storage/ipfs-elastic-provider-bitswap-peer-deployment
+          repository: ipfs-elastic-provider/ipfs-elastic-provider-bitswap-peer-deployment
           path: deployment
           token: ${{ secrets.DEPLOYMENT_PERSONAL_ACCESS_TOKEN }}
       - name: Deploy new image

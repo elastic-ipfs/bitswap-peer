@@ -16,6 +16,9 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: 16
+      - uses: jgierer12/npm-auth-gpr@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: bahmutov/npm-install@v1
       - name: Test
         run: npm test

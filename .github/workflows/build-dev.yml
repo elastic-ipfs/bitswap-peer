@@ -9,7 +9,6 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    environment: prod # Just to test manual approve
     permissions:
       packages: write
     steps:
@@ -60,6 +59,11 @@ jobs:
           repository: ipfs-elastic-provider/ipfs-elastic-provider-bitswap-peer-deployment
           path: deployment
           token: ${{ secrets.DEPLOYMENT_PERSONAL_ACCESS_TOKEN }}
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment: dev
+    steps:
       - name: Deploy new image
         run: |
           cd deployment

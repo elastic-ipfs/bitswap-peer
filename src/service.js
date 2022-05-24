@@ -122,6 +122,8 @@ async function processEntry(entry, context) {
         newPresence = new BlockPresence(entry.cid, BlockPresence.Type.Have)
       } else if (entry.sendDontHave) {
         telemetry.increaseCount('bitswap-block-misses')
+        // Log which is the entry.cid?
+        // Make sure that this request came from the peer that is testing this
         newPresence = new BlockPresence(entry.cid, BlockPresence.Type.DontHave)
       }
     }

@@ -1,14 +1,15 @@
 ---
-name: Build
+name: Build And Deploy Dev
 on:
   push:
-    branches: [dev, env-workflows]
+    branches: [dev, env-workflows] # TODO: Just DEV
   workflow_dispatch:
 env:
   REGISTRY: ghcr.io
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: prod # Just to test manual approve
     permissions:
       packages: write
     steps:

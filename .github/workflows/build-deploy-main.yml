@@ -1,5 +1,5 @@
 ---
-name: Build
+name: Build And Deploy Main
 on:
   push:
     branches: [main]

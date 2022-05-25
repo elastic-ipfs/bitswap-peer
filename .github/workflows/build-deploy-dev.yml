@@ -29,6 +29,6 @@ jobs:
         cd deployment
         git config user.name ${{ github.actor }}
         git config user.email ${{ github.actor }}@users.noreply.github.com
-        yq -iP ".image.version=\"${{ env.BUILD_DATE }}-dev\"" helm/values-dev.yaml
-        git commit -am "feat: Deployed version ${{ env.PACKAGE_VERSION }}-dev-${{ env.BUILD_DATE }}-dev."
+        yq -iP ".image.version=\"${{ needs.build.outputs.build_date }}-dev\"" helm/values-dev.yaml
+        git commit -am "feat: Deployed version ${{ needs.build.outputs.package_version }}-${{ needs.build.outputs.build_date }}-dev."
         git push

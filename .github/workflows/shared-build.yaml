@@ -52,9 +52,9 @@ jobs:
     - name: Install dependencies
       id: dependencies
       run: | 
-        echo "::set-output name=image_repository::testreturnfromoutputimage"
-        echo "::set-output name=package_version::testreturnfromoutputpackage"
-        echo "::set-output name=build_date::testreturnfromoutputbuild"
+        echo "::set-output name=image_repository::hello"
+        echo "::set-output name=package_version::hello"
+        echo "::set-output name=build_date::hello"
       # run: |  # Next try: Put real values here
       #   mkdir yq && wget https://github.com/mikefarah/yq/releases/download/v4.21.1/yq_linux_amd64.tar.gz -q -O - | tar xz -C yq && sudo mv yq/yq_linux_amd64 /usr/bin/yq
       #   yq -i ".version = \"$(yq .version package.json)\", .buildDate = \"$(date +%Y%m%d.%H%M)\"" metrics.yml

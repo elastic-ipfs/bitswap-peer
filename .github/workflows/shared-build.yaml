@@ -41,9 +41,9 @@ jobs:
           echo BUILD_DATE=$(yq .buildDate metrics.yml) >> $GITHUB_ENV
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
           npm install
-          echo "::set-output name=image_repository::$IMAGE_REPOSITORY"
-          echo "::set-output name=package_version::$PACKAGE_VERSION"
-          echo "::set-output name=build_date::$BUILD_DATE"
+          echo "::set-output name=image_repository::/${{ env.IMAGE_REPOSITORY }}"
+          echo "::set-output name=package_version::${{ env.PACKAGE_VERSION }}"
+          echo "::set-output name=build_date::${{ env.BUILD_DATE }}"
       - name: Lint code
         run: npm run lint
       - name: Set up Docker Buildx

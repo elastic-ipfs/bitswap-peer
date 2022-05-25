@@ -6,15 +6,15 @@ on:
       auth_token:
         required: true
         description: Used for authentication      
-    inputs:
-      docker_image_tags: 
-        required: true
-        type: string
-        description: Tags to be used for docker build
-      registry: 
-        required: true
-        type: string
-        description: Tags to be used for docker build
+    # inputs:
+    #   docker_image_tags: 
+    #     required: true
+    #     type: string
+    #     description: Tags to be used for docker build
+    #   registry: 
+    #     required: true
+    #     type: string
+    #     description: Tags to be used for docker build
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -48,18 +48,18 @@ jobs:
       - name: Log in to GitHub Docker Registry
         uses: docker/login-action@v1
         with:
-          registry: ${{ inputs.registry }}
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.auth_token }}
-      - name: Build And Push Image
-        uses: docker/build-push-action@v2
-        with:
-          push: true
-          context: .
-          tags: |
-            ${{ inputs.docker_image_tags }}
-          labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+      # - name: Build And Push Image
+      #   uses: docker/build-push-action@v2
+      #   with:
+      #     push: true
+      #     context: .
+      #     tags: |
+      #       ${{ inputs.docker_image_tags }}
+      #     labels: |
+      #       org.opencontainers.image.source=https://github.com/${{ github.repository }}
       # - name: Build Image
       #   uses: docker/build-push-action@v2
       #   with:

@@ -11,6 +11,10 @@ on:
         required: true
         type: string
         description: Tags to be used for docker build
+      registry: 
+        required: true
+        type: string
+        description: Tags to be used for docker build
 jobs:
   build:
     runs-on: ubuntu-latest

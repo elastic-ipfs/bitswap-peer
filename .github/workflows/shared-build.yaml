@@ -2,10 +2,10 @@ name: 'Shared CI flow'
 
 on:
   workflow_call:
-    secrets:
-      auth_token:
-        required: true
-        description: Used for authentication      
+    # secrets:
+    #   auth_token:
+    #     required: true
+    #     description: Used for authentication      
     # inputs:
     #   docker_image_tags: 
     #     required: true

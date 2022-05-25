@@ -8,6 +8,8 @@ env:
   REGISTRY: ghcr.io
 jobs:
   build:
+    permissions:
+      packages: write
     uses: ipfs-elastic-provider/ipfs-elastic-provider-bitswap-peer/.github/workflows/shared-build.yaml@env-workflows # TODO: @dev
     # with:
       # docker_image_tags: |

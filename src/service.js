@@ -144,7 +144,7 @@ async function processEntry(entry, context) {
         await sendMessage(context, toSend)
       }
     } else if (newPresence) {
-      if (context.message.addBlockPresence(newPresence, context.protocol)) {
+      if (!context.message.addBlockPresence(newPresence, context.protocol)) {
         const toSend = context.message.encode(context.protocol)
         context.message = createEmptyMessage([], [newPresence])
         await sendMessage(context, toSend)

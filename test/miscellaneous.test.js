@@ -146,7 +146,7 @@ t.test('telemetry - export', async t => {
   const server2 = await telemetry.startServer(0)
   t.equal(server.address().port, server2.address().port)
 
-  const metricsUrl = `http://localhost:${server.address().port}/metrics`
+  const metricsUrl = `http://0.0.0.0:${server.address().port}/metrics`
 
   {
     const { statusCode, headers, body } = await requestMetrics(metricsUrl)

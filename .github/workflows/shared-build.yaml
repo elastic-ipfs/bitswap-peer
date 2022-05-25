@@ -18,7 +18,6 @@ on:
       build_date: 
         description: build_date
         value: ${{ jobs.build.outputs.build_date }}
-
 env:
   REGISTRY: ghcr.io
 jobs:

@@ -10,11 +10,11 @@ jobs:
   build:
     permissions:
       packages: write
-    uses: ipfs-elastic-provider/ipfs-elastic-provider-bitswap-peer/.github/workflows/shared-build.yaml@dev
+    uses: ipfs-elastic-provider/ipfs-elastic-provider-bitswap-peer/.github/workflows/shared-build.yaml@env-workflows
     with:
       docker_image_version_suffix_label: dev
   deploy:
-    uses: ipfs-elastic-provider/ipfs-elastic-provider-bitswap-peer/.github/workflows/shared-deploy.yaml@dev
+    uses: ipfs-elastic-provider/ipfs-elastic-provider-bitswap-peer/.github/workflows/shared-deploy.yaml@env-workflows
     needs: build
     with:
       deploy_to_environment: dev

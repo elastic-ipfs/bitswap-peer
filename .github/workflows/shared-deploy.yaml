@@ -13,6 +13,14 @@ on:
         description: Version label to be used for docker build
         required: false
         default: ''
+      build_date:
+        type: string
+        required: true
+        description: Docker image tag prefix
+      package_version:
+        type: string
+        required: true
+        description: Docker image tag prefix
     secrets: 
       deployment_personal_access_token:
         required: true
@@ -35,8 +43,8 @@ jobs:
         cd deployment
         git config user.name ${{ github.actor }}
         git config user.email ${{ github.actor }}@users.noreply.github.com
-        yq -iP ".image.version=\"${{ needs.build.outputs.build_date }}-${{inputs.docker_image_version_suffix_label}}\"" helm/values-${{ inputs.deploy_to_environment }}.yaml
-        git commit -am "feat: Deployed version ${{ needs.build.outputs.package_version }}-${{ needs.build.outputs.build_date }}-${{ inputs.deploy_to_environment }}."
+        yq -iP ".image.version=\"${{ inputs.build_date }}-${{inputs.docker_image_version_suffix_label}}\"" helm/values-${{ inputs.deploy_to_environment }}.yaml
+        git commit -am "feat: Deployed version ${{ inputs.package_version }}-${{ inputs.build_date }}-${{ inputs.deploy_to_environment }}."
         git push
     - name: Deploy new image
       if: inputs.docker_image_version_suffix_label == ''
@@ -44,6 +52,6 @@ jobs:
         cd deployment
         git config user.name ${{ github.actor }}
         git config user.email ${{ github.actor }}@users.noreply.github.com
-        yq -iP ".image.version=\"${{ needs.build.outputs.build_date }}\"" helm/values-${{ inputs.deploy_to_environment }}.yaml
-        git commit -am "feat: Deployed version ${{ needs.build.outputs.package_version }}-${{ needs.build.outputs.build_date }}-${{ inputs.deploy_to_environment }}."
+        yq -iP ".image.version=\"${{ inputs.build_date }}\"" helm/values-${{ inputs.deploy_to_environment }}.yaml
+        git commit -am "feat: Deployed version ${{ inputs.package_version }}-${{ inputs.build_date }} to environment: ${{ inputs.deploy_to_environment }}."
         git push

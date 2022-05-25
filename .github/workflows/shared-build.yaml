@@ -15,6 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       packages: write
+    outputs:
+      package_version: ${{ steps.dependencies.outputs.package_version }}
+      build_date: ${{ steps.dependencies.outputs.build_date }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -28,6 +31,7 @@ jobs:
           path: node_modules
           key: node-modules-${{ hashFiles('package.json') }}
       - name: Install dependencies
+        id : dependencies
         run: |
           mkdir yq && wget https://github.com/mikefarah/yq/releases/download/v4.21.1/yq_linux_amd64.tar.gz -q -O - | tar xz -C yq && sudo mv yq/yq_linux_amd64 /usr/bin/yq
           yq -i ".version = \"$(yq .version package.json)\", .buildDate = \"$(date +%Y%m%d.%H%M)\"" metrics.yml
@@ -36,6 +40,9 @@ jobs:
           echo BUILD_DATE=$(yq .buildDate metrics.yml) >> $GITHUB_ENV
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
           npm install
+          echo "::set-output image_repository=$IMAGE_REPOSITORY"
+          echo "::set-output package_version=$PACKAGE_VERSION"
+          echo "::set-output build_date=$BUILD_DATE"
       - name: Lint code
         run: npm run lint
       - name: Set up Docker Buildx

@@ -13,22 +13,27 @@ jobs:
     uses: ipfs-elastic-provider/ipfs-elastic-provider-bitswap-peer/.github/workflows/shared-build.yaml@env-workflows # TODO: @dev
     with:
       docker_image_version_suffix_label: dev
-  deploy:
+  testoutputfrombuild:
     runs-on: ubuntu-latest
     needs: build
-    environment: dev
     steps:
-    - name: Checkout deployment repository
-      uses: actions/checkout@v3
-      with:
-        repository: ipfs-elastic-provider/ipfs-elastic-provider-bitswap-peer-deployment
-        path: deployment
-        token: ${{ secrets.DEPLOYMENT_PERSONAL_ACCESS_TOKEN }}
-    - name: Deploy new image
-      run: |
-        cd deployment
-        git config user.name ${{ github.actor }}
-        git config user.email ${{ github.actor }}@users.noreply.github.com
-        yq -iP ".image.version=\"${{ needs.build.outputs.build_date }}-dev\"" helm/values-dev.yaml
-        git commit -am "feat: Deployed version ${{ needs.build.outputs.package_version }}-${{ needs.build.outputs.build_date }}-dev."
-        git push
+    - run: echo ${{ needs.build.outputs.build_date }} ${{ needs.build.outputs.package_version }}
+  # deploy:
+  #   runs-on: ubuntu-latest
+  #   needs: build
+  #   environment: dev
+  #   steps:
+  #   - name: Checkout deployment repository
+  #     uses: actions/checkout@v3
+  #     with:
+  #       repository: ipfs-elastic-provider/ipfs-elastic-provider-bitswap-peer-deployment
+  #       path: deployment
+  #       token: ${{ secrets.DEPLOYMENT_PERSONAL_ACCESS_TOKEN }}
+  #   - name: Deploy new image
+  #     run: |
+  #       cd deployment
+  #       git config user.name ${{ github.actor }}
+  #       git config user.email ${{ github.actor }}@users.noreply.github.com
+  #       yq -iP ".image.version=\"${{ needs.build.outputs.build_date }}-dev\"" helm/values-dev.yaml
+  #       git commit -am "feat: Deployed version ${{ needs.build.outputs.package_version }}-${{ needs.build.outputs.build_date }}-dev."
+  #       git push

@@ -33,7 +33,7 @@ jobs:
           key: node-modules-${{ hashFiles('package.json') }}
       - name: Install dependencies
         id : dependencies
-        run: |
+        run: |  # Next try: Put real values here
           mkdir yq && wget https://github.com/mikefarah/yq/releases/download/v4.21.1/yq_linux_amd64.tar.gz -q -O - | tar xz -C yq && sudo mv yq/yq_linux_amd64 /usr/bin/yq
           yq -i ".version = \"$(yq .version package.json)\", .buildDate = \"$(date +%Y%m%d.%H%M)\"" metrics.yml
           echo IMAGE_REPOSITORY=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]') >> $GITHUB_ENV
@@ -41,9 +41,9 @@ jobs:
           echo BUILD_DATE=$(yq .buildDate metrics.yml) >> $GITHUB_ENV
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
           npm install
-          echo "::set-output name=image_repository::/${{ env.IMAGE_REPOSITORY }}"
-          echo "::set-output name=package_version::${{ env.PACKAGE_VERSION }}"
-          echo "::set-output name=build_date::${{ env.BUILD_DATE }}"
+          echo "::set-output name=image_repository::testreturnfromoutputimage"
+          echo "::set-output name=package_version::testreturnfromoutputpackage"
+          echo "::set-output name=build_date::testreturnfromoutputbuild"
       - name: Lint code
         run: npm run lint
       - name: Set up Docker Buildx

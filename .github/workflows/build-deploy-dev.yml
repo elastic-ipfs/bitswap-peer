@@ -14,7 +14,7 @@ jobs:
         ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.PACKAGE_VERSION }}-dev
         ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.BUILD_DATE }}-dev
         ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:dev
-      registry: ${{ env.REGISTRY }}
+      registry: ghcr.io # ${{ env.REGISTRY }} # TODO: Why this didn't work?
     secrets:
       auth_token: ${{ secrets.GITHUB_TOKEN }}
   deploy:

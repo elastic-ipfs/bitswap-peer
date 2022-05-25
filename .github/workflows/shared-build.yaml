@@ -30,9 +30,9 @@ jobs:
     outputs:
       # output1: ${{ steps.step1.outputs.test }}
       # output2: ${{ steps.step2.outputs.test }}
-      image_repository: ${{ steps.dependencies.outputs.image_repository }}
-      package_version: ${{ steps.dependencies.outputs.package_version }}
-      build_date: ${{ steps.dependencies.outputs.build_date }}
+      image_repository: ${{ steps.setOutput.outputs.image_repository }}
+      package_version: ${{ steps.setOutput.outputs.package_version }}
+      build_date: ${{ steps.setOutput.outputs.build_date }}
     steps:
     # - id: step1
     #   run: echo "::set-output name=test::hello"
@@ -61,6 +61,12 @@ jobs:
         npm install
         echo "::set-output name=image_repository::$IMAGE_REPOSITORY"
         echo "::set-output name=package_version::$PACKAGE_VERSION"
+        echo "::set-output name=build_date::build_date_fixed"
+    - name: Set output variables
+      id: setOutput
+      run: |
+        echo "::set-output name=image_repository::${{ env.IMAGE_REPOSITORY }}"
+        echo "::set-output name=package_version::${{ env.PACKAGE_VERSION }}"
         echo "::set-output name=build_date::build_date_fixed"
     - name: Lint code
       run: npm run lint

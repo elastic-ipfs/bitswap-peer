@@ -8,11 +8,16 @@ on:
         description: Version label to be used for docker build
         required: false
         default: ''
+      environment:
+        type: string
+        description: env
+        required: true
 env:
   REGISTRY: ghcr.io
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     permissions:
       packages: write
     outputs:
@@ -89,3 +94,6 @@ jobs:
     #     echo "::set-output name=image_repository::testreturnfromoutputimage"
     #     echo "::set-output name=package_version::testreturnfromoutputpackage"
     #     echo "::set-output name=build_date::testreturnfromoutputbuild"
+
+
+    ### TODO: Shared deploy. Need to understand if it is possible to receive environment as input (I don't think so, probably will get the same error as the 'runs-on')

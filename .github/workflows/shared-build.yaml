@@ -9,8 +9,10 @@ on:
         required: false
         default: ''
     outputs:
-      output1: ${{ jobs.build.outputs.output1 }}
-      output2: ${{ jobs.build.outputs.output2 }}
+      output1: 
+        description: output1
+        value: ${{ jobs.build.outputs.output1 }}
+      # output2: ${{ jobs.build.outputs.output2 }}
 env:
   REGISTRY: ghcr.io
 jobs:

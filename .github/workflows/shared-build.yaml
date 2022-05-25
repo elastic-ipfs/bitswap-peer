@@ -10,7 +10,6 @@ on:
         default: ''
 env:
   REGISTRY: ghcr.io
-  BRANCH: ${{ github.head_ref || github.ref_name }}
 jobs:
   build:
     runs-on: ubuntu-latest

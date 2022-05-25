@@ -94,7 +94,7 @@ class Entry {
     }
 
     return {
-      block: cid.toV1().bytes,
+      block: cid.bytes,
       priority,
       cancel,
       wantType,
@@ -179,12 +179,12 @@ class BlockPresence {
   }
 
   static fromRaw(raw, protocol) {
-    return new BlockPresence(CID.decode(raw.cid).toV1(), raw.type)
+    return new BlockPresence(CID.decode(raw.cid), raw.type)
   }
 
   serialize(protocol) {
     return {
-      cid: this.cid.toV1().bytes,
+      cid: this.cid.bytes,
       type: this.type
     }
   }

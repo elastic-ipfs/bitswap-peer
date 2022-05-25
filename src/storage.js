@@ -205,4 +205,3 @@ module.exports = {
   refreshAwsCredentials,
   searchCarInDynamo
 }
-

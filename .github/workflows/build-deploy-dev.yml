@@ -11,7 +11,8 @@ jobs:
     permissions:
       packages: write
     uses: ipfs-elastic-provider/ipfs-elastic-provider-bitswap-peer/.github/workflows/shared-build.yaml@env-workflows # TODO: @dev
-    # with:
+    with:
+      docker_image_version_label: dev
       # docker_image_tags: |
       #   ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.PACKAGE_VERSION }}-dev
       #   ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.BUILD_DATE }}-dev

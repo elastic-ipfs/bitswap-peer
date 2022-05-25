@@ -2,21 +2,15 @@ name: 'Shared CI flow'
 
 on:
   workflow_call:
-    # secrets:
-    #   auth_token:
-    #     required: true
-    #     description: Used for authentication      
-    # inputs:
-    #   docker_image_tags: 
-    #     required: true
-    #     type: string
-    #     description: Tags to be used for docker build
-    #   registry: 
-    #     required: true
-    #     type: string
-    #     description: Tags to be used for docker build
+    inputs:
+      docker_image_version_label:
+        type: string
+        description: Version label to be used for docker build
+        required: false
+        default: ''
 env:
   REGISTRY: ghcr.io
+  BRANCH: ${{ github.head_ref || github.ref_name }}
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -53,24 +47,24 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          # password: ${{ secrets.auth_token }}
-      # - name: Build And Push Image
-      #   uses: docker/build-push-action@v2
-      #   with:
-      #     push: true
-      #     context: .
-      #     tags: |
-      #       ${{ inputs.docker_image_tags }}
-      #     labels: |
-      #       org.opencontainers.image.source=https://github.com/${{ github.repository }}
-      # - name: Build Image
-      #   uses: docker/build-push-action@v2
-      #   with:
-      #     push: true
-      #     context: .
-      #     tags: |
-      #       ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.PACKAGE_VERSION }}-dev
-      #       ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.BUILD_DATE }}-dev
-      #       ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:dev
-      #     labels: |
-      #       org.opencontainers.image.source=https://github.com/${{ github.repository }}
+      - name: Build And Push Image
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          context: .
+          tags: |
+            ${{ inputs.docker_image_tags }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+      - name: Build Image
+        if: env.BRANCH == 'main'
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          context: .
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.PACKAGE_VERSION }}-dev
+            ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.BUILD_DATE }}-dev
+            ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:dev
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}

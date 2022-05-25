@@ -34,7 +34,7 @@ jobs:
           echo IMAGE_REPOSITORY=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]') >> $GITHUB_ENV
           echo PACKAGE_VERSION=$(yq .version metrics.yml) >> $GITHUB_ENV
           echo BUILD_DATE=$(yq .buildDate metrics.yml) >> $GITHUB_ENV
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.auth_token }}" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
           npm install
       - name: Lint code
         run: npm run lint
@@ -47,7 +47,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build And Push Image with suffix label
-        if: inputs.docker_image_version_label != ''
+        if: inputs.docker_image_version_suffix_label != ''
         uses: docker/build-push-action@v2
         with:
           push: true
@@ -59,7 +59,7 @@ jobs:
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
       - name: Build And Push Image
-        if: inputs.docker_image_version_suffix_label != ''
+        if: inputs.docker_image_version_suffix_label == ''
         uses: docker/build-push-action@v2
         with:
           push: true

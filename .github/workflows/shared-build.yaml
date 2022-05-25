@@ -9,10 +9,16 @@ on:
         required: false
         default: ''
     outputs:
-      output1: 
-        description: output1
-        value: ${{ jobs.build.outputs.output1 }}
-      # output2: ${{ jobs.build.outputs.output2 }}
+      image_repository: 
+        description: image_repository
+        value: ${{ jobs.build.outputs.image_repository }}
+      package_version: 
+        description: package_version
+        value: ${{ jobs.build.outputs.package_version }}
+      build_date: 
+        description: build_date
+        value: ${{ jobs.build.outputs.build_date }}
+
 env:
   REGISTRY: ghcr.io
 jobs:
@@ -22,39 +28,44 @@ jobs:
     permissions:
       packages: write
     outputs:
-      output1: ${{ steps.step1.outputs.test }}
-      output2: ${{ steps.step2.outputs.test }}
-      # image_repository: ${{ steps.setOutputs.outputs.image_repository }}
-      # package_version: ${{ steps.setOutputs.outputs.package_version }}
-      # build_date: ${{ steps.setOutputs.outputs.build_date }}
+      # output1: ${{ steps.step1.outputs.test }}
+      # output2: ${{ steps.step2.outputs.test }}
+      image_repository: ${{ steps.dependencies.outputs.image_repository }}
+      package_version: ${{ steps.dependencies.outputs.package_version }}
+      build_date: ${{ steps.dependencies.outputs.build_date }}
     steps:
-    - id: step1
-      run: echo "::set-output name=test::hello"
-    - id: step2
-      run: echo "::set-output name=test::world"
-    # - name: Checkout
-    #   uses: actions/checkout@v3
-    # - name: Use Node.js Current
-    #   uses: actions/setup-node@v2
-    #   with:
-    #     node-version: 16.x
-    # - name: Restore cached dependencies
-    #   uses: actions/cache@v2
-    #   with:
-    #     path: node_modules
-    #     key: node-modules-${{ hashFiles('package.json') }}
-    # - name: Install dependencies
-    #   run: |  # Next try: Put real values here
-    #     mkdir yq && wget https://github.com/mikefarah/yq/releases/download/v4.21.1/yq_linux_amd64.tar.gz -q -O - | tar xz -C yq && sudo mv yq/yq_linux_amd64 /usr/bin/yq
-    #     yq -i ".version = \"$(yq .version package.json)\", .buildDate = \"$(date +%Y%m%d.%H%M)\"" metrics.yml
-    #     echo IMAGE_REPOSITORY=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]') >> $GITHUB_ENV
-    #     echo PACKAGE_VERSION=$(yq .version metrics.yml) >> $GITHUB_ENV
-    #     echo BUILD_DATE=$(yq .buildDate metrics.yml) >> $GITHUB_ENV
-    #     echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
-    #     npm install
-    #     echo "::set-output name=image_repository::testreturnfromoutputimage"
-    #     echo "::set-output name=package_version::testreturnfromoutputpackage"
-    #     echo "::set-output name=build_date::testreturnfromoutputbuild"
+    # - id: step1
+    #   run: echo "::set-output name=test::hello"
+    # - id: step2
+    #   run: echo "::set-output name=test::world"
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Use Node.js Current
+      uses: actions/setup-node@v2
+      with:
+        node-version: 16.x
+    - name: Restore cached dependencies
+      uses: actions/cache@v2
+      with:
+        path: node_modules
+        key: node-modules-${{ hashFiles('package.json') }}
+    - name: Install dependencies
+      id: dependencies
+      run: | 
+        echo "::set-output name=image_repository::testreturnfromoutputimage"
+        echo "::set-output name=package_version::testreturnfromoutputpackage"
+        echo "::set-output name=build_date::testreturnfromoutputbuild"
+      # run: |  # Next try: Put real values here
+      #   mkdir yq && wget https://github.com/mikefarah/yq/releases/download/v4.21.1/yq_linux_amd64.tar.gz -q -O - | tar xz -C yq && sudo mv yq/yq_linux_amd64 /usr/bin/yq
+      #   yq -i ".version = \"$(yq .version package.json)\", .buildDate = \"$(date +%Y%m%d.%H%M)\"" metrics.yml
+      #   echo IMAGE_REPOSITORY=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]') >> $GITHUB_ENV
+      #   echo PACKAGE_VERSION=$(yq .version metrics.yml) >> $GITHUB_ENV
+      #   echo BUILD_DATE=$(yq .buildDate metrics.yml) >> $GITHUB_ENV
+      #   echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+      #   npm install
+      #   echo "::set-output name=image_repository::testreturnfromoutputimage"
+      #   echo "::set-output name=package_version::testreturnfromoutputpackage"
+      #   echo "::set-output name=build_date::testreturnfromoutputbuild"
     # - name: Lint code
     #   run: npm run lint
     # - name: Set up Docker Buildx
@@ -96,5 +107,3 @@ jobs:
     #     echo "::set-output name=package_version::testreturnfromoutputpackage"
     #     echo "::set-output name=build_date::testreturnfromoutputbuild"
 
-
-    ### TODO: Shared deploy. Need to understand if it is possible to receive environment as input (I don't think so, probably will get the same error as the 'runs-on')

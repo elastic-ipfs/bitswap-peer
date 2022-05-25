@@ -60,8 +60,8 @@ jobs:
         echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
         npm install
         echo "::set-output name=image_repository::$IMAGE_REPOSITORY"
-        echo "::set-output name=package_version::$PACKAGE_VERSION"
-        echo "::set-output name=build_date::$BUILD_DATE"
+        echo "::set-output name=package_version::$(PACKAGE_VERSION)"
+        echo "::set-output name=build_date::build_date_fixed"
     - name: Lint code
       run: npm run lint
     # - name: Set up Docker Buildx

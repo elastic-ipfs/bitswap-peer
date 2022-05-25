@@ -13,7 +13,7 @@ jobs:
     uses: ipfs-elastic-provider/ipfs-elastic-provider-bitswap-peer/.github/workflows/shared-build.yaml@env-workflows # TODO: @dev
     with:
       docker_image_version_suffix_label: dev
-      environment: dev
+      environment: prod
 
   # deploy:
   #   runs-on: ubuntu-latest

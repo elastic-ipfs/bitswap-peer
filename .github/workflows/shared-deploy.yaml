@@ -36,21 +36,21 @@ jobs:
         repository: ipfs-elastic-provider/ipfs-elastic-provider-bitswap-peer-deployment
         path: deployment
         token: ${{ secrets.deployment_personal_access_token }}
-    - name: Git Config
-      run: |
-        git config user.name ${{ github.actor }}
-        git config user.email ${{ github.actor }}@users.noreply.github.com
     - name: Deploy new image with suffix label
       if: inputs.docker_image_version_suffix_label != ''
       run: |
         cd deployment
+        git config user.name ${{ github.actor }}
+        git config user.email ${{ github.actor }}@users.noreply.github.com
         yq -iP ".image.version=\"${{ inputs.build_date }}-${{inputs.docker_image_version_suffix_label}}\"" helm/values-${{ inputs.deploy_to_environment }}.yaml
-        git commit -am "feat: Deployed version ${{ inputs.package_version }}-${{ inputs.build_date }}-${{ inputs.deploy_to_environment }}."
+        git commit -am "feat: Deployed version ${{ inputs.package_version }}-${{ inputs.build_date }}-${{inputs.docker_image_version_suffix_label}} to environment: ${{ inputs.deploy_to_environment }}."
         git push
     - name: Deploy new image
       if: inputs.docker_image_version_suffix_label == ''
       run: |
         cd deployment
+        git config user.name ${{ github.actor }}
+        git config user.email ${{ github.actor }}@users.noreply.github.com
         yq -iP ".image.version=\"${{ inputs.build_date }}\"" helm/values-${{ inputs.deploy_to_environment }}.yaml
         git commit -am "feat: Deployed version ${{ inputs.package_version }}-${{ inputs.build_date }} to environment: ${{ inputs.deploy_to_environment }}."
         git push

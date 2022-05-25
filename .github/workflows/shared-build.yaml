@@ -3,7 +3,7 @@ name: 'Shared CI flow'
 on:
   workflow_call:
     inputs:
-      docker_image_version_label:
+      docker_image_version_suffix_label:
         type: string
         description: Version label to be used for docker build
         required: false
@@ -47,24 +47,27 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build And Push Image
+      - name: Build And Push Image with suffix label
+        if: inputs.docker_image_version_label != ''
         uses: docker/build-push-action@v2
         with:
           push: true
           context: .
           tags: |
-            ${{ inputs.docker_image_tags }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.PACKAGE_VERSION }}-${{ inputs.docker_image_version_suffix_label }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.BUILD_DATE }}-${{ inputs.docker_image_version_suffix_label }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ inputs.docker_image_version_suffix_label }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-      - name: Build Image
-        if: env.BRANCH == 'main'
+      - name: Build And Push Image
+        if: inputs.docker_image_version_suffix_label != ''
         uses: docker/build-push-action@v2
         with:
           push: true
           context: .
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.PACKAGE_VERSION }}-dev
-            ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.BUILD_DATE }}-dev
-            ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:dev
+            ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.PACKAGE_VERSION }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.BUILD_DATE }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:latest
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}

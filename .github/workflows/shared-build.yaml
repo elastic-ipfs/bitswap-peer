@@ -8,10 +8,9 @@ on:
         description: Version label to be used for docker build
         required: false
         default: ''
-      environment:
-        type: string
-        description: env
-        required: true
+    outputs:
+      output1: ${{ jobs.build.outputs.output1 }}
+      output2: ${{ jobs.build.outputs.output2 }}
 env:
   REGISTRY: ghcr.io
 jobs:

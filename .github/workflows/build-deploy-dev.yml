@@ -13,8 +13,12 @@ jobs:
     uses: ipfs-elastic-provider/ipfs-elastic-provider-bitswap-peer/.github/workflows/shared-build.yaml@env-workflows # TODO: @dev
     with:
       docker_image_version_suffix_label: dev
-      environment: prod
-
+  testoutputfrombuild:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    # - run: echo ${{ needs.build.outputs.build_date }} ${{ needs.build.outputs.package_version }}
+    - run: echo ${{needs.build.outputs.output1}} ${{needs.build.outputs.output2}}
   # deploy:
   #   runs-on: ubuntu-latest
   #   needs: build

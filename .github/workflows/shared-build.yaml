@@ -1,0 +1,94 @@
+name: 'Shared CI flow'
+
+on:
+  workflow_call:
+    inputs:
+      docker_image_version_suffix_label:
+        type: string
+        description: Version label to be used for docker build
+        required: false
+        default: ''
+    outputs:
+      image_repository: 
+        description: image_repository
+        value: ${{ jobs.build.outputs.image_repository }}
+      package_version: 
+        description: package_version
+        value: ${{ jobs.build.outputs.package_version }}
+      build_date: 
+        description: build_date
+        value: ${{ jobs.build.outputs.build_date }}
+env:
+  REGISTRY: ghcr.io
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    outputs:
+      image_repository: ${{ steps.setOutput.outputs.image_repository }}
+      package_version: ${{ steps.setOutput.outputs.package_version }}
+      build_date: ${{ steps.setOutput.outputs.build_date }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Use Node.js Current
+      uses: actions/setup-node@v2
+      with:
+        node-version: 16.x
+    - name: Restore cached dependencies
+      uses: actions/cache@v2
+      with:
+        path: node_modules
+        key: node-modules-${{ hashFiles('package.json') }}
+    - name: Install dependencies
+      id: dependencies
+      run: | 
+        mkdir yq && wget https://github.com/mikefarah/yq/releases/download/v4.21.1/yq_linux_amd64.tar.gz -q -O - | tar xz -C yq && sudo mv yq/yq_linux_amd64 /usr/bin/yq
+        yq -i ".version = \"$(yq .version package.json)\", .buildDate = \"$(date +%Y%m%d.%H%M)\"" metrics.yml
+        echo IMAGE_REPOSITORY=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]') >> $GITHUB_ENV
+        echo PACKAGE_VERSION=$(yq .version metrics.yml) >> $GITHUB_ENV
+        echo BUILD_DATE=$(yq .buildDate metrics.yml) >> $GITHUB_ENV
+        echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+        npm install    
+    - name: Lint code
+      run: npm run lint
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+    - name: Log in to GitHub Docker Registry
+      uses: docker/login-action@v1
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Build And Push Image with suffix label
+      if: inputs.docker_image_version_suffix_label != ''
+      uses: docker/build-push-action@v2
+      with:
+        push: true
+        context: .
+        tags: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.PACKAGE_VERSION }}-${{ inputs.docker_image_version_suffix_label }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.BUILD_DATE }}-${{ inputs.docker_image_version_suffix_label }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ inputs.docker_image_version_suffix_label }}
+        labels: |
+          org.opencontainers.image.source=https://github.com/${{ github.repository }}
+    - name: Build And Push Image
+      if: inputs.docker_image_version_suffix_label == ''
+      uses: docker/build-push-action@v2
+      with:
+        push: true
+        context: .
+        tags: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.PACKAGE_VERSION }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.BUILD_DATE }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:latest
+        labels: |
+          org.opencontainers.image.source=https://github.com/${{ github.repository }}
+    - name: Set output variables
+      id: setOutput
+      run: |
+        echo "::set-output name=image_repository::${{ env.IMAGE_REPOSITORY }}"
+        echo "::set-output name=package_version::${{ env.PACKAGE_VERSION }}"
+        echo "::set-output name=build_date::${{ env.BUILD_DATE }}"
+  

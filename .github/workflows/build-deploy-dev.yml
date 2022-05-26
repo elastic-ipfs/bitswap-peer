@@ -1,0 +1,25 @@
+---
+name: Build And Deploy Dev
+on:
+  push:
+    branches: [dev] 
+  workflow_dispatch:
+env:
+  REGISTRY: ghcr.io
+jobs:
+  build:
+    permissions:
+      packages: write
+    uses: ipfs-elastic-provider/ipfs-elastic-provider-bitswap-peer/.github/workflows/shared-build.yaml@dev
+    with:
+      docker_image_version_suffix_label: dev
+  deploy:
+    uses: ipfs-elastic-provider/ipfs-elastic-provider-bitswap-peer/.github/workflows/shared-deploy.yaml@dev
+    needs: build
+    with:
+      deploy_to_environment: dev
+      docker_image_version_suffix_label: dev
+      build_date: ${{ needs.build.outputs.build_date }}
+      package_version: ${{ needs.build.outputs.package_version }}
+    secrets:
+      deployment_personal_access_token: ${{ secrets.DEPLOYMENT_PERSONAL_ACCESS_TOKEN }}

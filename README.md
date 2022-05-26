@@ -1,4 +1,4 @@
-# AWS IPFS BitSwap peer
+# IPFS Elastic Provider Bitswap peer
 
 ## Deployment environment variables
 

@@ -14,7 +14,8 @@ function readData(file, from, to) {
 }
 
 function readBlock(file) {
-  return JSON.parse(readFileSync(resolve(process.cwd(), `test/fixtures/${file}`), 'utf-8'))
+  const json = readFileSync(resolve(process.cwd(), `test/fixtures/${file}`), 'utf-8')
+  return JSON.parse(json.replaceAll('{AWS_REGION}', process.env.AWS_REGION))
 }
 
 function mockDynamoItem(pool, cid, response, times = 1) {

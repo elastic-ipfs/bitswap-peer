@@ -16,7 +16,7 @@
             "N": "2096652"
           },
           "car": {
-            "S": "test-cars/test-cid9.car"
+            "S": "{AWS_REGION}/test-cars/test-cid9.car"
           }
         }
       }

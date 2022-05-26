@@ -74,7 +74,7 @@ t.test('searchCarInDynamo - HTTP error handling', async t => {
     .reply(400, { message: 'FOO' })
 
   await t.rejects(searchCarInDynamo(mockAgent, 'table', 'key', 'error'), {
-    message: 'GetItem failed with HTTP error 400 and body: {"message":"FOO"}'
+    message: 'GetItem from DynamoDB table table with key error failed with HTTP error 400 and body: {"message":"FOO"}'
   })
 })
 

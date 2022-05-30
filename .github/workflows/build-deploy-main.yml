@@ -16,8 +16,7 @@ jobs:
     needs: build
     with:
       deploy_to_environment: staging
-      build_date: ${{ needs.build.outputs.build_date }}
-      package_version: ${{ needs.build.outputs.package_version }}
+      docker_image_version: ${{ needs.build.outputs.build_date }}
     secrets:
       deployment_personal_access_token: ${{ secrets.DEPLOYMENT_PERSONAL_ACCESS_TOKEN }}
   deploy-to-prod:

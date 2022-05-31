@@ -127,9 +127,9 @@ t.test('fetchBlockFromS3', async t => {
       .intercept({ method: 'GET', path: '/error' })
       .reply(400, { message: 'FOO' })
 
-    await t.rejects(() => 
-      fetchBlockFromS3(mockAgent, bucketRegion, 'bucket', 'error', 1, 1, 3, 0), 
-      'Cannot download from S3 https://bucket.s3.us-west-2.amazonaws.com/error')
+    await t.rejects(() =>
+      fetchBlockFromS3(mockAgent, bucketRegion, 'bucket', 'error', 1, 1, 3, 0),
+    'Cannot download from S3 https://bucket.s3.us-west-2.amazonaws.com/error')
     t.ok(logger.error.calledWith('Cannot download from S3 https://bucket.s3.us-west-2.amazonaws.com/error after 3 attempts'))
   })
 

@@ -7,8 +7,9 @@ const { resolve } = require('path')
 const { Piscina } = require('piscina')
 const { Agent, request } = require('undici')
 const { xml2js } = require('xml-js')
+const sleep = require('util').promisify(setTimeout)
 
-const { concurrency: connections, pipelining } = require('./config')
+const { concurrency: connections, pipelining, s3MaxRetries, s3RetryDelay } = require('./config')
 const { logger, serializeError } = require('./logging')
 const { telemetry } = require('./telemetry')
 
@@ -151,50 +152,64 @@ async function searchCarInDynamo(dispatcher, table, keyName, keyValue) {
   }
 }
 
-async function fetchBlockFromS3(dispatcher, bucketRegion, bucketName, key, offset, length) {
-  let url
-  try {
-    url = `https://${bucketName}.s3.${bucketRegion}.amazonaws.com/${key}`
-    telemetry.increaseCount('s3-fetchs')
-
-    if (length === 0) {
-      return Buffer.alloc(0)
-    }
-
-    // Create the request and sign it
-    const headers = await signerWorker.run({
-      region: bucketRegion,
-      keyId,
-      accessKey,
-      sessionToken,
-      service: 's3',
-      method: 'GET',
-      url,
-      headers: offset > 0 && length > 0 ? { range: `bytes=${offset}-${offset + length - 1}` } : {}
-    })
-
-    // Download from S3
-    const { statusCode, body } = await telemetry.trackDuration(
-      's3-fetchs',
-      request(url, { method: 'GET', headers, dispatcher })
-    )
-
-    // Read the response
-    const buffer = new BufferList()
-
-    for await (const chunk of body) {
-      buffer.append(chunk)
-    }
-
-    if (statusCode >= 400) {
-      throw new Error(`Fetch failed with HTTP error ${statusCode} and body: ${buffer.slice().toString('utf-8')} `)
-    }
-
-    return buffer.slice()
-  } catch (e) {
-    logger.error(`Cannot download from S3 URL "${url}": ${serializeError(e)}`)
-    throw e
+async function fetchBlockFromS3(dispatcher, bucketRegion, bucketName, key, offset, length, retries = s3MaxRetries, retryDelay = s3RetryDelay) {
+  telemetry.increaseCount('s3-fetchs')
+  if (length === 0) {
+    logger.warn('Called fetch S3 with length 0')
+    return Buffer.alloc(0)
   }
+
+  // Create the request and sign it
+  const url = `https://${bucketName}.s3.${bucketRegion}.amazonaws.com/${key}`
+  const headers = await signerWorker.run({
+    region: bucketRegion,
+    keyId,
+    accessKey,
+    sessionToken,
+    service: 's3',
+    method: 'GET',
+    url,
+    headers: offset > 0 && length > 0 ? { range: `bytes=${offset}-${offset + length - 1}` } : {}
+  })
+
+  let attempts = 1
+  do {
+    try {
+      return await fetchFromS3(dispatcher, url, headers)
+    } catch (err) {
+      if (err.message === 'NOT_FOUND') {
+        logger.error(`Not Found S3, URL: ${url}`)
+        throw err
+      }
+      logger.error(`S3 Error, URL: ${url} Error: "${err.message}" attempt ${attempts} / ${retries}`)
+    }
+
+    await sleep(retryDelay)
+  } while (++attempts < retries)
+
+  logger.error(`Cannot download from S3 ${url} after ${attempts} attempts`)
+  throw new Error(`Cannot download from S3 ${url}`)
+}
+
+async function fetchFromS3(dispatcher, url, headers) {
+  const { statusCode, body } = await telemetry.trackDuration(
+    's3-fetchs',
+    request(url, { method: 'GET', headers, dispatcher })
+  )
+
+  const buffer = new BufferList()
+  for await (const chunk of body) {
+    buffer.append(chunk)
+  }
+
+  if (statusCode === 404) {
+    throw new Error('NOT_FOUND')
+  }
+  if (statusCode >= 400) {
+    throw new Error(`S3 Response - Status: ${statusCode} Body: ${buffer.slice().toString('utf-8')} `)
+  }
+
+  return buffer.slice()
 }
 
 module.exports = {

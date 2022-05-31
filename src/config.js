@@ -15,7 +15,10 @@ const {
   PIPELINING: rawPipelining,
   PORT: rawPort,
   TELEMETRY_PORT: rawTelemetryPort,
-  PING_PERIOD_SECONDS: pingPeriodSecs
+  PING_PERIOD_SECONDS: pingPeriodSecs,
+
+  S3_MAX_RETRIES: s3MaxRetries,
+  S3_RETRY_DELAY: s3RetryDelay
 } = process.env
 
 const concurrency = parseInt(rawConcurrency)
@@ -37,5 +40,8 @@ module.exports = {
     blocks: 'multihash',
     cars: 'path'
   },
-  telemetryPort: !isNaN(telemetryPort) && telemetryPort > 0 ? telemetryPort : 3001
+  telemetryPort: !isNaN(telemetryPort) && telemetryPort > 0 ? telemetryPort : 3001,
+
+  s3MaxRetries: s3MaxRetries ?? 3,
+  s3RetryDelay: s3RetryDelay ?? 500 // ms
 }

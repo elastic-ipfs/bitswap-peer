@@ -9,9 +9,6 @@ on:
         required: false
         default: ''
     outputs:
-      image_repository: 
-        description: image_repository
-        value: ${{ jobs.build.outputs.image_repository }}
       package_version: 
         description: package_version
         value: ${{ jobs.build.outputs.package_version }}
@@ -88,7 +85,6 @@ jobs:
     - name: Set output variables
       id: setOutput
       run: |
-        echo "::set-output name=image_repository::${{ env.IMAGE_REPOSITORY }}"
         echo "::set-output name=package_version::${{ env.PACKAGE_VERSION }}"
         echo "::set-output name=build_date::${{ env.BUILD_DATE }}"
   

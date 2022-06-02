@@ -8,19 +8,11 @@ on:
         description: Name of GH environment which image be deployed to
         required: false
         default: ''
-      docker_image_version_suffix_label:
+      docker_image_version:
         type: string
-        description: Version label to be used for docker build
+        description: Version label used for building image
         required: false
         default: ''
-      build_date:
-        type: string
-        required: true
-        description: Docker image tag prefix
-      package_version:
-        type: string
-        required: true
-        description: Docker image tag prefix
     secrets: 
       deployment_personal_access_token:
         required: true
@@ -37,20 +29,11 @@ jobs:
         path: deployment
         token: ${{ secrets.deployment_personal_access_token }}
     - name: Deploy new image with suffix label
-      if: inputs.docker_image_version_suffix_label != ''
       run: |
         cd deployment
         git config user.name ${{ github.actor }}
         git config user.email ${{ github.actor }}@users.noreply.github.com
-        yq -iP ".image.version=\"${{ inputs.build_date }}-${{inputs.docker_image_version_suffix_label}}\"" helm/values-${{ inputs.deploy_to_environment }}.yaml
-        git commit -am "feat: Deployed version ${{ inputs.package_version }}-${{ inputs.build_date }}-${{inputs.docker_image_version_suffix_label}} to environment: ${{ inputs.deploy_to_environment }}."
+        yq -iP ".image.version=\"${{ inputs.docker_image_version }}\"" helm/values-${{ inputs.deploy_to_environment }}.yaml
+        git commit -am "feat: Deployed version ${{ inputs.docker_image_version }} to environment: ${{ inputs.deploy_to_environment }}."
         git push
-    - name: Deploy new image
-      if: inputs.docker_image_version_suffix_label == ''
-      run: |
-        cd deployment
-        git config user.name ${{ github.actor }}
-        git config user.email ${{ github.actor }}@users.noreply.github.com
-        yq -iP ".image.version=\"${{ inputs.build_date }}\"" helm/values-${{ inputs.deploy_to_environment }}.yaml
-        git commit -am "feat: Deployed version ${{ inputs.package_version }}-${{ inputs.build_date }} to environment: ${{ inputs.deploy_to_environment }}."
-        git push
+  

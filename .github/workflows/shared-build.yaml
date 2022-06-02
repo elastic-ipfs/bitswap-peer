@@ -9,9 +9,6 @@ on:
         required: false
         default: ''
     outputs:
-      image_repository: 
-        description: image_repository
-        value: ${{ jobs.build.outputs.image_repository }}
       package_version: 
         description: package_version
         value: ${{ jobs.build.outputs.package_version }}
@@ -41,16 +38,19 @@ jobs:
       with:
         path: node_modules
         key: node-modules-${{ hashFiles('package.json') }}
+    - name: npm auth
+      uses: jgierer12/npm-auth-gpr@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
     - name: Install dependencies
-      id: dependencies
+      uses: bahmutov/npm-install@v1
+    - name: Set environment variables
       run: | 
         mkdir yq && wget https://github.com/mikefarah/yq/releases/download/v4.21.1/yq_linux_amd64.tar.gz -q -O - | tar xz -C yq && sudo mv yq/yq_linux_amd64 /usr/bin/yq
         yq -i ".version = \"$(yq .version package.json)\", .buildDate = \"$(date +%Y%m%d.%H%M)\"" metrics.yml
         echo IMAGE_REPOSITORY=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]') >> $GITHUB_ENV
         echo PACKAGE_VERSION=$(yq .version metrics.yml) >> $GITHUB_ENV
         echo BUILD_DATE=$(yq .buildDate metrics.yml) >> $GITHUB_ENV
-        echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
-        npm install    
     - name: Lint code
       run: npm run lint
     - name: Set up Docker Buildx
@@ -88,7 +88,6 @@ jobs:
     - name: Set output variables
       id: setOutput
       run: |
-        echo "::set-output name=image_repository::${{ env.IMAGE_REPOSITORY }}"
         echo "::set-output name=package_version::${{ env.PACKAGE_VERSION }}"
         echo "::set-output name=build_date::${{ env.BUILD_DATE }}"
   

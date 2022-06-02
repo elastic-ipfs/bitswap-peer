@@ -1,6 +1,6 @@
 {
   "name": "aws-ipfs-bitswap-peer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "AWS IPFS BitSwap Peer",
   "homepage": "https://github.com/web3-storage/aws-ipfs-bitswap-peer",
   "repository": "github:web3-storage/aws-ipfs-bitswap-peer",

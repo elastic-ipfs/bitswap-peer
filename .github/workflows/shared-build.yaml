@@ -51,6 +51,8 @@ jobs:
         echo IMAGE_REPOSITORY=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]') >> $GITHUB_ENV
         echo PACKAGE_VERSION=$(yq .version metrics.yml) >> $GITHUB_ENV
         echo BUILD_DATE=$(yq .buildDate metrics.yml) >> $GITHUB_ENV
+    - name: Test
+      run: npm test
     - name: Lint code
       run: npm run lint
     - name: Set up Docker Buildx

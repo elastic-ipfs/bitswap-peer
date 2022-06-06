@@ -42,8 +42,7 @@ t.test('refreshAwsCredentials - signing', async t => {
 })
 
 t.test('refreshAwsCredentials - error handling', async t => {
-  t.plan(1)
-
+  // TODO spy logger
   const mockAgent = createMockAgent()
   mockAgent
     .get('https://sts.amazonaws.com')
@@ -59,8 +58,7 @@ t.test('refreshAwsCredentials - error handling', async t => {
 })
 
 t.test('searchCarInDynamo - HTTP error handling', async t => {
-  t.plan(1)
-
+  // TODO spy logger
   const mockAgent = createMockAgent()
   mockAgent
     .get('https://dynamodb.us-west-2.amazonaws.com')
@@ -75,14 +73,13 @@ t.test('searchCarInDynamo - HTTP error handling', async t => {
     })
     .reply(400, { message: 'FOO' })
 
-  await t.rejects(() => searchCarInDynamo(mockAgent, 'table', 'key', 'error'), {
-    message: 'GetItem from DynamoDB table table with key error failed with HTTP error 400 and body: {"message":"FOO"}'
+  await t.rejects(() => searchCarInDynamo(mockAgent, 'table', 'key', 'not-a-key'), {
+    message: 'Cannot get item from Dynamo Table: table Key: not-a-key'
   })
 })
 
 t.test('searchCarInDynamo - error handling', async t => {
-  t.plan(1)
-
+  // TODO spy logger
   const error = new Error('FAILED')
   const mockAgent = createMockAgent()
   mockAgent
@@ -92,13 +89,15 @@ t.test('searchCarInDynamo - error handling', async t => {
       path: '/',
       body: JSON.stringify({
         TableName: 'table',
-        Key: { key: { S: 'error' } },
+        Key: { key: { S: 'key-value' } },
         ProjectionExpression: 'cars'
       })
     })
     .replyWithError(error)
 
-  await t.rejects(() => searchCarInDynamo(mockAgent, 'table', 'key', 'error'), error)
+  await t.rejects(() => searchCarInDynamo(mockAgent, 'table', 'key', 'key-value'), {
+    message: 'Cannot get item from Dynamo Table: table Key: key-value'
+  })
 })
 
 t.test('fetchBlockFromS3', async t => {

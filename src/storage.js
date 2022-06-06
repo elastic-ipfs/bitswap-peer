@@ -9,12 +9,14 @@ const { Agent, request } = require('undici')
 const { xml2js } = require('xml-js')
 const sleep = require('util').promisify(setTimeout)
 
-const { concurrency: connections, pipelining, s3MaxRetries, s3RetryDelay } = require('./config')
+const { concurrency: connections, pipelining, s3MaxRetries, s3RetryDelay, dynamoRetryDelay, dynamoMaxRetries } = require('./config')
 const { logger, serializeError } = require('./logging')
 const { telemetry } = require('./telemetry')
 
 // Setup AWS credentials handling
 const dynamoRegion = process.env.AWS_REGION
+const dynamoUrl = `https://dynamodb.${dynamoRegion}.amazonaws.com/`
+
 let keyId = ''
 let accessKey = ''
 let sessionToken = ''
@@ -91,64 +93,73 @@ async function refreshAwsCredentials(role, identity, dispatcher) {
   return { keyId, accessKey, sessionToken }
 }
 
-async function searchCarInDynamo(dispatcher, table, keyName, keyValue) {
-  try {
-    telemetry.increaseCount('dynamo-reads')
+async function searchCarInDynamo(dispatcher, table, keyName, keyValue, retries = dynamoMaxRetries, retryDelay = dynamoRetryDelay) {
+  telemetry.increaseCount('dynamo-reads')
 
-    // Create the request and sign it
-    const url = `https://dynamodb.${dynamoRegion}.amazonaws.com/`
-    const payload = JSON.stringify({
-      TableName: table,
-      Key: { [keyName]: { S: keyValue } },
-      ProjectionExpression: 'cars'
-    })
+  const payload = JSON.stringify({
+    TableName: table,
+    Key: { [keyName]: { S: keyValue } },
+    ProjectionExpression: 'cars'
+  })
 
-    const headers = await signerWorker.run({
-      region: dynamoRegion,
-      keyId,
-      accessKey,
-      sessionToken,
-      service: 'dynamodb',
+  const headers = await signerWorker.run({
+    region: dynamoRegion,
+    keyId,
+    accessKey,
+    sessionToken,
+    service: 'dynamodb',
+    method: 'POST',
+    url: dynamoUrl,
+    headers: { 'x-amz-target': 'DynamoDB_20120810.GetItem' },
+    payload
+  })
+
+  let attempts = 1
+  let error
+  do {
+    try {
+      return await sendDynamoCommand(dispatcher, dynamoUrl, headers, payload)
+    } catch (err) {
+      logger.debug(`Cannot get item from DynamoDB - Table: ${table} Key: ${keyValue} Error: ${serializeError(err)}`)
+      error = err
+    }
+    await sleep(retryDelay)
+  } while (++attempts < retries)
+
+  logger.error(`Cannot get item from Dynamo after ${attempts} attempts - Table: ${table} Key: ${keyValue} Error: ${serializeError(error)}`)
+  throw new Error(`Cannot get item from Dynamo Table: ${table} Key: ${keyValue}`)
+}
+
+async function sendDynamoCommand(dispatcher, url, headers, payload) {
+  const { statusCode, body } = await telemetry.trackDuration(
+    'dynamo-reads',
+    request(url, {
       method: 'POST',
-      url,
-      headers: { 'x-amz-target': 'DynamoDB_20120810.GetItem' },
-      payload
+      headers: { ...headers, 'content-type': 'application/x-amz-json-1.0' },
+      body: payload,
+      dispatcher
     })
+  )
 
-    // Download from S3
-    const { statusCode, body } = await telemetry.trackDuration(
-      'dynamo-reads',
-      request(url, {
-        method: 'POST',
-        headers: { ...headers, 'content-type': 'application/x-amz-json-1.0' },
-        body: payload,
-        dispatcher
-      })
-    )
+  const buffer = new BufferList()
+  for await (const chunk of body) {
+    buffer.append(chunk)
+  }
 
-    // Read the response
-    const buffer = new BufferList()
+  if (statusCode >= 400) {
+    throw new Error(`DynamoDB.GetItem - Status: ${statusCode} Body: ${buffer.slice().toString('utf-8')} `)
+  }
 
-    for await (const chunk of body) {
-      buffer.append(chunk)
-    }
+  const record = JSON.parse(buffer.slice())
+  if (!record || !record.Item) {
+    return undefined
+  }
 
-    if (statusCode >= 400) {
-      throw new Error(`GetItem from DynamoDB table ${table} with key ${keyValue} failed with HTTP error ${statusCode} and body: ${buffer.slice().toString('utf-8')} `)
-    }
-
-    const record = JSON.parse(buffer.slice())
-
-    if (!record || !record.Item) {
-      return undefined
-    }
-
-    const car = record.Item.cars.L[0].M
-
-    return { offset: Number.parseInt(car.offset.N, 10), length: Number.parseInt(car.length.N, 10), car: car.car.S }
-  } catch (e) {
-    logger.error(`Cannot get item from DynamoDB table ${table} with key ${keyValue}: ${serializeError(e)}`)
-    throw e
+  const car = record.Item.cars.L[0].M
+  return {
+    offset: Number.parseInt(car.offset.N, 10),
+    length: Number.parseInt(car.length.N, 10),
+    car: car.car.S
   }
 }
 

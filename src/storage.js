@@ -114,13 +114,13 @@ async function searchCarInDynamo(dispatcher, table, keyName, keyValue, retries =
     payload
   })
 
-  let attempts = 1
+  let attempts = 0
   let error
   do {
     try {
       return await sendDynamoCommand(dispatcher, dynamoUrl, headers, payload)
     } catch (err) {
-      logger.debug(`Cannot get item from DynamoDB - Table: ${table} Key: ${keyValue} Error: ${serializeError(err)}`)
+      logger.debug(`Cannot get item from DynamoDB attempt ${attempts + 1} / ${retries} - Table: ${table} Key: ${keyValue} Error: ${serializeError(err)}`)
       error = err
     }
     await sleep(retryDelay)

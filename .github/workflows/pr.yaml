@@ -6,6 +6,6 @@ on:
       - dev
 jobs:
   build:
-    uses: ipfs-elastic-provider/ipfs-elastic-provider-bitswap-peer/.github/workflows/shared-build.yaml@remove-pr-package-perm
+    uses: ipfs-elastic-provider/ipfs-elastic-provider-bitswap-peer/.github/workflows/shared-build.yaml@main
     with:
       docker_push: false

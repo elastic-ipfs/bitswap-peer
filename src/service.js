@@ -77,6 +77,9 @@ async function sendMessage(context, encodedMessage) {
     const dialConnection = await context.service.dial(context.peer)
     const { stream } = await dialConnection.newStream(context.protocol)
     context.connection = new Connection(stream)
+    context.connection.on('error', error => {
+      logger.error({ error }, `Outgoing connection error: ${serializeError(error)}`)
+    })
   }
 
   context.connection.send(encodedMessage)

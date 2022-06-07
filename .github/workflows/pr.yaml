@@ -8,6 +8,6 @@ jobs:
   build:
     permissions:
       packages: write
-    uses: ipfs-elastic-provider/ipfs-elastic-provider-bitswap-peer/.github/workflows/shared-build.yaml@pr-workflow
+    uses: ipfs-elastic-provider/ipfs-elastic-provider-bitswap-peer/.github/workflows/shared-build.yaml@main
     with:
       docker_push: false

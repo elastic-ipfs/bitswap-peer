@@ -8,6 +8,11 @@ on:
         description: Version label to be used for docker build
         required: false
         default: ''
+      docker_push:
+        type: boolean
+        description: Whether to push image after build
+        required: false
+        default: true
     outputs:
       package_version: 
         description: package_version
@@ -67,7 +72,7 @@ jobs:
       if: inputs.docker_image_version_suffix_label != ''
       uses: docker/build-push-action@v2
       with:
-        push: true
+        push: ${{ inputs.docker_push }}
         context: .
         tags: |
           ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.PACKAGE_VERSION }}-${{ inputs.docker_image_version_suffix_label }}
@@ -79,7 +84,7 @@ jobs:
       if: inputs.docker_image_version_suffix_label == ''
       uses: docker/build-push-action@v2
       with:
-        push: true
+        push: ${{ inputs.docker_push }}
         context: .
         tags: |
           ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.PACKAGE_VERSION }}

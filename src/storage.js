@@ -9,7 +9,14 @@ const { Agent, request } = require('undici')
 const { xml2js } = require('xml-js')
 const sleep = require('util').promisify(setTimeout)
 
-const { concurrency: connections, pipelining, s3MaxRetries, s3RetryDelay, dynamoRetryDelay, dynamoMaxRetries } = require('./config')
+const {
+  concurrency: connections,
+  pipelining,
+  s3MaxRetries,
+  s3RetryDelay,
+  dynamoRetryDelay,
+  dynamoMaxRetries
+} = require('./config')
 const { logger, serializeError } = require('./logging')
 const { telemetry } = require('./telemetry')
 
@@ -93,7 +100,14 @@ async function refreshAwsCredentials(role, identity, dispatcher) {
   return { keyId, accessKey, sessionToken }
 }
 
-async function searchCarInDynamo(dispatcher, table, keyName, keyValue, retries = dynamoMaxRetries, retryDelay = dynamoRetryDelay) {
+async function searchCarInDynamo(
+  dispatcher,
+  table,
+  keyName,
+  keyValue,
+  retries = dynamoMaxRetries,
+  retryDelay = dynamoRetryDelay
+) {
   telemetry.increaseCount('dynamo-reads')
 
   const payload = JSON.stringify({
@@ -115,18 +129,28 @@ async function searchCarInDynamo(dispatcher, table, keyName, keyValue, retries =
   })
 
   let attempts = 0
-  let error
+  let err
   do {
     try {
       return await sendDynamoCommand(dispatcher, dynamoUrl, headers, payload)
-    } catch (err) {
-      logger.debug(`Cannot get item from DynamoDB attempt ${attempts + 1} / ${retries} - Table: ${table} Key: ${keyValue} Error: ${serializeError(err)}`)
-      error = err
+    } catch (error) {
+      logger.debug(
+        { table },
+        `Cannot get item from DynamoDB attempt ${
+          attempts + 1
+        } / ${retries} - Table: ${table} Key: ${keyValue} Error: ${serializeError(error)}`
+      )
+      err = error
     }
     await sleep(retryDelay)
   } while (++attempts < retries)
 
-  logger.error(`Cannot get item from Dynamo after ${attempts} attempts - Table: ${table} Key: ${keyValue} Error: ${serializeError(error)}`)
+  logger.error(
+    { err },
+    `Cannot get item from Dynamo after ${attempts} attempts - Table: ${table} Key: ${keyValue} Error: ${serializeError(
+      err
+    )}`
+  )
   throw new Error(`Cannot get item from Dynamo Table: ${table} Key: ${keyValue}`)
 }
 
@@ -163,10 +187,19 @@ async function sendDynamoCommand(dispatcher, url, headers, payload) {
   }
 }
 
-async function fetchBlockFromS3(dispatcher, bucketRegion, bucketName, key, offset, length, retries = s3MaxRetries, retryDelay = s3RetryDelay) {
+async function fetchBlockFromS3(
+  dispatcher,
+  bucketRegion,
+  bucketName,
+  key,
+  offset,
+  length,
+  retries = s3MaxRetries,
+  retryDelay = s3RetryDelay
+) {
   telemetry.increaseCount('s3-fetchs')
   if (length === 0) {
-    logger.warn('Called fetch S3 with length 0')
+    logger.warn({ key }, 'Called fetch S3 with length 0')
     return Buffer.alloc(0)
   }
 
@@ -189,16 +222,16 @@ async function fetchBlockFromS3(dispatcher, bucketRegion, bucketName, key, offse
       return await fetchFromS3(dispatcher, url, headers)
     } catch (err) {
       if (err.message === 'NOT_FOUND') {
-        logger.error(`Not Found S3, URL: ${url}`)
+        logger.error({ url }, 'Not Found S3')
         throw err
       }
-      logger.error(`S3 Error, URL: ${url} Error: "${err.message}" attempt ${attempts} / ${retries}`)
+      logger.debug(`S3 Error, URL: ${url} Error: "${err.message}" attempt ${attempts} / ${retries}`)
     }
 
     await sleep(retryDelay)
   } while (++attempts < retries)
 
-  logger.error(`Cannot download from S3 ${url} after ${attempts} attempts`)
+  logger.error({ key }, `Cannot download from S3 ${url} after ${attempts} attempts`)
   throw new Error(`Cannot download from S3 ${url}`)
 }
 

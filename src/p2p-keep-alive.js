@@ -21,9 +21,9 @@ function startKeepAlive(peerId, currentNode) {
 
   if (pingPeriodSecs !== 0) {
     pingKeepAliveTimers[peerIdStr] = setInterval(() => {
-      currentNode.ping(peerId).catch(error => {
-        if (error.code !== 'ERR_MPLEX_STREAM_RESET' && error.code !== 'ERR_UNSUPPORTED_PROTOCOL') {
-          logger.error({ error }, `Ping failed (${peerIdStr}) ${serializeError(error)}`)
+      currentNode.ping(peerId).catch(err => {
+        if (err.code !== 'ERR_MPLEX_STREAM_RESET' && err.code !== 'ERR_UNSUPPORTED_PROTOCOL') {
+          logger.debug({ err }, `Ping failed - peerId: ${peerIdStr} Error: ${serializeError(err)}`)
         }
         stopKeepAlive(peerId)
       })

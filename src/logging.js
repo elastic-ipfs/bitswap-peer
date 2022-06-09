@@ -31,7 +31,7 @@ const logger = pino(
 )
 
 function serializeError(e) {
-  return `[${e.code || e.constructor.name}] ${e.message}`
+  return `[${e.code || e.constructor.name}] ${e.message}\n${e.stack}`
 }
 
 module.exports = {

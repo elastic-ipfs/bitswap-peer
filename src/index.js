@@ -14,8 +14,8 @@ async function boot() {
     await telemetry.startServer(telemetryPort)
 
     process.nextTick(startService)
-  } catch (error) {
-    logger.error(error)
+  } catch (err) {
+    logger.fatal({ err }, 'Cannot start the service')
   }
 }
 

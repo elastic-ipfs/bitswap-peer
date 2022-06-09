@@ -82,8 +82,14 @@ t.test('searchCarInDynamo', async t => {
     await t.rejects(() => searchCarInDynamo(mockAgent, 'table', 'key', 'not-a-key', 2, 10), {
       message: 'Cannot get item from Dynamo Table: table Key: not-a-key'
     })
-    t.match(logger.debug.getCall(0).lastArg, 'Cannot get item from DynamoDB attempt 1 / 2 - Table: table Key: not-a-key Error: [Error] DynamoDB.GetItem - Status: 400 Body: {"message":"FOO"}')
-    t.match(logger.debug.getCall(1).lastArg, 'Cannot get item from DynamoDB attempt 2 / 2 - Table: table Key: not-a-key Error: [Error] DynamoDB.GetItem - Status: 400 Body: {"message":"FOO"}')
+    t.match(
+      logger.debug.getCall(0).lastArg,
+      'Cannot get item from DynamoDB attempt 1 / 2 - Table: table Key: not-a-key Error: [Error] DynamoDB.GetItem - Status: 400 Body: {"message":"FOO"}'
+    )
+    t.match(
+      logger.debug.getCall(1).lastArg,
+      'Cannot get item from DynamoDB attempt 2 / 2 - Table: table Key: not-a-key Error: [Error] DynamoDB.GetItem - Status: 400 Body: {"message":"FOO"}'
+    )
     t.match(logger.error.getCall(0).lastArg, /from Dynamo after 2 attempts/)
   })
 
@@ -102,9 +108,18 @@ t.test('searchCarInDynamo', async t => {
     await t.rejects(() => searchCarInDynamo(mockAgent, 'table', 'key', 'key-value', 3, 10), {
       message: 'Cannot get item from Dynamo Table: table Key: key-value'
     })
-    t.match(logger.debug.getCall(0).lastArg, 'Cannot get item from DynamoDB attempt 1 / 3 - Table: table Key: key-value Error: [Error] FAILED')
-    t.match(logger.debug.getCall(1).lastArg, 'Cannot get item from DynamoDB attempt 2 / 3 - Table: table Key: key-value Error: [Error] FAILED')
-    t.match(logger.debug.getCall(2).lastArg, 'Cannot get item from DynamoDB attempt 3 / 3 - Table: table Key: key-value Error: [Error] FAILED')
+    t.match(
+      logger.debug.getCall(0).lastArg,
+      'Cannot get item from DynamoDB attempt 1 / 3 - Table: table Key: key-value Error: [Error] FAILED'
+    )
+    t.match(
+      logger.debug.getCall(1).lastArg,
+      'Cannot get item from DynamoDB attempt 2 / 3 - Table: table Key: key-value Error: [Error] FAILED'
+    )
+    t.match(
+      logger.debug.getCall(2).lastArg,
+      'Cannot get item from DynamoDB attempt 3 / 3 - Table: table Key: key-value Error: [Error] FAILED'
+    )
     t.match(logger.error.getCall(0).lastArg, /from Dynamo after 3 attempts/)
   })
 })
@@ -125,7 +140,7 @@ t.test('fetchBlockFromS3', async t => {
     const empty = await fetchBlockFromS3(mockAgent, bucketRegion, 'bucket', 'key', 12345, 0)
     t.ok(Buffer.isBuffer(empty))
     t.equal(empty.length, 0)
-    t.ok(logger.warn.calledOnceWith('Called fetch S3 with length 0'))
+    t.ok(logger.warn.calledOnceWith({ key: 'key' }, 'Called fetch S3 with length 0'))
   })
 
   t.test('error handling, s3 request fails after all retries', async t => {
@@ -135,10 +150,16 @@ t.test('fetchBlockFromS3', async t => {
       .intercept({ method: 'GET', path: '/error' })
       .reply(400, { message: 'FOO' })
 
-    await t.rejects(() =>
-      fetchBlockFromS3(mockAgent, bucketRegion, 'bucket', 'error', 1, 1, 3, 0),
-    'Cannot download from S3 https://bucket.s3.us-west-2.amazonaws.com/error')
-    t.ok(logger.error.calledWith('Cannot download from S3 https://bucket.s3.us-west-2.amazonaws.com/error after 3 attempts'))
+    await t.rejects(
+      () => fetchBlockFromS3(mockAgent, bucketRegion, 'bucket', 'error', 1, 1, 3, 0),
+      'Cannot download from S3 https://bucket.s3.us-west-2.amazonaws.com/error'
+    )
+    t.ok(
+      logger.error.calledWith(
+        { key: 'error' },
+        'Cannot download from S3 https://bucket.s3.us-west-2.amazonaws.com/error after 3 attempts'
+      )
+    )
   })
 
   t.test('error handling, s3 request fails fetching', async t => {
@@ -160,7 +181,10 @@ t.test('fetchBlockFromS3', async t => {
       .intercept({ method: 'GET', path: '/not-a-resource' })
       .reply(404, { message: 'FOO' })
 
-    await t.rejects(() => fetchBlockFromS3(mockAgent, bucketRegion, 'bucket', 'not-a-resource', 1, 1, 3, 0), 'NOT_FOUND')
-    t.ok(logger.error.calledWith('Not Found S3, URL: https://bucket.s3.us-west-2.amazonaws.com/not-a-resource'))
+    await t.rejects(
+      () => fetchBlockFromS3(mockAgent, bucketRegion, 'bucket', 'not-a-resource', 1, 1, 3, 0),
+      'NOT_FOUND'
+    )
+    t.ok(logger.error.calledWith({ url: 'https://bucket.s3.us-west-2.amazonaws.com/not-a-resource' }, 'Not Found S3'))
   })
 })

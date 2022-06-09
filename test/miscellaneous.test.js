@@ -79,8 +79,8 @@ t.test('logging - an error is properly serialized', t => {
 
   const error = new Error('FAILED')
 
-  t.equal(serializeError(error), '[Error] FAILED')
-  t.equal(serializeError(errorWithCode), '[CODE] FAILED')
+  t.match(serializeError(error), '[Error] FAILED')
+  t.match(serializeError(errorWithCode), '[CODE] FAILED')
 })
 
 t.test('signer-worker - can handle both session and session-less signing', t => {

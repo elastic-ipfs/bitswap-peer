@@ -78,7 +78,7 @@ async function sendMessage(context, encodedMessage) {
     const { stream } = await dialConnection.newStream(context.protocol)
     context.connection = new Connection(stream)
     context.connection.on('error', err => {
-      logger.warn({ err, context }, `Outgoing connection error: ${serializeError(err)}`)
+      logger.warn({ err }, `Outgoing connection error: ${serializeError(err)}`)
     })
   }
 
@@ -233,7 +233,7 @@ async function startService(peerId, currentPort, dispatcher) {
           try {
             message = Message.decode(data, protocol)
           } catch (err) {
-            logger.warn({ err, data, protocol }, `Cannot decode received data: ${serializeError(err)}`)
+            logger.warn({ err }, `Cannot decode received data: ${serializeError(err)}`)
             service.emit('error:receive', err)
             return
           }
@@ -255,17 +255,17 @@ async function startService(peerId, currentPort, dispatcher) {
             telemetry.increaseCount('bitswap-pending-entries', context.total)
             process.nextTick(processWantlist, context)
           } catch (err) {
-            logger.warn({ err, data, protocol }, `Error while preparing wantList context: ${serializeError(err)}`)
+            logger.warn({ err }, `Error while preparing wantList context: ${serializeError(err)}`)
           }
         })
 
         /* c8 ignore next 4 */
         connection.on('error', err => {
-          logger.error({ err, dial, stream, protocol }, `Connection error: ${serializeError(err)}`)
+          logger.error({ err }, `Connection error: ${serializeError(err)}`)
           service.emit('error:connection', err)
         })
       } catch (err) {
-        logger.error({ err, dial, stream, protocol }, `Error while creating connection: ${serializeError(err)}`)
+        logger.error({ err }, `Error while creating connection: ${serializeError(err)}`)
       }
     })
 

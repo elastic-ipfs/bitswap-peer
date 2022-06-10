@@ -29,10 +29,10 @@ class Connection extends EventEmitter {
       .then(() => {
         this.emit('end:receive')
       })
-      .catch(error => {
-        this.emit('error', error)
-        this.emit('error:receive', error)
-        logger.error({ error }, `Cannot receive data: ${serializeError(error)}`)
+      .catch(err => {
+        this.emit('error', err)
+        this.emit('error:receive', err)
+        logger.debug({ err }, `Cannot receive data: ${serializeError(err)}`)
       })
 
     // Prepare for sending
@@ -40,10 +40,10 @@ class Connection extends EventEmitter {
       .then(() => {
         this.emit('end:send')
       })
-      .catch(error => {
-        this.emit('error', error)
-        this.emit('error:send', error)
-        logger.error({ error }, `Cannot send data: ${serializeError(error)}`)
+      .catch(err => {
+        this.emit('error', err)
+        this.emit('error:send', err)
+        logger.debug({ err }, `Cannot send data: ${serializeError(err)}`)
       })
   }
 

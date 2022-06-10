@@ -77,8 +77,8 @@ async function sendMessage(context, encodedMessage) {
     const dialConnection = await context.service.dial(context.peer)
     const { stream } = await dialConnection.newStream(context.protocol)
     context.connection = new Connection(stream)
-    context.connection.on('error', error => {
-      logger.error({ error }, `Outgoing connection error: ${serializeError(error)}`)
+    context.connection.on('error', err => {
+      logger.warn({ err, context }, `Outgoing connection error: ${serializeError(err)}`)
     })
   }
 
@@ -115,6 +115,7 @@ async function processEntry(entry, context) {
       } else if (entry.sendDontHave && context.protocol === BITSWAP_V_120) {
         telemetry.increaseCount('bitswap-block-misses')
         newPresence = new BlockPresence(entry.cid, BlockPresence.Type.DontHave)
+        logger.warn({ entry }, 'Block not found')
       }
     } else if (entry.wantType === Entry.WantType.Have && context.protocol === BITSWAP_V_120) {
       // Check if we have the block
@@ -126,6 +127,7 @@ async function processEntry(entry, context) {
       } else if (entry.sendDontHave) {
         telemetry.increaseCount('bitswap-block-misses')
         newPresence = new BlockPresence(entry.cid, BlockPresence.Type.DontHave)
+        logger.warn({ entry }, 'Block not found')
       }
     }
 
@@ -154,13 +156,13 @@ async function processEntry(entry, context) {
       }
     }
 
+    // TODO move outside this function
     context.pending--
-
     if (context.pending === 0) {
       await finalizeWantlist(context)
     }
-  } catch (error) {
-    logger.error({ error }, `Cannot process an entry: ${serializeError(error)}`)
+  } catch (err) {
+    logger.error({ err, entry }, `Cannot process an entry: ${serializeError(err)}`)
   }
 }
 
@@ -216,8 +218,8 @@ async function startService(peerId, currentPort, dispatcher) {
       }
     })
 
-    service.on('error', error => {
-      logger.error({ error }, `libp2p error: ${serializeError(error)}`)
+    service.on('error', err => {
+      logger.warn({ err }, `libp2p error: ${serializeError(err)}`)
     })
 
     service.handle(protocols, async ({ connection: dial, stream, protocol }) => {
@@ -230,9 +232,9 @@ async function startService(peerId, currentPort, dispatcher) {
 
           try {
             message = Message.decode(data, protocol)
-          } catch (error) {
-            logger.error({ error }, `Invalid data received: ${serializeError(error)}`)
-            service.emit('error:receive', error)
+          } catch (err) {
+            logger.warn({ err, data, protocol }, `Cannot decode received data: ${serializeError(err)}`)
+            service.emit('error:receive', err)
             return
           }
 
@@ -252,18 +254,18 @@ async function startService(peerId, currentPort, dispatcher) {
             telemetry.increaseCount('bitswap-total-entries', context.total)
             telemetry.increaseCount('bitswap-pending-entries', context.total)
             process.nextTick(processWantlist, context)
-          } catch (error) {
-            logger.error({ error }, `Error while preparing wantList context: ${serializeError(error)}`)
+          } catch (err) {
+            logger.warn({ err, data, protocol }, `Error while preparing wantList context: ${serializeError(err)}`)
           }
         })
 
         /* c8 ignore next 4 */
-        connection.on('error', error => {
-          logger.error({ error }, `Connection error: ${serializeError(error)}`)
-          service.emit('error:connection', error)
+        connection.on('error', err => {
+          logger.error({ err, dial, stream, protocol }, `Connection error: ${serializeError(err)}`)
+          service.emit('error:connection', err)
         })
-      } catch (error) {
-        logger.error({ error }, `Error while creating connection: ${serializeError(error)}`)
+      } catch (err) {
+        logger.error({ err, dial, stream, protocol }, `Error while creating connection: ${serializeError(err)}`)
       }
     })
 
@@ -272,8 +274,8 @@ async function startService(peerId, currentPort, dispatcher) {
         startKeepAlive(connection.remotePeer, service)
         telemetry.increaseCount('bitswap-total-connections')
         telemetry.increaseCount('bitswap-active-connections')
-      } catch (error) {
-        logger.error({ error }, `Error while peer connecting: ${serializeError(error)}`)
+      } catch (err) {
+        logger.warn({ err, remotePeer: connection.remotePeer }, `Error while peer connecting: ${serializeError(err)}`)
       }
     })
 
@@ -281,34 +283,34 @@ async function startService(peerId, currentPort, dispatcher) {
       try {
         stopKeepAlive(connection.remotePeer)
         telemetry.decreaseCount('bitswap-active-connections')
-      } catch (error) {
-        logger.error({ error }, `Error while peer disconnecting: ${serializeError(error)}`)
+      } catch (err) {
+        logger.warn({ err, remotePeer: connection.remotePeer }, `Error while peer disconnecting: ${serializeError(err)}`)
       }
     })
 
-    service.connectionManager.on('error', error => {
-      logger.error({ error }, `libp2p connectionManager.error: ${serializeError(error)}`)
+    service.connectionManager.on('error', err => {
+      logger.error({ err }, `libp2p connectionManager.error: ${serializeError(err)}`)
     })
 
     service.connectionManager.on('connection', connection => {
-      logger.info({ connection }, ' ******** connectionManager.on connection')
+      logger.debug({ connection }, ' ******** connectionManager.on connection')
     })
 
     service.connectionManager.on('connectionEnd', connection => {
-      logger.info({ connection }, ' ******** connectionManager.on connectionEnd')
+      logger.debug({ connection }, ' ******** connectionManager.on connectionEnd')
     })
 
     await service.start()
 
     logger.info(
       { address: service.transportManager.getAddrs() },
-      `BitSwap peer started with PeerId ${service.peerId} and listening on port ${currentPort} ...`
+    `BitSwap peer started with PeerId ${service.peerId} and listening on port ${currentPort} ...`
     )
 
     return { service, port: currentPort, peerId }
     /* c8 ignore next 3 */
-  } catch (error) {
-    logger.error(error)
+  } catch (err) {
+    logger.error({ err }, 'Error on service')
   }
 }
 

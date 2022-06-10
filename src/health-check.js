@@ -11,14 +11,21 @@ class HealthCheck {
       return this.server
     }
 
-    this.server = createServer((_, res) => {
+    this.server = createServer((req, res) => {
+      switch (req.url) {
+        case '/liveness':
+          res.writeHead(200)
+          res.end('liveness')
+          break
+      }
+
       res.writeHead(200, {
         connection: 'close',
         'content-type': 'text/plain'
         // 'x-ipfs-bitswap-peer-version': this.version
       })
 
-      res.end('Hello world')
+      res.end('Replace this by a 404')
     })
 
     return new Promise((resolve, reject) => {

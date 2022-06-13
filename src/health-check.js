@@ -1,5 +1,8 @@
 const { createServer } = require('http')
-const { logger } = require('./logging')
+const { logger, serializeError } = require('./logging')
+const { getPeerId } = require('../src/peer-id')
+const { defaultDispatcher, searchCarInDynamo } = require('./storage')
+const { blocksTable, primaryKeys } = require('./config')
 
 class HealthCheck {
   constructor() {
@@ -11,16 +14,18 @@ class HealthCheck {
       return this.server
     }
 
-    this.server = createServer((req, res) => {
+    this.server = createServer(async (req, res) => {
       switch (req.url) {
         case '/liveness':
           res.writeHead(200)
           res.end()
           break
-        case '/readiness':
-          res.writeHead(200) // TODO: Just if successful Not always..
-          res.end(this.checkReadiness())
+        case '/readiness': {
+          const httpStatus = await this.checkReadiness()
+          res.writeHead(httpStatus)
+          res.end()
           break
+        }
         default:
           res.writeHead(404)
           res.end()
@@ -40,9 +45,48 @@ class HealthCheck {
     })
   }
 
-  checkReadiness() {
-    return ''
+  async checkReadiness() {
+    try {
+      await getPeerId()
+      console.log('**** GOT PEER ID!')
+      await searchCarInDynamo(defaultDispatcher, blocksTable, primaryKeys.blocks, 'nonExistentKey')
+      console.log('**** GOT RESPONSE FROM DYNAMO!')
+      return 200
+    } catch (err) {
+      const errMessage = `Readiness Probe Failed. Error: ${serializeError(err)}`
+      logger.error({ err }, errMessage)
+      return 503
+    }
   }
+
+  // async readFromDynamo()) {
+  //   searchCarInDynamo(defaultDispatcher, blocksTable, primaryKeys.blocks, "nonExistentKey")
+  // }
+  //   const payload = JSON.stringify({
+  //     TableName: table,
+  //     Key: { [keyName]: { S: keyValue } },
+  //     ProjectionExpression: 'cars'
+  //   })
+
+  //   const headers = await signerWorker.run({
+  //     region: dynamoRegion,
+  //     keyId,
+  //     accessKey,
+  //     sessionToken,
+  //     service: 'dynamodb',
+  //     method: 'POST',
+  //     url: dynamoUrl,
+  //     headers: { 'x-amz-target': 'DynamoDB_20120810.GetItem' },
+  //     payload
+  //   })
+
+  //   request(url, {
+  //     method: 'POST',
+  //     headers: { ...headers, 'content-type': 'application/x-amz-json-1.0' },
+  //     body: payload,
+  //     dispatcher
+  //   })
+  // }
 }
 
 module.exports = { healthCheck: new HealthCheck() }

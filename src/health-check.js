@@ -15,17 +15,16 @@ class HealthCheck {
       switch (req.url) {
         case '/liveness':
           res.writeHead(200)
-          res.end('liveness')
+          res.end()
           break
+        case '/readiness':
+          res.writeHead(200) // TODO: Just if successful Not always..
+          res.end(this.checkReadiness())
+          break
+        default:
+          res.writeHead(404)
+          res.end()
       }
-
-      res.writeHead(200, {
-        connection: 'close',
-        'content-type': 'text/plain'
-        // 'x-ipfs-bitswap-peer-version': this.version
-      })
-
-      res.end('Replace this by a 404')
     })
 
     return new Promise((resolve, reject) => {
@@ -39,6 +38,10 @@ class HealthCheck {
         resolve(this.server)
       })
     })
+  }
+
+  checkReadiness() {
+    return ''
   }
 }
 

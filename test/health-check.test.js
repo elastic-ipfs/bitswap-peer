@@ -7,8 +7,7 @@ const t = require('tap')
 
 const { healthCheckPort } = require('../src/config')
 const { healthCheck } = require('../src/health-check')
-const { request, Server } = require('http')
-const path = require('path')
+const { get } = require('http')
 
 // const { hasRawBlock, prepare, receiveMessages, teardown } = require('./utils/helpers')
 // const { createMockAgent, mockAWS } = require('./utils/mock')
@@ -19,10 +18,9 @@ const path = require('path')
 // TODO: Test Webserver Routes
 // TODO: Test Liveness
 // TODO: Test Readiness
+// DONE: Start server as beginning and teardown stops server
 
-// TODO: Start server as beginning and teardown stops server
-
-/** @type {Server} */
+/** @type {import('http').Server} */
 let server
 
 t.before(async () => {
@@ -34,21 +32,28 @@ t.test('healthcheck - Server starts with default port', async t => {
 })
 
 t.test('healthcheck - liveness returns 200', async t => {
-  /** @type {Server} */
-  const server = await healthCheck.startServer(healthCheckPort)
-  console.log('**************')
-  console.log(server?.address()?.address)
-  // request(server?.address(), {
-  //   path: 'readiness'
-  // })
-  // request({
-  //   add
-  //   hostname: server?.address()?.host
-  //   port: server?.address()?.port
-  //   path:
-  // })
+  const httpRequestPromise = new Promise((resolve, reject) => {
+    const req = get({
+      hostname: server?.address()?.address,
+      port: server?.address()?.port,
+      path: '/liveness'
+    })
 
-  t.equal(1, 1)
+    req.on('response', res => {
+      console.log('res')
+      resolve(res)
+    })
+
+    req.on('error', err => {
+      console.log('error')
+      reject(err)
+    })
+  })
+
+  /** @type {import('http').ServerResponse} */
+  const res = await httpRequestPromise
+  console.log(res.statusCode)
+  t.equal(res.statusCode, 200)
 })
 
 t.teardown(() => {

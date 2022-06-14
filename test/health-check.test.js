@@ -23,20 +23,12 @@ const { get } = require('http')
 /** @type {import('http').Server} */
 let server
 
-t.before(async () => {
-  server = await healthCheck.startServer(healthCheckPort)
-})
-
-t.test('healthcheck - Server starts with default port', async t => {
-  t.equal(server?.address()?.port, parseInt(healthCheckPort))
-})
-
-t.test('healthcheck - liveness returns 200', async t => {
-  const httpRequestPromise = new Promise((resolve, reject) => {
+function doHttpRequest(path) {
+  return new Promise((resolve, reject) => {
     const req = get({
       hostname: server?.address()?.address,
       port: server?.address()?.port,
-      path: '/liveness'
+      path: path
     })
 
     req.on('response', res => {
@@ -49,11 +41,26 @@ t.test('healthcheck - liveness returns 200', async t => {
       reject(err)
     })
   })
+}
 
+t.before(async () => {
+  server = await healthCheck.startServer(healthCheckPort)
+})
+
+t.test('healthcheck - Server starts with default port', async t => {
+  t.equal(server?.address()?.port, parseInt(healthCheckPort))
+})
+
+t.test('healthcheck - liveness returns 200', async t => {
   /** @type {import('http').ServerResponse} */
-  const res = await httpRequestPromise
-  console.log(res.statusCode)
+  const res = await doHttpRequest('/liveness')
   t.equal(res.statusCode, 200)
+})
+
+t.test('healthcheck - not found path returns 404', async t => {
+  /** @type {import('http').ServerResponse} */
+  const res = await doHttpRequest('/thisPathDoesNotExist')
+  t.equal(res.statusCode, 404)
 })
 
 t.teardown(() => {

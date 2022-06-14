@@ -1,6 +1,6 @@
 const { createServer } = require('http')
 const { logger, serializeError } = require('./logging')
-const { getPeerId } = require('../src/peer-id')
+const { getPeerId } = require('./peer-id')
 const { defaultDispatcher, searchCarInDynamo } = require('./storage')
 const { blocksTable, primaryKeys } = require('./config')
 

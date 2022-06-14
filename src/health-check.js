@@ -48,9 +48,7 @@ class HealthCheck {
   async checkReadiness() {
     try {
       await getPeerId()
-      console.log('**** GOT PEER ID!')
       await searchCarInDynamo(defaultDispatcher, blocksTable, primaryKeys.blocks, 'nonExistentKey')
-      console.log('**** GOT RESPONSE FROM DYNAMO!')
       return 200
     } catch (err) {
       const errMessage = `Readiness Probe Failed. Error: ${serializeError(err)}`
@@ -58,35 +56,6 @@ class HealthCheck {
       return 503
     }
   }
-
-  // async readFromDynamo()) {
-  //   searchCarInDynamo(defaultDispatcher, blocksTable, primaryKeys.blocks, "nonExistentKey")
-  // }
-  //   const payload = JSON.stringify({
-  //     TableName: table,
-  //     Key: { [keyName]: { S: keyValue } },
-  //     ProjectionExpression: 'cars'
-  //   })
-
-  //   const headers = await signerWorker.run({
-  //     region: dynamoRegion,
-  //     keyId,
-  //     accessKey,
-  //     sessionToken,
-  //     service: 'dynamodb',
-  //     method: 'POST',
-  //     url: dynamoUrl,
-  //     headers: { 'x-amz-target': 'DynamoDB_20120810.GetItem' },
-  //     payload
-  //   })
-
-  //   request(url, {
-  //     method: 'POST',
-  //     headers: { ...headers, 'content-type': 'application/x-amz-json-1.0' },
-  //     body: payload,
-  //     dispatcher
-  //   })
-  // }
 }
 
 module.exports = { healthCheck: new HealthCheck() }

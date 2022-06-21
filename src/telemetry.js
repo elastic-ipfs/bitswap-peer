@@ -1,7 +1,6 @@
 'use strict'
 
 const { readFileSync } = require('fs')
-const { createServer } = require('http')
 const { build: buildHistogram } = require('hdr-histogram-js')
 const { load } = require('js-yaml')
 const { join } = require('path')
@@ -94,34 +93,6 @@ class Telemetry {
         this.createMetric(category, description, 'durations')
       }
     }
-  }
-
-  startServer(port) {
-    if (this.server) {
-      return this.server
-    }
-
-    this.server = createServer((_, res) => {
-      res.writeHead(200, {
-        connection: 'close',
-        'content-type': 'text/plain',
-        'x-ipfs-bitswap-peer-version': this.version
-      })
-
-      res.end(this.export())
-    })
-
-    return new Promise((resolve, reject) => {
-      this.server.listen(port, '0.0.0.0', error => {
-        /* c8 ignore next 3 */
-        if (error) {
-          return reject(error)
-        }
-
-        this.logger.info(`Metrics server and listening on port ${this.server.address().port} ...`)
-        resolve(this.server)
-      })
-    })
   }
 
   createMetric(category, description, metric) {

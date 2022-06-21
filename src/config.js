@@ -14,8 +14,7 @@ const {
   PEER_ID_FILE: peerIdJsonFile,
   PIPELINING: rawPipelining,
   PORT: rawPort,
-  TELEMETRY_PORT: rawTelemetryPort,
-  HEALTH_CHECK_PORT: rawHealthCheckPort,
+  HTTP_PORT: rawHttpPort,
   PING_PERIOD_SECONDS: pingPeriodSecs,
 
   DYNAMO_MAX_RETRIES: dynamoMaxRetries,
@@ -27,7 +26,7 @@ const {
 const concurrency = parseInt(rawConcurrency)
 const pipelining = parseInt(rawPipelining)
 const port = parseInt(rawPort)
-const telemetryPort = parseInt(rawTelemetryPort)
+const httpPort = parseInt(rawHttpPort)
 
 module.exports = {
   blocksTable: blocksTable ?? 'blocks',
@@ -43,8 +42,7 @@ module.exports = {
     blocks: 'multihash',
     cars: 'path'
   },
-  telemetryPort: !isNaN(telemetryPort) && telemetryPort > 0 ? telemetryPort : 3001,
-  healthCheckPort: !isNaN(rawHealthCheckPort) && rawHealthCheckPort > 0 ? rawHealthCheckPort : 3002,
+  httpPort: !isNaN(httpPort) && httpPort > 0 ? httpPort : 3001,
   dynamoMaxRetries: dynamoMaxRetries ?? 3,
   dynamoRetryDelay: dynamoRetryDelay ?? 500, // ms
   s3MaxRetries: s3MaxRetries ?? 3,

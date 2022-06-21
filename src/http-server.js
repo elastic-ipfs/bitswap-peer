@@ -54,9 +54,10 @@ class HttpServer {
           return reject(error)
         }
 
-        logger.info(`Metrics server and listening on port ${this.server.address().port} ...`)
+        logger.info(`HTTP server started and listening on port ${this.server.address().port} ...`)
         resolve(this.server)
       })
     })
   }
 }
+module.exports = { httpServer: new HttpServer() }

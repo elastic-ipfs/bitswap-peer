@@ -16,7 +16,7 @@ class HttpServer {
           res.end()
           break
         case '/readiness': {
-          const httpStatus = healthCheck
+          healthCheck
             .checkReadiness()
             .then(httpStatus => {
               res.writeHead(httpStatus)
@@ -27,15 +27,12 @@ class HttpServer {
               res.writeHead(500)
               res.end()
             })
-          res.writeHead(httpStatus)
-          res.end()
           break
         }
         case '/metrics': {
           res.writeHead(200, {
             connection: 'close',
-            'content-type': 'text/plain',
-            'x-ipfs-bitswap-peer-version': this.version
+            'content-type': 'text/plain'
           })
           res.end(telemetry.export())
           break

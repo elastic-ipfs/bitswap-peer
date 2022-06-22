@@ -13,7 +13,7 @@ process.env.PEER_ID_FILE = 'peerId.json'
 process.env.PEER_ID_S3_BUCKET = 'idBucket'
 process.env.PIPELINING = '16'
 process.env.PORT = '3000'
-process.env.TELEMETRY_PORT = '3001'
+process.env.HTTP_PORT = '3001'
 
 const { readFile } = require('fs/promises')
 const { get } = require('http')
@@ -21,11 +21,12 @@ const { resolve } = require('path')
 const { createFromJSON } = require('peer-id')
 const t = require('tap')
 
-const { concurrency, blocksTable, carsTable, port, telemetryPort } = require('../src/config')
+const { concurrency, blocksTable, carsTable, port, httpPort } = require('../src/config')
 const { logger, serializeError } = require('../src/logging')
 const { ensureAwsCredentials } = require('../src/storage')
 const signerWorker = require('../src/signer-worker')
 const { telemetry } = require('../src/telemetry')
+const { httpServer } = require('../src/http-server')
 const { getPeerId } = require('../src/peer-id')
 const { createMockAgent } = require('./utils/mock')
 
@@ -68,7 +69,7 @@ t.test('config - it exports reasonable defaults', t => {
   t.equal(blocksTable, 'blocks')
   t.equal(carsTable, 'cars')
   t.equal(port, 3000)
-  t.equal(telemetryPort, 3001)
+  t.equal(httpPort, 3001)
 })
 
 t.test('logging - an error is properly serialized', t => {
@@ -142,8 +143,8 @@ t.test('telemetry - export', async t => {
     info(arg) {}
   }
 
-  const server = await telemetry.startServer(0)
-  const server2 = await telemetry.startServer(0)
+  const server = await httpServer.startServer(0)
+  const server2 = await httpServer.startServer(0)
   t.equal(server.address().port, server2.address().port)
 
   const metricsUrl = `http://0.0.0.0:${server.address().port}/metrics`

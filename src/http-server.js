@@ -23,7 +23,7 @@ class HttpServer {
               res.end()
             })
             .catch(error => {
-              this.logger.error({ error }, 'Cannot check readiness.')
+              logger.error({ error }, 'Cannot check readiness.')
               res.writeHead(500)
               res.end()
             })

@@ -10,13 +10,10 @@ const { get } = require('http')
 
 /** @type {import('http').Server} */
 let _server
-let _errorReadinessServer
 
 t.before(async () => {
   const successReadinessMock = () => Promise.resolve(200)
-  const errorReadinessMock = () => Promise.reject(new Error('Something bad happened'))
   _server = await startServer(successReadinessMock, httpPort)
-  _errorReadinessServer = await startServer(errorReadinessMock, Number(httpPort) + 1)
 })
 
 t.test('httpServer - Server starts with default http port', async t => {
@@ -49,8 +46,11 @@ t.test('httpServer - not found path returns 404', async t => {
 })
 
 t.test('httpServer - error in readiness returns 500', async t => {
+  const errorReadinessMock = () => Promise.reject(new Error('Something bad happened'))
+  const errorReadinessServer = await startServer(errorReadinessMock, Number(httpPort) + 1)
   /** @type {import('http').ServerResponse} */
-  const res = await doHttpRequest('/readiness', _errorReadinessServer)
+  const res = await doHttpRequest('/readiness', errorReadinessServer)
+  errorReadinessServer?.close()
   t.equal(res.statusCode, 500)
 })
 
@@ -94,5 +94,4 @@ function doHttpRequest(path, server) {
 
 t.teardown(async () => {
   _server?.close()
-  _errorReadinessServer?.close()
 })

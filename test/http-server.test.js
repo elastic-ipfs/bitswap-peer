@@ -12,69 +12,47 @@ const { get } = require('http')
 let _server
 let _errorReadinessServer
 
-t.test('httpServer - Happy path through working server', async t => {
+t.before(async () => {
   const successReadinessMock = () => Promise.resolve(200)
   const errorReadinessMock = () => Promise.reject(new Error('Something bad happened'))
   _server = await startServer(successReadinessMock, httpPort)
   _errorReadinessServer = await startServer(errorReadinessMock, Number(httpPort) + 1)
+})
+
+t.test('httpServer - Server starts with default http port', async t => {
   t.equal(_server?.address()?.port, parseInt(httpPort))
+  t.end()
+})
+
+t.test('httpServer - liveness returns 200', async t => {
+  /** @type {import('http').ServerResponse} */
+  const res = await doHttpRequest('/liveness', _server)
+  t.equal(res.statusCode, 200)
+})
+
+t.test('httpServer - metrics returns 200', async t => {
+  /** @type {import('http').ServerResponse} */
+  const res = await doHttpRequest('/metrics', _server)
+  t.equal(res.statusCode, 200)
+})
+
+t.test('httpServer - readiness returns 200', async t => {
+  /** @type {import('http').ServerResponse} */
+  const res = await doHttpRequest('/readiness', _server)
+  t.equal(res.statusCode, 200)
+})
+
+t.test('httpServer - not found path returns 404', async t => {
+  /** @type {import('http').ServerResponse} */
+  const res = await doHttpRequest('/thisPathDoesNotExist', _server)
+  t.equal(res.statusCode, 404)
+})
+
+t.test('httpServer - error in readiness returns 500', async t => {
+  /** @type {import('http').ServerResponse} */
   const res = await doHttpRequest('/readiness', _errorReadinessServer)
   t.equal(res.statusCode, 500)
-  // t.equal(1, 1)
-  // server?.close()
-  // errorReadinessServer?.close()
 })
-
-t.teardown(async t => {
-  _server?.close()
-  _errorReadinessServer?.close()
-  console.log('******** hit end of teardown!')
-})
-
-// t.before(async () => {
-//   const successReadinessMock = () => Promise.resolve(200)
-//   const errorReadinessMock = () => Promise.reject(new Error('Something bad happened'))
-//   _server = await startServer(successReadinessMock, httpPort)
-//   _errorReadinessServer = await startServer(successReadinessMock, Number(httpPort) + 1)
-//   t.end()
-//   // server?.close()
-//   // errorReadinessServer?.close()
-// })
-
-// t.test('httpServer - Server starts with default http port', async t => {
-//   t.equal(_server?.address()?.port, parseInt(httpPort))
-//   t.end()
-// })
-
-// // t.test('httpServer - liveness returns 200', async t => {
-// //   /** @type {import('http').ServerResponse} */
-// //   const res = await doHttpRequest('/liveness')
-// //   t.equal(res.statusCode, 200)
-// // })
-
-// // t.test('httpServer - metrics returns 200', async t => {
-// //   /** @type {import('http').ServerResponse} */
-// //   const res = await doHttpRequest('/metrics')
-// //   t.equal(res.statusCode, 200)
-// // })
-
-// // t.test('httpServer - readiness returns 200', async t => {
-// //   /** @type {import('http').ServerResponse} */
-// //   const res = await doHttpRequest('/readiness')
-// //   t.equal(res.statusCode, 200)
-// // })
-
-// // t.test('httpServer - not found path returns 404', async t => {
-// //   /** @type {import('http').ServerResponse} */
-// //   const res = await doHttpRequest('/thisPathDoesNotExist')
-// //   t.equal(res.statusCode, 404)
-// // })
-
-// t.test('httpServer - error in readiness returns 500', async t => {
-//   /** @type {import('http').ServerResponse} */
-//   const res = await doHttpRequest('/readiness', _errorReadinessServer)
-//   t.equal(res.statusCode, 500)
-// })
 
 async function startServer(readinessFunction, port) {
   /** @type {import('../src/http-server')} */
@@ -113,3 +91,8 @@ function doHttpRequest(path, server) {
     })
   })
 }
+
+t.teardown(async () => {
+  _server?.close()
+  _errorReadinessServer?.close()
+})

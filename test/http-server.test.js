@@ -10,23 +10,24 @@ const { get } = require('http')
 
 /** @type {import('http').Server} */
 let _server
-// let _errorReadinessServer
+let _errorReadinessServer
 
 t.test('httpServer - Happy path through working server', async t => {
   const successReadinessMock = () => Promise.resolve(200)
+  const errorReadinessMock = () => Promise.reject(new Error('Something bad happened'))
   _server = await startServer(successReadinessMock, httpPort)
-  // t.equal(_server?.address()?.port, parseInt(httpPort))
-  t.equal(1, 1)
-
-  // const errorReadinessMock = () => Promise.reject(new Error('Something bad happened'))
-  // _errorReadinessServer = await startServer(errorReadinessMock, Number(httpPort) + 1)
+  _errorReadinessServer = await startServer(errorReadinessMock, Number(httpPort) + 1)
+  t.equal(_server?.address()?.port, parseInt(httpPort))
+  const res = await doHttpRequest('/readiness', _errorReadinessServer)
+  t.equal(res.statusCode, 500)
+  // t.equal(1, 1)
   // server?.close()
   // errorReadinessServer?.close()
 })
 
 t.teardown(async t => {
   _server?.close()
-  // errorReadinessServer?.close()
+  _errorReadinessServer?.close()
   console.log('******** hit end of teardown!')
 })
 
@@ -73,7 +74,6 @@ t.teardown(async t => {
 //   /** @type {import('http').ServerResponse} */
 //   const res = await doHttpRequest('/readiness', _errorReadinessServer)
 //   t.equal(res.statusCode, 500)
-//   t.end()
 // })
 
 async function startServer(readinessFunction, port) {
@@ -113,4 +113,3 @@ function doHttpRequest(path, server) {
     })
   })
 }
-

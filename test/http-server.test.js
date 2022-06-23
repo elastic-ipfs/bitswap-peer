@@ -13,24 +13,44 @@ let server
 
 t.before(async () => {
   /** @type {import('../src/http-server')} */
-  const httpServerModuleWithMocks = await t.mock('../src/http-server', {
+  const httpServerModuleWithMocks = await t.mock('../src/http-server.js', {
+    /** @type {import('../src/health-check.js')} */
     '../src/health-check.js': {
-      checkReadiness: () => 200
+      // healthCheck: healthCheck
+      healthCheck: {
+        checkReadiness: () => {
+          return new Promise((resolve, reject) => {
+            resolve(200)
+          })
+        }
+      //   // checkReadiness: () => Promise.resolve(200)
+      //   // checkReadiness: async () => 200
+      // }
+      // '../src/health-check.js': {
+      //   testSomething: () => 'bye'
+      // checkReadiness: async () => 200
+      // checkReadiness: () => 200
+      // checkReadiness: () => Promise.resolve(200)
+      // checkReadiness: () => {
+      //   return new Promise((resolve, reject) => {
+      //     resolve(200)
+      //   })
+      }
     }
   })
 
   server = await httpServerModuleWithMocks.httpServer.startServer(httpPort)
 })
 
-t.test('httpServer - Server starts with default http port', async t => {
-  t.equal(server?.address()?.port, parseInt(httpPort))
-})
+// t.test('httpServer - Server starts with default http port', async t => {
+//   t.equal(server?.address()?.port, parseInt(httpPort))
+// })
 
-t.test('httpServer - liveness returns 200', async t => {
-  /** @type {import('http').ServerResponse} */
-  const res = await doHttpRequest('/liveness')
-  t.equal(res.statusCode, 200)
-})
+// t.test('httpServer - liveness returns 200', async t => {
+//   /** @type {import('http').ServerResponse} */
+//   const res = await doHttpRequest('/liveness')
+//   t.equal(res.statusCode, 200)
+// })
 
 t.test('httpServer - readiness returns 200', async t => {
   /** @type {import('http').ServerResponse} */
@@ -38,17 +58,18 @@ t.test('httpServer - readiness returns 200', async t => {
   t.equal(res.statusCode, 200)
 })
 
-t.test('httpServer - metrics returns 200', async t => {
-  /** @type {import('http').ServerResponse} */
-  const res = await doHttpRequest('/metrics')
-  t.equal(res.statusCode, 200)
-})
+// t.test('httpServer - metrics returns 200', async t => {
+//   /** @type {import('http').ServerResponse} */
+//   const res = await doHttpRequest('/metrics')
+//   t.equal(res.statusCode, 200)
+// })
+// /** */
 
-t.test('httpServer - not found path returns 404', async t => {
-  /** @type {import('http').ServerResponse} */
-  const res = await doHttpRequest('/thisPathDoesNotExist')
-  t.equal(res.statusCode, 404)
-})
+// t.test('httpServer - not found path returns 404', async t => {
+//   /** @type {import('http').ServerResponse} */
+//   const res = await doHttpRequest('/thisPathDoesNotExist')
+//   t.equal(res.statusCode, 404)
+// })
 
 function doHttpRequest(path) {
   return new Promise((resolve, reject) => {
@@ -59,12 +80,11 @@ function doHttpRequest(path) {
     })
 
     req.on('response', res => {
-      console.log('res')
       resolve(res)
     })
 
     req.on('error', err => {
-      console.log('error')
+      console.log('http request error')
       reject(err)
     })
   })

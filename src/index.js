@@ -19,4 +19,8 @@ async function boot() {
   }
 }
 
+process.on('uncaughtExceptionMonitor', (err, origin) => {
+  logger.fatal({ err, origin }, 'uncaught exception')
+})
+
 boot()

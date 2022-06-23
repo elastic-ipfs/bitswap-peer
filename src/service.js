@@ -115,7 +115,7 @@ async function processEntry(entry, context) {
       } else if (entry.sendDontHave && context.protocol === BITSWAP_V_120) {
         telemetry.increaseCount('bitswap-block-misses')
         newPresence = new BlockPresence(entry.cid, BlockPresence.Type.DontHave)
-        logger.warn({ entry }, `Block not found: ${entry.cid}`)
+        logger.warn({ entry, cid: entry.cid.toString() }, 'Block not found')
       }
     } else if (entry.wantType === Entry.WantType.Have && context.protocol === BITSWAP_V_120) {
       // Check if we have the block
@@ -127,7 +127,7 @@ async function processEntry(entry, context) {
       } else if (entry.sendDontHave) {
         telemetry.increaseCount('bitswap-block-misses')
         newPresence = new BlockPresence(entry.cid, BlockPresence.Type.DontHave)
-        logger.warn({ entry }, `Block not found: ${entry.cid}`)
+        logger.warn({ entry, cid: entry.cid.toString() }, 'Block not found')
       }
     }
 

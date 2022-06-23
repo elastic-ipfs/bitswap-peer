@@ -16,6 +16,25 @@ t.before(async () => {
   _server = await startServer(successReadinessMock, httpPort)
 })
 
+async function startServer(readinessFunction, port) {
+  /** @type {import('../src/http-server')} */
+  const httpServerModuleWithMocks = await t.mock('../src/http-server.js', {
+    /** @type {import('../src/health-check.js')} */
+    '../src/health-check.js': {
+      healthCheck: {
+        checkReadiness: readinessFunction
+      }
+    },
+    /** @type {import('../src/telemetry.js')} */
+    '../src/telemetry.js': {
+      telemetry: {
+        export: () => 'Works'
+      }
+    }
+  })
+  return await httpServerModuleWithMocks.httpServer.startServer(port)
+}
+
 t.test('httpServer - Server starts with default http port', async t => {
   t.equal(_server?.address()?.port, parseInt(httpPort))
   t.end()
@@ -53,25 +72,6 @@ t.test('httpServer - error in readiness returns 500', async t => {
   errorReadinessServer?.close()
   t.equal(res.statusCode, 500)
 })
-
-async function startServer(readinessFunction, port) {
-  /** @type {import('../src/http-server')} */
-  const httpServerModuleWithMocks = await t.mock('../src/http-server.js', {
-    /** @type {import('../src/health-check.js')} */
-    '../src/health-check.js': {
-      healthCheck: {
-        checkReadiness: readinessFunction
-      }
-    },
-    /** @type {import('../src/telemetry.js')} */
-    '../src/telemetry.js': {
-      telemetry: {
-        export: () => 'Works'
-      }
-    }
-  })
-  return await httpServerModuleWithMocks.httpServer.startServer(port)
-}
 
 function doHttpRequest(path, server) {
   return new Promise((resolve, reject) => {

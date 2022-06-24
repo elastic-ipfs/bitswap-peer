@@ -8,7 +8,7 @@ const { logger } = require('./logging')
 const { defaultDispatcher, fetchBlockFromS3 } = require('./storage')
 
 async function downloadPeerIdFile(dispatcher) {
-  logger.info(`Downloading PeerId from s3://${process.env.PEER_ID_S3_BUCKET}/${peerIdJsonFile}`)
+  logger.debug(`Downloading PeerId from s3://${process.env.PEER_ID_S3_BUCKET}/${peerIdJsonFile}`)
 
   const contents = await fetchBlockFromS3(
     dispatcher,

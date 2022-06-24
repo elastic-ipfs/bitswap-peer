@@ -2,16 +2,16 @@
 
 require('make-promises-safe')
 
-const { telemetryPort } = require('./config')
+const { httpPort } = require('./config')
 const { logger } = require('./logging')
 const { startService } = require('./service')
 const { ensureAwsCredentials } = require('./storage')
-const { telemetry } = require('./telemetry')
+const { httpServer } = require('./http-server')
 
 async function boot() {
   try {
     await ensureAwsCredentials()
-    await telemetry.startServer(telemetryPort)
+    await httpServer.startServer(httpPort)
 
     process.nextTick(startService)
   } catch (err) {

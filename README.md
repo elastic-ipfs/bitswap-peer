@@ -10,6 +10,7 @@ _Variables in bold are required._
 | AWS_REGION            |               | The AWS region.                                                          |
 | AWS_SECRET_ACCESS_KEY |               | The AWS access key.                                                      |
 | CACHE_BLOCKS_INFO     | `false`       | Set to `true` to cache block informations with in a in-memory LRU cache. |
+| CACHE_BLOCKS_SIZE     | `1e3`         | Max entries of the cache.                                                |
 | CONCURRENCY           | `128`         | The maximum concurrency when searching CIDs.                             |
 | DYNAMO_BLOCKS_TABLE   | `blocks`      | The DynamoDB table where store CIDs informations to.                     |
 | DYNAMO_CARS_TABLE     | `cars`        | The DynamoDB table where store CAR files informations to.                |

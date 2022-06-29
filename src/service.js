@@ -6,7 +6,7 @@ const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
 const LRUCache = require('mnemonist/lru-cache')
 
-const { cacheBlocksInfo, blocksTable, port, primaryKeys } = require('./config')
+const { cacheBlocksInfo, cacheBlocksSize, blocksTable, port, primaryKeys } = require('./config')
 const { logger, serializeError } = require('./logging')
 const { Connection } = require('./networking')
 const { noiseCrypto } = require('./noise-crypto')
@@ -25,7 +25,7 @@ const {
 const { cidToKey, defaultDispatcher, fetchBlockFromS3, searchCarInDynamo } = require('./storage')
 const { telemetry } = require('./telemetry')
 
-const blocksCache = new LRUCache(1e6)
+const blocksCache = new LRUCache(cacheBlocksSize)
 
 function createEmptyMessage(blocks = [], presences = []) {
   return new Message(emptyWantList, blocks, presences, 0)

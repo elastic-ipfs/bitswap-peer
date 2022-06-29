@@ -7,6 +7,8 @@ require('dotenv').config({ path: process.env.ENV_FILE_PATH || resolve(process.cw
 
 const {
   CACHE_BLOCKS_INFO: cacheBlocksInfo,
+  CACHE_BLOCKS_SIZE: cacheBlocksSize,
+
   CONCURRENCY: rawConcurrency,
   DYNAMO_BLOCKS_TABLE: blocksTable,
   DYNAMO_CARS_TABLE: carsTable,
@@ -30,7 +32,8 @@ const httpPort = parseInt(rawHttpPort)
 
 module.exports = {
   blocksTable: blocksTable ?? 'blocks',
-  cacheBlocksInfo: cacheBlocksInfo !== 'false',
+  cacheBlocksInfo: cacheBlocksInfo === 'true',
+  cacheBlocksSize: cacheBlocksSize ?? 1e3,
   carsTable: carsTable ?? 'cars',
   pingPeriodSecs: pingPeriodSecs ?? 10,
   concurrency: !isNaN(concurrency) && concurrency > 0 ? concurrency : 128,

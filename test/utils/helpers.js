@@ -55,7 +55,7 @@ async function prepare(t, protocol, dispatcher) {
     dispatcher = await mockAWS(t)
   }
 
-  const { service } = await startService(peerId, port, dispatcher)
+  const { service } = await startService({ peerId, currentPort: port, dispatcher })
   const { stream, receiver, node } = await createClient(peerId, port, protocol)
 
   const connection = new Connection(stream)

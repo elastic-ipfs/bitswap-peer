@@ -14,6 +14,7 @@ const {
   DYNAMO_CARS_TABLE: carsTable,
   PEER_ID_DIRECTORY: peerIdJsonDirectory,
   PEER_ID_FILE: peerIdJsonFile,
+  PEER_ANNOUNCE_ADDR: peerAnnounceAddr,
   PIPELINING: rawPipelining,
   PORT: rawPort,
   HTTP_PORT: rawHttpPort,
@@ -39,6 +40,7 @@ module.exports = {
   concurrency: !isNaN(concurrency) && concurrency > 0 ? concurrency : 128,
   peerIdJsonFile,
   peerIdJsonPath: join(peerIdJsonDirectory ?? '/tmp', peerIdJsonFile ?? 'peerId.json'),
+  peerAnnounceAddr,
   pipelining: !isNaN(pipelining) && pipelining > 0 ? pipelining : 16,
   port: !isNaN(port) && port > 0 ? port : 3000,
   primaryKeys: {

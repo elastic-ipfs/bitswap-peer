@@ -6,7 +6,7 @@ const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
 const LRUCache = require('mnemonist/lru-cache')
 
-const { cacheBlocksInfo, cacheBlocksSize, blocksTable, port, primaryKeys } = require('./config')
+const { cacheBlocksInfo, cacheBlocksSize, blocksTable, port, primaryKeys, peerAnnounceAddr } = require('./config')
 const { logger, serializeError } = require('./logging')
 const { Connection } = require('./networking')
 const { noiseCrypto } = require('./noise-crypto')
@@ -192,7 +192,7 @@ function processWantlist(context) {
   process.nextTick(processWantlist, context)
 }
 
-async function startService(peerId, currentPort, dispatcher) {
+async function startService({ peerId, currentPort, dispatcher, announceAddr } = {}) {
   try {
     if (!peerId) {
       peerId = await getPeerId()
@@ -206,10 +206,15 @@ async function startService(peerId, currentPort, dispatcher) {
       currentPort = port
     }
 
+    if (!announceAddr) {
+      announceAddr = peerAnnounceAddr
+    }
+
     const service = await libp2p.create({
       peerId,
       addresses: {
-        listen: [`/ip4/0.0.0.0/tcp/${currentPort}/ws`]
+        listen: [`/ip4/0.0.0.0/tcp/${currentPort}/ws`],
+        announce: announceAddr ? [announceAddr] : undefined
       },
       modules: {
         transport: [Websockets],

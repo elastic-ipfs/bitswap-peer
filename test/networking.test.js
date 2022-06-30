@@ -31,7 +31,7 @@ t.test('error handling', async t => {
   t.plan(2)
 
   const peerId = await PeerId.create()
-  const { port, service } = await startService(peerId, await getFreePort())
+  const { port, service } = await startService({ peerId, currentPort: await getFreePort() })
   const { stream, node: client } = await createClient(peerId, port, protocol)
 
   stream.source[Symbol.asyncIterator] = function () {
@@ -61,6 +61,29 @@ t.test('error handling', async t => {
 
   t.equal((await receiveError).message, 'SOURCE ERROR')
   t.equal((await sendError).message, 'SINK ERROR')
+
+  await teardown(t, client, service, connection)
+})
+
+t.test('announced multiaddr', async t => {
+  t.plan(2)
+
+  const announceAddr = '/dns4/example.com/tcp/3000/ws'
+  const peerId = await PeerId.create()
+  const { port, service } = await startService({ peerId, currentPort: await getFreePort(), announceAddr })
+  const { stream, node: client } = await createClient(peerId, port, protocol)
+
+  const connection = new Connection(stream)
+  connection.on('error', () => {})
+
+  // libp2p needs a tick to store announced addresses in peer store
+  await new Promise(resolve => setTimeout(resolve))
+
+  const peer = client.peerStore.get(peerId)
+  t.ok(peer, `${peerId} exists in peer store`)
+
+  const isAnnounced = peer.addresses.some(a => a.multiaddr.toString().startsWith(announceAddr))
+  t.ok(isAnnounced, `${announceAddr} is announced`)
 
   await teardown(t, client, service, connection)
 })

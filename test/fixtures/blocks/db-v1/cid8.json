@@ -1,0 +1,13 @@
+[
+  {
+    "offset": {
+      "N": "99"
+    },
+    "length": {
+      "N": "3000000"
+    },
+    "carpath": {
+      "S": "{AWS_REGION}/test-cars/test-cid8.car"
+    }
+  }
+]

@@ -6,7 +6,7 @@ const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
 const LRUCache = require('mnemonist/lru-cache')
 
-const { cacheBlocksInfo, cacheBlocksSize, blocksTable, port, primaryKeys, peerAnnounceAddr } = require('./config')
+const { cacheBlocksInfo, cacheBlocksSize, port, peerAnnounceAddr } = require('./config')
 const { logger, serializeError } = require('./logging')
 const { Connection } = require('./networking')
 const { noiseCrypto } = require('./noise-crypto')
@@ -22,7 +22,7 @@ const {
   Message,
   protocols
 } = require('./protocol')
-const { cidToKey, defaultDispatcher, fetchBlockFromS3, searchCarInDynamo } = require('./storage')
+const { cidToKey, defaultDispatcher, fetchBlockFromS3, searchCarInDynamoV1 } = require('./storage')
 const { telemetry } = require('./telemetry')
 
 const blocksCache = new LRUCache(cacheBlocksSize)
@@ -42,7 +42,7 @@ async function getBlockInfo(dispatcher, cid) {
   telemetry.increaseCount('dynamo-reads')
   const item = await telemetry.trackDuration(
     'dynamo-reads',
-    searchCarInDynamo(dispatcher, blocksTable, primaryKeys.blocks, key)
+    searchCarInDynamoV1({ dispatcher, blockKey: key, logger })
   )
 
   if (item) {
@@ -54,7 +54,6 @@ async function getBlockInfo(dispatcher, cid) {
 
 async function fetchBlock(dispatcher, cid) {
   const info = await getBlockInfo(dispatcher, cid)
-
   if (!info) {
     return null
   }
@@ -309,7 +308,7 @@ async function startService({ peerId, currentPort, dispatcher, announceAddr } = 
 
     logger.info(
       { address: service.transportManager.getAddrs() },
-    `BitSwap peer started with PeerId ${service.peerId} and listening on port ${currentPort} ...`
+      `BitSwap peer started with PeerId ${service.peerId} and listening on port ${currentPort} ...`
     )
 
     return { service, port: currentPort, peerId }

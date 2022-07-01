@@ -1,13 +1,14 @@
+'use strict'
+
 const { logger, serializeError } = require('./logging')
 const { getPeerId } = require('./peer-id')
-const { defaultDispatcher, searchCarInDynamo } = require('./storage')
-const { blocksTable, primaryKeys } = require('./config')
+const { searchCarInDynamoV1 } = require('./storage')
 
 class HealthCheck {
   async checkReadiness() {
     try {
       await getPeerId()
-      await searchCarInDynamo(defaultDispatcher, blocksTable, primaryKeys.blocks, 'nonExistentKey')
+      await searchCarInDynamoV1({ blockKey: 'nonExistentKey', logger })
       return 200
     } catch (err) {
       const errMessage = `Readiness Probe Failed. Error: ${serializeError(err)}`

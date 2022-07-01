@@ -7,9 +7,17 @@ const { resolve } = require('path')
 const { Piscina } = require('piscina')
 const { Agent, request } = require('undici')
 const { xml2js } = require('xml-js')
+const { marshall, unmarshall } = require('@aws-sdk/util-dynamodb')
 const sleep = require('util').promisify(setTimeout)
 
 const {
+  blocksTable,
+  blocksTablePrimaryKey,
+
+  linkTableV1,
+  linkTableBlockKey,
+  linkTableCarKey,
+
   concurrency: connections,
   pipelining,
   s3MaxRetries,
@@ -100,7 +108,90 @@ async function refreshAwsCredentials(role, identity, dispatcher) {
   return { keyId, accessKey, sessionToken }
 }
 
-async function searchCarInDynamo(
+async function searchCarInDynamoV1({
+  blockKey,
+  dispatcher = defaultDispatcher,
+  logger,
+  retries = dynamoMaxRetries,
+  retryDelay = dynamoRetryDelay
+}) {
+  const key = { name: linkTableBlockKey, value: blockKey }
+  const cars = await dynamoQuery({ dispatcher, table: linkTableV1, key, logger, retries, retryDelay })
+
+  if (cars.length > 0) {
+    // current implementation support only 1 car per block, so the first one is picked
+    const car = cars[0]
+    return {
+      offset: car.offset,
+      length: car.length,
+      car: car[linkTableCarKey]
+    }
+  }
+
+  logger.debug({ block: key }, 'block not found in V1 table, fallback to V0')
+  return searchCarInDynamoV0(dispatcher, blocksTable, blocksTablePrimaryKey, blockKey, retries, retryDelay)
+}
+
+async function dynamoQuery({
+  dispatcher,
+  table,
+  key,
+  logger,
+  region = dynamoRegion,
+  url = dynamoUrl,
+  retries = dynamoMaxRetries,
+  retryDelay = dynamoRetryDelay
+}) {
+  telemetry.increaseCount('dynamo-reads')
+
+  const payload = JSON.stringify({
+    TableName: table,
+    Limit: 1,
+    KeyConditionExpression: `${key.name} = :v`,
+    ExpressionAttributeValues: marshall({ ':v': key.value }, { removeUndefined: true })
+  })
+
+  const headers = await signerWorker.run({
+    region,
+    keyId,
+    accessKey,
+    sessionToken,
+    service: 'dynamodb',
+    method: 'POST',
+    url,
+    headers: { 'x-amz-target': 'DynamoDB_20120810.Query' },
+    payload
+  })
+
+  let attempts = 0
+  let err
+  let record
+  do {
+    try {
+      record = await sendDynamoCommand(dispatcher, url, headers, payload)
+      break
+    } catch (error) {
+      logger.debug(
+        { error: serializeError(error), table, key },
+        `Cannot query DynamoDB attempt ${attempts + 1} / ${retries}`
+      )
+      err = error
+    }
+    await sleep(retryDelay)
+  } while (++attempts < retries)
+
+  if (record) {
+    return record?.Items ? record.Items.map(i => unmarshall(i)) : []
+  }
+
+  logger.error({ error: serializeError(err), table, key }, `Cannot query Dynamo after ${attempts} attempts`)
+  throw new Error('Cannot query Dynamo')
+}
+
+/**
+ * this function will be removed after the migration will be completed
+ */
+async function searchCarInDynamoV0(
   dispatcher,
   table,
   keyName,
@@ -132,12 +223,21 @@ async function searchCarInDynamo(
   let err
   do {
     try {
-      return await sendDynamoCommand(dispatcher, dynamoUrl, headers, payload)
+      const record = await sendDynamoCommand(dispatcher, dynamoUrl, headers, payload)
+      if (!record?.Item) {
+        return
+      }
+
+      const car = record.Item.cars.L[0].M
+      return {
+        offset: Number.parseInt(car.offset.N, 10),
+        length: Number.parseInt(car.length.N, 10),
+        car: car.car.S
+      }
     } catch (error) {
       logger.debug(
         { table },
-        `Cannot get item from DynamoDB attempt ${
-          attempts + 1
+        `Cannot get item from DynamoDB attempt ${attempts + 1
         } / ${retries} - Table: ${table} Key: ${keyValue} Error: ${serializeError(error)}`
       )
       err = error
@@ -174,17 +274,7 @@ async function sendDynamoCommand(dispatcher, url, headers, payload) {
     throw new Error(`DynamoDB.GetItem - Status: ${statusCode} Body: ${buffer.slice().toString('utf-8')} `)
   }
 
-  const record = JSON.parse(buffer.slice())
-  if (!record || !record.Item) {
-    return undefined
-  }
-
-  const car = record.Item.cars.L[0].M
-  return {
-    offset: Number.parseInt(car.offset.N, 10),
-    length: Number.parseInt(car.length.N, 10),
-    car: car.car.S
-  }
+  return JSON.parse(buffer.slice())
 }
 
 async function fetchBlockFromS3(
@@ -262,5 +352,6 @@ module.exports = {
   ensureAwsCredentials,
   fetchBlockFromS3,
   refreshAwsCredentials,
-  searchCarInDynamo
+  searchCarInDynamoV0,
+  searchCarInDynamoV1
 }

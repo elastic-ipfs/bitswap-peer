@@ -58,10 +58,6 @@ module.exports = {
   peerAnnounceAddr,
   pipelining: !isNaN(pipelining) && pipelining > 0 ? pipelining : 16,
   port: !isNaN(port) && port > 0 ? port : 3000,
-  primaryKeys: {
-    blocks: 'multihash',
-    cars: 'path'
-  },
   httpPort: !isNaN(httpPort) && httpPort > 0 ? httpPort : 3001,
   dynamoMaxRetries: dynamoMaxRetries ?? 3,
   dynamoRetryDelay: dynamoRetryDelay ?? 100, // ms

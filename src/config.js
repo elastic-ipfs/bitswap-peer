@@ -44,7 +44,7 @@ module.exports = {
   carsTable: carsTable ?? 'cars',
   blocksTableV1: blocksTableV1 ?? 'v1-blocks',
   carsTableV1: carsTableV1 ?? 'v1-cars',
-  linkTableV1: linkTableV1 ?? 'v1-blocks-cars',
+  linkTableV1: linkTableV1 ?? 'v1-blocks-cars-position',
 
   blocksTablePrimaryKey: 'multihash',
   carsTablePrimaryKey: 'path',

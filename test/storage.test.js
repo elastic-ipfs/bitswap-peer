@@ -228,10 +228,13 @@ t.test('searchCarInDynamoV1', async t => {
       })
       .reply(200, { Item: require('./fixtures/blocks/db-v0/cid1.json') })
 
-    const logs = { debug: [], error: [] }
+    const logs = { debug: [], info: [], error: [] }
     const loggerSpy = {
       debug: (info, message) => {
         logs.debug.push({ info, message })
+      },
+      info: (info, message) => {
+        logs.info.push({ info, message })
       },
       error: (info, message) => {
         logs.error.push({ info, message })
@@ -243,7 +246,7 @@ t.test('searchCarInDynamoV1', async t => {
       length: 5,
       car: '{AWS_REGION}/test-cars/test-cid1.car'
     })
-    t.equal(logs.debug[0].message, 'block not found in V1 table, fallback to V0')
+    t.equal(logs.info[0].message, 'block not found in V1 table, fallback to V0')
     t.match(logs.error.length, 0)
   })
 })

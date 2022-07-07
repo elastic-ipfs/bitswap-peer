@@ -4,9 +4,10 @@ process.env.LOG_LEVEL = 'fatal'
 
 const t = require('tap')
 const sinon = require('sinon')
+const config = require('../src/config')
 const { logger } = require('../src/logging')
 
-const { fetchBlockFromS3, refreshAwsCredentials, searchCarInDynamo } = require('../src/storage')
+const { fetchBlockFromS3, refreshAwsCredentials, searchCarInDynamoV0, searchCarInDynamoV1 } = require('../src/storage')
 const { createMockAgent } = require('./utils/mock')
 const bucketRegion = process.env.AWS_REGION
 
@@ -57,7 +58,7 @@ t.test('refreshAwsCredentials - error handling', async t => {
   })
 })
 
-t.test('searchCarInDynamo', async t => {
+t.test('searchCarInDynamoV0', async t => {
   const sandbox = sinon.createSandbox()
 
   t.beforeEach(() => {
@@ -79,7 +80,7 @@ t.test('searchCarInDynamo', async t => {
       .reply(400, { message: 'FOO' })
       .times(2)
 
-    await t.rejects(() => searchCarInDynamo(mockAgent, 'table', 'key', 'not-a-key', 2, 10), {
+    await t.rejects(() => searchCarInDynamoV0(mockAgent, 'table', 'key', 'not-a-key', 2, 10), {
       message: 'Cannot get item from Dynamo Table: table Key: not-a-key'
     })
     t.match(
@@ -105,7 +106,7 @@ t.test('searchCarInDynamo', async t => {
       .replyWithError(error)
       .times(3)
 
-    await t.rejects(() => searchCarInDynamo(mockAgent, 'table', 'key', 'key-value', 3, 10), {
+    await t.rejects(() => searchCarInDynamoV0(mockAgent, 'table', 'key', 'key-value', 3, 10), {
       message: 'Cannot get item from Dynamo Table: table Key: key-value'
     })
     t.match(
@@ -121,6 +122,132 @@ t.test('searchCarInDynamo', async t => {
       'Cannot get item from DynamoDB attempt 3 / 3 - Table: table Key: key-value Error: [Error] FAILED'
     )
     t.match(logger.error.getCall(0).lastArg, /from Dynamo after 3 attempts/)
+  })
+})
+
+t.test('searchCarInDynamoV1', async t => {
+  t.test('HTTP error handling', async t => {
+    const mockAgent = createMockAgent()
+    mockAgent
+      .get('https://dynamodb.us-west-2.amazonaws.com')
+      .intercept({
+        method: 'POST',
+        path: '/'
+      })
+      .reply(400, { message: 'FOO' })
+      .times(2)
+    const logs = { debug: [], error: [] }
+    const loggerSpy = {
+      debug: (info, message) => {
+        logs.debug.push({ info, message })
+      },
+      error: (info, message) => {
+        logs.error.push({ info, message })
+      }
+    }
+
+    await t.rejects(
+      () =>
+        searchCarInDynamoV1({
+          dispatcher: mockAgent,
+          blockKey: 'not-a-key',
+          logger: loggerSpy,
+          retries: 2,
+          retryDelay: 10
+        }),
+      {
+        message: 'Cannot query Dynamo'
+      }
+    )
+    t.equal(logs.debug[0].message, 'Cannot query DynamoDB attempt 1 / 2')
+    t.equal(logs.debug[1].message, 'Cannot query DynamoDB attempt 2 / 2')
+    t.match(logs.error[0].message, /query Dynamo after 2 attempts/)
+  })
+
+  t.test('error handling', async t => {
+    const error = new Error('FAILED')
+    const mockAgent = createMockAgent()
+    mockAgent
+      .get('https://dynamodb.us-west-2.amazonaws.com')
+      .intercept({
+        method: 'POST',
+        path: '/'
+      })
+      .replyWithError(error)
+      .times(3)
+    const logs = { debug: [], error: [] }
+    const loggerSpy = {
+      debug: (info, message) => {
+        logs.debug.push({ info, message })
+      },
+      error: (info, message) => {
+        logs.error.push({ info, message })
+      }
+    }
+
+    await t.rejects(
+      () =>
+        searchCarInDynamoV1({
+          dispatcher: mockAgent,
+          blockKey: 'not-a-key',
+          logger: loggerSpy,
+          retries: 3,
+          retryDelay: 10
+        }),
+      {
+        message: 'Cannot query Dynamo'
+      }
+    )
+    t.equal(logs.debug[0].message, 'Cannot query DynamoDB attempt 1 / 3')
+    t.equal(logs.debug[1].message, 'Cannot query DynamoDB attempt 2 / 3')
+    t.equal(logs.debug[2].message, 'Cannot query DynamoDB attempt 3 / 3')
+    t.match(logs.error[0].message, /query Dynamo after 3 attempts/)
+  })
+
+  t.test('fallback to v0', async t => {
+    const blockKey = 'the-block-key'
+    const mockAgent = createMockAgent()
+    mockAgent
+      .get('https://dynamodb.us-west-2.amazonaws.com')
+      .intercept({
+        method: 'POST',
+        path: '/',
+        body: JSON.stringify({
+          TableName: config.linkTableV1,
+          Limit: 1,
+          KeyConditionExpression: `${config.linkTableBlockKey} = :v`,
+          ExpressionAttributeValues: { ':v': { S: blockKey } }
+        })
+      })
+      .reply(200, { Items: [] })
+    mockAgent
+      .get('https://dynamodb.us-west-2.amazonaws.com')
+      .intercept({
+        method: 'POST',
+        path: '/'
+      })
+      .reply(200, { Item: require('./fixtures/blocks/db-v0/cid1.json') })
+
+    const logs = { debug: [], info: [], error: [] }
+    const loggerSpy = {
+      debug: (info, message) => {
+        logs.debug.push({ info, message })
+      },
+      info: (info, message) => {
+        logs.info.push({ info, message })
+      },
+      error: (info, message) => {
+        logs.error.push({ info, message })
+      }
+    }
+
+    t.same(await searchCarInDynamoV1({ dispatcher: mockAgent, blockKey, logger: loggerSpy }), {
+      offset: 96,
+      length: 5,
+      car: '{AWS_REGION}/test-cars/test-cid1.car'
+    })
+    t.equal(logs.info[0].message, 'block not found in V1 table, fallback to V0')
+    t.match(logs.error.length, 0)
   })
 })
 

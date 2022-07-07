@@ -1,3 +1,5 @@
+'use strict'
+
 /*
 This is a workaround for ERR_MPLEX_STREAM_RESET errors
 This is related to:

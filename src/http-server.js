@@ -1,3 +1,5 @@
+'use strict'
+
 const { createServer } = require('http')
 const { logger } = require('./logging')
 const { healthCheck } = require('./health-check')

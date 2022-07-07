@@ -12,7 +12,7 @@ t.test('healthCheck - readiness returns 200', async t => {
       getPeerId: () => 'Works'
     },
     '../src/storage.js': {
-      searchCarInDynamo: () => 'Works'
+      searchCarInDynamoV1: () => 'Works'
     }
   })
   const statusCode = await healthCheckModuleWithMocks.healthCheck.checkReadiness()

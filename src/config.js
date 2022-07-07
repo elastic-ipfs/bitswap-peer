@@ -10,8 +10,13 @@ const {
   CACHE_BLOCKS_SIZE: cacheBlocksSize,
 
   CONCURRENCY: rawConcurrency,
+
   DYNAMO_BLOCKS_TABLE: blocksTable,
   DYNAMO_CARS_TABLE: carsTable,
+  DYNAMO_BLOCKS_TABLE_V1: blocksTableV1,
+  DYNAMO_CARS_TABLE_V1: carsTableV1,
+  DYNAMO_LINK_TABLE_V1: linkTableV1,
+
   PEER_ID_DIRECTORY: peerIdJsonDirectory,
   PEER_ID_FILE: peerIdJsonFile,
   PEER_ANNOUNCE_ADDR: peerAnnounceAddr,
@@ -35,7 +40,17 @@ module.exports = {
   blocksTable: blocksTable ?? 'blocks',
   cacheBlocksInfo: cacheBlocksInfo === 'true',
   cacheBlocksSize: cacheBlocksSize ?? 1e3,
+
   carsTable: carsTable ?? 'cars',
+  blocksTableV1: blocksTableV1 ?? 'v1-blocks',
+  carsTableV1: carsTableV1 ?? 'v1-cars',
+  linkTableV1: linkTableV1 ?? 'v1-blocks-cars-position',
+
+  blocksTablePrimaryKey: 'multihash',
+  carsTablePrimaryKey: 'path',
+  linkTableBlockKey: 'blockmultihash',
+  linkTableCarKey: 'carpath',
+
   pingPeriodSecs: pingPeriodSecs ?? 10,
   concurrency: !isNaN(concurrency) && concurrency > 0 ? concurrency : 128,
   peerIdJsonFile,
@@ -43,13 +58,9 @@ module.exports = {
   peerAnnounceAddr,
   pipelining: !isNaN(pipelining) && pipelining > 0 ? pipelining : 16,
   port: !isNaN(port) && port > 0 ? port : 3000,
-  primaryKeys: {
-    blocks: 'multihash',
-    cars: 'path'
-  },
   httpPort: !isNaN(httpPort) && httpPort > 0 ? httpPort : 3001,
   dynamoMaxRetries: dynamoMaxRetries ?? 3,
-  dynamoRetryDelay: dynamoRetryDelay ?? 500, // ms
+  dynamoRetryDelay: dynamoRetryDelay ?? 100, // ms
   s3MaxRetries: s3MaxRetries ?? 3,
-  s3RetryDelay: s3RetryDelay ?? 500 // ms
+  s3RetryDelay: s3RetryDelay ?? 100 // ms
 }

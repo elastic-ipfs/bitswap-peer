@@ -1,4 +1,4 @@
-# IPFS Elastic Provider Bitswap peer
+# Bitswap peer
 
 ## Deployment environment variables
 

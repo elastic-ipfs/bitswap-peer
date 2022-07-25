@@ -25,7 +25,7 @@ jobs:
     - name: Checkout deployment repository
       uses: actions/checkout@v3
       with:
-        repository: ipfs-elastic-provider/ipfs-elastic-provider-bitswap-peer-deployment
+        repository: elastic-ipfs/bitswap-peer-deployment
         path: deployment
         token: ${{ secrets.deployment_personal_access_token }}
     - name: Deploy new image with suffix label

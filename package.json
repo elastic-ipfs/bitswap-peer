@@ -1,9 +1,9 @@
 {
-  "name": "aws-ipfs-bitswap-peer",
+  "name": "bitswap-peer",
   "version": "0.3.0",
-  "description": "AWS IPFS BitSwap Peer",
-  "homepage": "https://github.com/web3-storage/aws-ipfs-bitswap-peer",
-  "repository": "github:web3-storage/aws-ipfs-bitswap-peer",
+  "description": "Elastic IPFS BitSwap Peer",
+  "homepage": "https://github.com/elastic-ipfs/bitswap-peer",
+  "repository": "github:web3-storage/bitswap-peer",
   "author": "Paolo Insogna <paolo.insogna@nearform.com>",
   "license": "(Apache-2.0 AND MIT)",
   "private": true,

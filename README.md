@@ -27,3 +27,4 @@ _Variables in bold are required._
 | PING_PERIOD_SECONDS   | `10`          | Wait interval for ping connected peer (Keep Alive)                       |
 | PORT                  | `3000`        | The port number to listen on.                                            |
 | TELEMETRY_PORT        | `3001`        | The telemetry port number for the OpenTelemetry server to listen on.     |
+

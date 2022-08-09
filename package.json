@@ -14,7 +14,7 @@
     "lint": "eslint src test"
   },
   "dependencies": {
-    "@aws-sdk/util-dynamodb": "^3.118.1",
+    "@aws-sdk/util-dynamodb": "^3.145.0",
     "@web3-storage/libp2p-noise": "^6.0.0",
     "bl": "^5.0.0",
     "dotenv": "^10.0.0",
@@ -26,7 +26,7 @@
     "libp2p-mplex": "^0.10.4",
     "libp2p-websockets": "^0.16.2",
     "make-promises-safe": "^5.1.0",
-    "mnemonist": "^0.39.0",
+    "mnemonist": "^0.39.2",
     "pino": "^7.2.0",
     "piscina": "^3.2.0",
     "protobufjs": "^6.11.2",

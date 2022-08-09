@@ -11,7 +11,7 @@ const { logger, serializeError } = require('./logging')
 const { Connection } = require('./networking')
 const { noiseCrypto } = require('./noise-crypto')
 const { getPeerId } = require('../src/peer-id')
-const { startKeepAlive, stopKeepAlive } = require('./p2p-keep-alive.js')
+const { startKeepAlive, stopKeepAlive, _timers } = require('./p2p-keep-alive.js')
 const {
   BITSWAP_V_120,
   Block,
@@ -25,7 +25,7 @@ const {
 const { cidToKey, defaultDispatcher, fetchBlockFromS3, searchCarInDynamoV1 } = require('./storage')
 const { telemetry } = require('./telemetry')
 
-const blocksCache = new LRUCache(cacheBlocksSize)
+const blocksCache = cacheBlocksInfo ? new LRUCache(cacheBlocksSize) : null
 
 function createEmptyMessage(blocks = [], presences = []) {
   return new Message(emptyWantList, blocks, presences, 0)
@@ -33,7 +33,7 @@ function createEmptyMessage(blocks = [], presences = []) {
 
 async function getBlockInfo(dispatcher, cid) {
   const key = cidToKey(cid)
-  const cached = blocksCache.get(key)
+  const cached = cacheBlocksInfo && blocksCache.get(key)
 
   if (cacheBlocksInfo && cached) {
     return cached
@@ -45,7 +45,7 @@ async function getBlockInfo(dispatcher, cid) {
     searchCarInDynamoV1({ dispatcher, blockKey: key, logger })
   )
 
-  if (item) {
+  if (cacheBlocksInfo && item) {
     blocksCache.set(key, item)
   }
 
@@ -296,14 +296,6 @@ async function startService({ peerId, currentPort, dispatcher, announceAddr } = 
       logger.error({ err }, `libp2p connectionManager.error: ${serializeError(err)}`)
     })
 
-    service.connectionManager.on('connection', connection => {
-      logger.debug({ connection }, ' ******** connectionManager.on connection')
-    })
-
-    service.connectionManager.on('connectionEnd', connection => {
-      logger.debug({ connection }, ' ******** connectionManager.on connectionEnd')
-    })
-
     await service.start()
 
     logger.info(
@@ -311,11 +303,34 @@ async function startService({ peerId, currentPort, dispatcher, announceAddr } = 
       `BitSwap peer started with PeerId ${service.peerId} and listening on port ${currentPort} ...`
     )
 
+    debugging(service)
+
     return { service, port: currentPort, peerId }
     /* c8 ignore next 3 */
   } catch (err) {
     logger.error({ err }, 'Error on service')
   }
+}
+
+/**
+ * TEMPORARY information logger to catch memory leak
+ */
+function debugging(service) {
+  if (global.debuggerTimer) { return }
+
+  global.debuggerTimer = setInterval(() => {
+    const info = {
+      timers: Object.keys(_timers()),
+      connections: service.getConnections().length,
+      multiaddrs: service.getMultiaddrs().length,
+      peers: service.getPeers().length
+    }
+    logger.info(info, 'SERVICE')
+  }, 60e3)
+
+  process.on('beforeExit', () => {
+    global.debuggerTimer && clearInterval(global.debuggerTimer)
+  })
 }
 
 module.exports = { startService }

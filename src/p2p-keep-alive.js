@@ -16,7 +16,6 @@ const { pingPeriodSecs } = require('./config')
 const pingKeepAliveTimers = {}
 
 function startKeepAlive(peerId, currentNode) {
-  // !debug
   const peerIdStr = peerId.toB58String()
 
   if (pingPeriodSecs !== 0 && !pingKeepAliveTimers[peerIdStr]) {
@@ -35,7 +34,6 @@ function stopKeepAlive(peerId) {
   const peerIdStr = peerId.toB58String()
 
   if (pingKeepAliveTimers[peerIdStr]) {
-    // !debug
     clearInterval(pingKeepAliveTimers[peerIdStr])
     delete pingKeepAliveTimers[peerIdStr]
   }

@@ -209,7 +209,6 @@ async function startService({ peerId, currentPort, dispatcher, announceAddr } = 
       announceAddr = peerAnnounceAddr
     }
 
-    // ! check libp2p.create
     const service = await libp2p.create({
       peerId,
       addresses: {

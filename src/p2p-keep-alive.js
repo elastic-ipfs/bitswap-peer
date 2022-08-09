@@ -16,16 +16,14 @@ const { pingPeriodSecs } = require('./config')
 const pingKeepAliveTimers = {}
 
 function startKeepAlive(peerId, currentNode) {
-  // Just in case a timer already exist for this peer
-  stopKeepAlive(peerId)
-
+  // !debug
   const peerIdStr = peerId.toB58String()
 
-  if (pingPeriodSecs !== 0) {
+  if (pingPeriodSecs !== 0 && !pingKeepAliveTimers[peerIdStr]) {
     pingKeepAliveTimers[peerIdStr] = setInterval(() => {
       currentNode.ping(peerId).catch(err => {
         if (err.code !== 'ERR_MPLEX_STREAM_RESET' && err.code !== 'ERR_UNSUPPORTED_PROTOCOL') {
-          logger.debug({ err }, `Ping failed - peerId: ${peerIdStr} Error: ${serializeError(err)}`)
+          logger.debug({ err, peerId: peerIdStr }, `Ping failed, Error: ${serializeError(err)}`)
         }
         stopKeepAlive(peerId)
       })
@@ -37,9 +35,21 @@ function stopKeepAlive(peerId) {
   const peerIdStr = peerId.toB58String()
 
   if (pingKeepAliveTimers[peerIdStr]) {
+    // !debug
     clearInterval(pingKeepAliveTimers[peerIdStr])
     delete pingKeepAliveTimers[peerIdStr]
   }
 }
+
+/**
+ * TEMPORARY information logger to catch memory leak
+ */
+function debugging() {
+  setInterval(() => {
+    logger.info({ timers: Object.keys(pingKeepAliveTimers) }, 'KEEP-ALIVE')
+  }, 60e3)
+}
+
+debugging()
 
 module.exports = { startKeepAlive, stopKeepAlive }

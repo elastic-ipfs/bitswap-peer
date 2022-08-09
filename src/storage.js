@@ -47,6 +47,7 @@ function cidToKey(cid) {
   return base58.encode(cid.multihash.bytes)
 }
 
+let refreshAwsCredentialsTimer
 function ensureAwsCredentials() {
   /* c8 ignore next 1 */
   if (!process.env.AWS_ROLE_ARN || !process.env.AWS_WEB_IDENTITY_TOKEN_FILE) {
@@ -55,10 +56,10 @@ function ensureAwsCredentials() {
 
     return Promise.resolve()
   }
-  /* c8 ignore next 7 */
-
+  /* c8 ignore next 8 */
+  if (refreshAwsCredentialsTimer) { return Promise.resolve() }
   // Every 50 minutes we rotate the keys using STS
-  setInterval(() => {
+  refreshAwsCredentialsTimer = setInterval(() => {
     refreshAwsCredentials(process.env.AWS_ROLE_ARN)
   }, 50 * 60_000).unref()
 

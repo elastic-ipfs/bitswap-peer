@@ -1,6 +1,7 @@
 'use strict'
 
 process.env.CACHE_BLOCKS_INFO = 'true'
+process.env.CACHE_BLOCK_DATA = 'true'
 process.env.LOG_LEVEL = 'fatal'
 
 const { once } = require('events')
@@ -9,7 +10,7 @@ const t = require('tap')
 const { port } = require('../src/config')
 const { BITSWAP_V_100: protocol, Entry, Message, WantList } = require('../src/protocol')
 const { startService } = require('../src/service')
-const { cid1, cid1Content } = require('./fixtures/cids')
+const { cid1, cid1Content, cid2 } = require('./fixtures/cids')
 const { hasRawBlock, prepare, receiveMessages, teardown } = require('./utils/helpers')
 const { createMockAgent, mockAWS } = require('./utils/mock')
 
@@ -81,7 +82,8 @@ t.test('service - handles blocks error', async t => {
 
   const { client, service, connection, receiver } = await prepare(t, protocol, mockAgent)
 
-  const wantList = new WantList([new Entry(cid1, 1, false, Entry.WantType.Block, true)], false)
+  // Use CID2, which is not already cached by the tests above
+  const wantList = new WantList([new Entry(cid2, 1, false, Entry.WantType.Block, true)], false)
 
   const request = new Message(wantList, [], [], 0)
   await connection.send(request.encode(protocol))

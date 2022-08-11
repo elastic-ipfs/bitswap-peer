@@ -6,7 +6,7 @@ const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
 const LRUCache = require('mnemonist/lru-cache')
 
-const { cacheBlocksInfo, cacheBlocksSize, port, peerAnnounceAddr } = require('./config')
+const { cacheBlocksInfo, cacheBlocksSize, cacheBlockData, cacheBlockDataSize, port, peerAnnounceAddr } = require('./config')
 const { logger, serializeError } = require('./logging')
 const { Connection } = require('./networking')
 const { noiseCrypto } = require('./noise-crypto')
@@ -26,6 +26,7 @@ const { cidToKey, defaultDispatcher, fetchBlockFromS3, searchCarInDynamoV1 } = r
 const { telemetry } = require('./telemetry')
 
 const blocksCache = new LRUCache(cacheBlocksSize)
+const blockDataCache = new LRUCache(cacheBlockDataSize)
 
 function createEmptyMessage(blocks = [], presences = []) {
   return new Message(emptyWantList, blocks, presences, 0)
@@ -64,8 +65,22 @@ async function fetchBlock(dispatcher, cid) {
     return null
   }
 
+  const cacheKey = cidToKey(cid)
+  if (cacheBlockData) {
+    const bytes = blockDataCache.get(cacheKey)
+    if (bytes) {
+      return bytes
+    }
+  }
+
   const [, bucketRegion, bucketName, key] = car.match(/([^/]+)\/([^/]+)\/(.+)/)
-  return fetchBlockFromS3(dispatcher, bucketRegion, bucketName, key, offset, length)
+  const bytes = await fetchBlockFromS3(dispatcher, bucketRegion, bucketName, key, offset, length)
+
+  if (cacheBlockData) {
+    blockDataCache.set(cacheKey, bytes)
+  }
+
+  return bytes
 }
 
 async function sendMessage(context, encodedMessage) {

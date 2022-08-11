@@ -9,6 +9,9 @@ const {
   CACHE_BLOCKS_INFO: cacheBlocksInfo,
   CACHE_BLOCKS_SIZE: cacheBlocksSize,
 
+  CACHE_BLOCK_DATA: cacheBlockData,
+  CACHE_BLOCK_DATA_SIZE: cacheBlockDataSize,
+
   CONCURRENCY: rawConcurrency,
 
   DYNAMO_BLOCKS_TABLE: blocksTable,
@@ -40,6 +43,9 @@ module.exports = {
   blocksTable: blocksTable ?? 'blocks',
   cacheBlocksInfo: cacheBlocksInfo === 'true',
   cacheBlocksSize: cacheBlocksSize ?? 1e3,
+
+  cacheBlockData: cacheBlockData === 'true',
+  cacheBlockDataSize: cacheBlockDataSize ? parseInt(cacheBlockDataSize) : 1e3,
 
   carsTable: carsTable ?? 'cars',
   blocksTableV1: blocksTableV1 ?? 'v1-blocks',

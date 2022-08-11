@@ -10,6 +10,7 @@ class Connection extends EventEmitter {
   constructor(stream) {
     super()
 
+    this.stream = stream
     this.done = false
     this.values = []
     this.resolves = []
@@ -68,6 +69,16 @@ class Connection extends EventEmitter {
     */
 
     this.shouldClose = true
+
+    // If there are resolves, then there is nothing waiting to be sent out and
+    // we can close the stream for reading (and writing) immediately.
+    if (this.resolves.length) {
+      for (const resolve of this.resolves) {
+        resolve({ done: true })
+      }
+      this.resolves = []
+      this.stream.close()
+    }
   }
 
   [Symbol.asyncIterator]() {
@@ -94,6 +105,7 @@ class Connection extends EventEmitter {
           }
 
           this.resolves = []
+          this.stream.close() // close the stream (read side)
           return Promise.resolve({ done: true, value: undefined })
         }
 

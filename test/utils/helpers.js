@@ -67,8 +67,6 @@ async function teardown(t, client, service, connection) {
   await connection.close()
   await client.stop()
   await service.stop()
-  // TEMPORARY for debugging
-  global.debuggerTimer && clearInterval(global.debuggerTimer)
 }
 
 async function receiveMessages(receiver, protocol, timeout = 10000, limit = 1, raw = false) {

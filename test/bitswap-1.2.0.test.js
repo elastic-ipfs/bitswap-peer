@@ -377,3 +377,30 @@ t.test(`${protocol} - large presences skipping`, async t => {
   t.equal(getPresence(t, responses[0], cid2).type, BlockPresence.Type.Have)
   t.equal(getPresence(t, responses[1], cid5).type, BlockPresence.Type.Have)
 })
+
+t.test(`${protocol} - closes streams properly`, async t => {
+  t.plan(3)
+
+  const { client, service, connection, receiver } = await prepare(t, protocol)
+  const entry = new Entry(cid1, 1, false, Entry.WantType.Block, true)
+  const wantList = new WantList([entry], false)
+  const request = new Message(wantList, [], [], 0)
+
+  connection.send(request.encode(protocol))
+  await receiveMessages(receiver, protocol, 5000, 1)
+  connection.close()
+
+  // Wait for streams to be closed (happens asynchronously)
+  await new Promise(resolve => setTimeout(resolve, 1000))
+
+  const peerConnections = Array.from(service.connectionManager.connections.entries())
+  t.equal(peerConnections.length, 1, 'Service has only 1 peer with connections')
+
+  const [, connnections] = peerConnections[0]
+  t.equal(connnections.length, 1, 'Service has 1 connection to client')
+
+  const streams = connnections[0].streams
+  t.equal(streams.length, 0, 'Service has 0 open streams to client')
+
+  await teardown(t, client, service, connection)
+})

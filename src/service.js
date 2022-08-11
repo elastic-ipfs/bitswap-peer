@@ -263,6 +263,11 @@ async function startService({ peerId, currentPort, dispatcher, announceAddr } = 
           }
         })
 
+        // When the incoming duplex stream finishes sending, close for writing.
+        // Note: we never write to this stream - responses are always sent on
+        // another multiplexed stream.
+        connection.on('end:receive', () => connection.close())
+
         /* c8 ignore next 4 */
         connection.on('error', err => {
           logger.error({ err, dial, stream, protocol }, `Connection error: ${serializeError(err)}`)

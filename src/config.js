@@ -39,7 +39,8 @@ const httpPort = parseInt(rawHttpPort)
 module.exports = {
   blocksTable: blocksTable ?? 'blocks',
   cacheBlocksInfo: cacheBlocksInfo === 'true',
-  cacheBlocksSize: cacheBlocksSize ? parseInt(cacheBlocksSize, 10) : 1e3,
+  cacheBlocksSize: cacheBlocksSize ?? 1e3,
+
   carsTable: carsTable ?? 'cars',
   blocksTableV1: blocksTableV1 ?? 'v1-blocks',
   carsTableV1: carsTableV1 ?? 'v1-cars',
@@ -52,7 +53,7 @@ module.exports = {
 
   pingPeriodSecs: pingPeriodSecs ?? 10,
   concurrency: !isNaN(concurrency) && concurrency > 0 ? concurrency : 128,
-  peerIdJsonFile: peerIdJsonFile ?? 'peerId.json',
+  peerIdJsonFile,
   peerIdJsonPath: join(peerIdJsonDirectory ?? '/tmp', peerIdJsonFile ?? 'peerId.json'),
   peerAnnounceAddr,
   pipelining: !isNaN(pipelining) && pipelining > 0 ? pipelining : 16,

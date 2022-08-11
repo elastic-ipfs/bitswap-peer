@@ -16,13 +16,16 @@ const { pingPeriodSecs } = require('./config')
 const pingKeepAliveTimers = {}
 
 function startKeepAlive(peerId, currentNode) {
+  // Just in case a timer already exist for this peer
+  stopKeepAlive(peerId)
+
   const peerIdStr = peerId.toB58String()
 
-  if (pingPeriodSecs !== 0 && !pingKeepAliveTimers[peerIdStr]) {
+  if (pingPeriodSecs !== 0) {
     pingKeepAliveTimers[peerIdStr] = setInterval(() => {
       currentNode.ping(peerId).catch(err => {
         if (err.code !== 'ERR_MPLEX_STREAM_RESET' && err.code !== 'ERR_UNSUPPORTED_PROTOCOL') {
-          logger.debug({ err, peerId: peerIdStr }, `Ping failed, Error: ${serializeError(err)}`)
+          logger.debug({ err }, `Ping failed - peerId: ${peerIdStr} Error: ${serializeError(err)}`)
         }
         stopKeepAlive(peerId)
       })
@@ -39,8 +42,4 @@ function stopKeepAlive(peerId) {
   }
 }
 
-function _timers () {
-  return pingKeepAliveTimers
-}
-
-module.exports = { startKeepAlive, stopKeepAlive, _timers }
+module.exports = { startKeepAlive, stopKeepAlive }

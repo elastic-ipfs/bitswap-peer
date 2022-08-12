@@ -128,8 +128,11 @@ async function searchCarInDynamoV1({
     }
   }
 
-  logger.info({ block: key }, 'block not found in V1 table, fallback to V0')
-  return searchCarInDynamoV0(dispatcher, blocksTable, blocksTablePrimaryKey, blockKey, retries, retryDelay)
+  const fallback = await searchCarInDynamoV0(dispatcher, blocksTable, blocksTablePrimaryKey, blockKey, retries, retryDelay)
+  if (fallback) {
+    logger.error({ block: key, car: fallback.car }, 'block not found in V1 table but found in V0 table')
+    return fallback
+  }
 }
 
 async function dynamoQuery({

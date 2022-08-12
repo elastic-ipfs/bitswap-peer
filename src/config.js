@@ -61,7 +61,7 @@ module.exports = {
 
   enableKeepAlive: enableKeepAlive === 'true',
   pingPeriodSecs: pingPeriodSecs ?? 10,
-  
+
   concurrency: !isNaN(concurrency) && concurrency > 0 ? concurrency : 128,
   peerIdJsonFile,
   peerIdJsonPath: join(peerIdJsonDirectory ?? '/tmp', peerIdJsonFile ?? 'peerId.json'),

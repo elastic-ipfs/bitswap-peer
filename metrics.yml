@@ -10,5 +10,7 @@ metrics:
   bitswap-sent-data: BitSwap Sent Data, in bytes
   s3-fetchs: AWS S3 GetObject
   dynamo-reads: AWS DynamoDB GetItem
+  cache-block-data-hits: LRU cache hits for block data
+  cache-block-data-misses: LRU cache misses for block data
 version: 0.1.0
 buildDate: "20220307.1423"

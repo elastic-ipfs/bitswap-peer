@@ -3,7 +3,6 @@
 const { Noise } = require('@web3-storage/libp2p-noise')
 const dagPB = require('@ipld/dag-pb')
 const { EventEmitter } = require('events')
-const getPort = require('get-port')
 const libp2p = require('libp2p')
 const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
@@ -43,7 +42,8 @@ async function createClient(peerId, port, protocol) {
   return { connection, stream, receiver, node }
 }
 
-function getFreePort() {
+async function getFreePort() {
+  const getPort = (await import('get-port')).default
   return getPort({ port: currentPort++ })
 }
 

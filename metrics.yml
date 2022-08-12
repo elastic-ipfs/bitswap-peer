@@ -12,5 +12,7 @@ metrics:
   dynamo-reads: AWS DynamoDB GetItem
   cache-block-data-hits: LRU cache hits for block data
   cache-block-data-misses: LRU cache misses for block data
+  cache-block-info-hits: LRU cache hits for block info
+  cache-block-info-misses: LRU cache misses for block info
 version: 0.1.0
 buildDate: "20220307.1423"

@@ -6,7 +6,7 @@ const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
 const LRUCache = require('mnemonist/lru-cache')
 
-const { cacheBlocksInfo, cacheBlocksSize, cacheBlockData, cacheBlockDataSize, port, peerAnnounceAddr } = require('./config')
+const { cacheBlocksInfo, cacheBlocksInfoSize, cacheBlockData, cacheBlockDataSize, port, peerAnnounceAddr } = require('./config')
 const { logger, serializeError } = require('./logging')
 const { Connection } = require('./networking')
 const { noiseCrypto } = require('./noise-crypto')
@@ -25,7 +25,7 @@ const {
 const { cidToKey, defaultDispatcher, fetchBlockFromS3, searchCarInDynamoV1 } = require('./storage')
 const { telemetry } = require('./telemetry')
 
-const blocksCache = new LRUCache(cacheBlocksSize)
+const blocksInfoCache = new LRUCache(cacheBlocksInfoSize)
 const blockDataCache = new LRUCache(cacheBlockDataSize)
 
 function createEmptyMessage(blocks = [], presences = []) {
@@ -34,10 +34,14 @@ function createEmptyMessage(blocks = [], presences = []) {
 
 async function getBlockInfo(dispatcher, cid) {
   const key = cidToKey(cid)
-  const cached = blocksCache.get(key)
+  const cached = blocksInfoCache.get(key)
 
-  if (cacheBlocksInfo && cached) {
-    return cached
+  if (cacheBlocksInfo) {
+    if (cached) {
+      telemetry.increaseCount('cache-block-info-hits')
+      return cached
+    }
+    telemetry.increaseCount('cache-block-info-misses')
   }
 
   telemetry.increaseCount('dynamo-reads')
@@ -47,7 +51,7 @@ async function getBlockInfo(dispatcher, cid) {
   )
 
   if (item) {
-    blocksCache.set(key, item)
+    blocksInfoCache.set(key, item)
   }
 
   return item

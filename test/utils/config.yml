@@ -6,4 +6,5 @@ test-env:
   - ENV_FILE_PATH=test/fixtures/env
   - LOG_LEVEL=error
   - CACHE_BLOCKS_INFO=false
+  - CACHE_BLOCKS_DATA=false
 timeout: 60

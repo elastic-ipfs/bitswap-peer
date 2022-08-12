@@ -42,7 +42,7 @@ const httpPort = parseInt(rawHttpPort)
 module.exports = {
   blocksTable: blocksTable ?? 'blocks',
   cacheBlockInfo: cacheBlockInfo === 'true',
-  cacheBlockInfoSize: cacheBlockInfoSize ?? 1e3,
+  cacheBlockInfoSize: cacheBlockInfoSize ? parseInt(cacheBlockInfoSize) : 1e3,
 
   cacheBlockData: cacheBlockData === 'true',
   cacheBlockDataSize: cacheBlockDataSize ? parseInt(cacheBlockDataSize) : 1e3,

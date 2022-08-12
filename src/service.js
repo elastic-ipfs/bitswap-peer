@@ -69,8 +69,10 @@ async function fetchBlock(dispatcher, cid) {
   if (cacheBlockData) {
     const bytes = blockDataCache.get(cacheKey)
     if (bytes) {
+      telemetry.increaseCount('cache-block-data-hits')
       return bytes
     }
+    telemetry.increaseCount('cache-block-data-misses')
   }
 
   const [, bucketRegion, bucketName, key] = car.match(/([^/]+)\/([^/]+)\/(.+)/)

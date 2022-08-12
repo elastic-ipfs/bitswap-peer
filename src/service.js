@@ -34,7 +34,7 @@ function createEmptyMessage(blocks = [], presences = []) {
 
 async function getBlockInfo(dispatcher, cid) {
   const key = cidToKey(cid)
-  const cached = blocksInfoCache.get(key)
+  const cached = blockInfoCache.get(key)
 
   if (cacheBlockInfo) {
     if (cached) {

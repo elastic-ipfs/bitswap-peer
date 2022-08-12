@@ -26,6 +26,8 @@ const {
   PIPELINING: rawPipelining,
   PORT: rawPort,
   HTTP_PORT: rawHttpPort,
+
+  ENABLE_KEEP_ALIVE: enableKeepAlive,
   PING_PERIOD_SECONDS: pingPeriodSecs,
 
   DYNAMO_MAX_RETRIES: dynamoMaxRetries,
@@ -57,7 +59,9 @@ module.exports = {
   linkTableBlockKey: 'blockmultihash',
   linkTableCarKey: 'carpath',
 
+  enableKeepAlive: enableKeepAlive === 'true',
   pingPeriodSecs: pingPeriodSecs ?? 10,
+  
   concurrency: !isNaN(concurrency) && concurrency > 0 ? concurrency : 128,
   peerIdJsonFile,
   peerIdJsonPath: join(peerIdJsonDirectory ?? '/tmp', peerIdJsonFile ?? 'peerId.json'),

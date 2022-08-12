@@ -25,7 +25,7 @@ const {
 const { cidToKey, defaultDispatcher, fetchBlockFromS3, searchCarInDynamoV1 } = require('./storage')
 const { telemetry } = require('./telemetry')
 
-const blocksInfoCache = new LRUCache(cacheBlockInfoSize)
+const blockInfoCache = new LRUCache(cacheBlockInfoSize)
 const blockDataCache = new LRUCache(cacheBlockDataSize)
 
 function createEmptyMessage(blocks = [], presences = []) {

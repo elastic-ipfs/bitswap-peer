@@ -5,6 +5,6 @@ test-regex: "(?:\\.test\\.js)$"
 test-env:
   - ENV_FILE_PATH=test/fixtures/env
   - LOG_LEVEL=error
-  - CACHE_BLOCKS_INFO=false
-  - CACHE_BLOCKS_DATA=false
+  - CACHE_BLOCK_INFO=false
+  - CACHE_BLOCK_DATA=false
 timeout: 60

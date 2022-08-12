@@ -6,7 +6,7 @@ const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
 const LRUCache = require('mnemonist/lru-cache')
 
-const { cacheBlocksInfo, cacheBlocksInfoSize, cacheBlockData, cacheBlockDataSize, port, peerAnnounceAddr } = require('./config')
+const { cacheBlockInfo, cacheBlockInfoSize, cacheBlockData, cacheBlockDataSize, port, peerAnnounceAddr } = require('./config')
 const { logger, serializeError } = require('./logging')
 const { Connection } = require('./networking')
 const { noiseCrypto } = require('./noise-crypto')
@@ -25,7 +25,7 @@ const {
 const { cidToKey, defaultDispatcher, fetchBlockFromS3, searchCarInDynamoV1 } = require('./storage')
 const { telemetry } = require('./telemetry')
 
-const blocksInfoCache = new LRUCache(cacheBlocksInfoSize)
+const blocksInfoCache = new LRUCache(cacheBlockInfoSize)
 const blockDataCache = new LRUCache(cacheBlockDataSize)
 
 function createEmptyMessage(blocks = [], presences = []) {
@@ -36,7 +36,7 @@ async function getBlockInfo(dispatcher, cid) {
   const key = cidToKey(cid)
   const cached = blocksInfoCache.get(key)
 
-  if (cacheBlocksInfo) {
+  if (cacheBlockInfo) {
     if (cached) {
       telemetry.increaseCount('cache-block-info-hits')
       return cached

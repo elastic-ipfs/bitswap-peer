@@ -6,8 +6,8 @@ const { join, resolve } = require('path')
 require('dotenv').config({ path: process.env.ENV_FILE_PATH || resolve(process.cwd(), '.env') })
 
 const {
-  CACHE_BLOCKS_INFO: cacheBlocksInfo,
-  CACHE_BLOCKS_INFO_SIZE: cacheBlocksInfoSize,
+  CACHE_BLOCK_INFO: cacheBlockInfo,
+  CACHE_BLOCK_INFO_SIZE: cacheBlockInfoSize,
 
   CACHE_BLOCK_DATA: cacheBlockData,
   CACHE_BLOCK_DATA_SIZE: cacheBlockDataSize,
@@ -41,8 +41,8 @@ const httpPort = parseInt(rawHttpPort)
 
 module.exports = {
   blocksTable: blocksTable ?? 'blocks',
-  cacheBlocksInfo: cacheBlocksInfo === 'true',
-  cacheBlocksInfoSize: cacheBlocksInfoSize ?? 1e3,
+  cacheBlockInfo: cacheBlockInfo === 'true',
+  cacheBlockInfoSize: cacheBlockInfoSize ?? 1e3,
 
   cacheBlockData: cacheBlockData === 'true',
   cacheBlockDataSize: cacheBlockDataSize ? parseInt(cacheBlockDataSize) : 1e3,

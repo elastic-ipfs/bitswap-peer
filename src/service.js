@@ -51,7 +51,7 @@ async function getBlockInfo(dispatcher, cid) {
   )
 
   if (item) {
-    blocksInfoCache.set(key, item)
+    blockInfoCache.set(key, item)
   }
 
   return item

@@ -9,16 +9,16 @@ _Variables in bold are required._
 | AWS_ACCESS_KEY_ID     |               | The AWS key ID.                                                          |
 | AWS_REGION            |               | The AWS region.                                                          |
 | AWS_SECRET_ACCESS_KEY |               | The AWS access key.                                                      |
-| CACHE_BLOCKS_INFO     | `false`       | Set to `true` to cache block informations with in a in-memory LRU cache. |
-| CACHE_BLOCKS_SIZE     | `1e3`         | Max entries of the block info cache.                                     |
+| CACHE_BLOCK_INFO     | `false`       | Set to `true` to cache block informations with in a in-memory LRU cache. |
+| CACHE_BLOCK_INFO_SIZE | `1000`       | Max entries of the block info cache.                                     |
 | CACHE_BLOCK_DATA      | `false`       | Set to `true` to cache block data with in a in-memory LRU cache.         |
 | CACHE_BLOCK_DATA_SIZE | `1000`        | Max entries of the block data cache.                                     |
 | CONCURRENCY           | `128`         | The maximum concurrency when searching CIDs.                             |
 | DYNAMO_BLOCKS_TABLE   | `blocks`      | The DynamoDB table where store CIDs informations to.                     |
 | DYNAMO_CARS_TABLE     | `cars`        | The DynamoDB table where store CAR files informations to.                |
-| DYNAMO_BLOCKS_TABLE_V1| `v1-blocks`      | The DynamoDB table where store CIDs informations to.                  |
-| DYNAMO_CARS_TABLE_V1  | `v1-cars`        | The DynamoDB table where store CAR files informations to.             |
-| DYNAMO_LINK_TABLE_V1  | `v1-blocks-cars-position` | The DynamoDB table with CARs-blocks links.                            |
+| DYNAMO_BLOCKS_TABLE_V1| `v1-blocks`   | The DynamoDB table where store CIDs informations to.                     |
+| DYNAMO_CARS_TABLE_V1  | `v1-cars`     | The DynamoDB table where store CAR files informations to.                |
+| DYNAMO_LINK_TABLE_V1  | `v1-blocks-cars-position` | The DynamoDB table with CARs-blocks links.                   |
 | DYNAMO_MAX_RETRIES    | 3             | DynamoDB max attempts in case of query failure.                          |
 | DYNAMO_RETRY_DELAY    | 500           | DynamoDB delay between attempts in case of failure, in milliseconds.     |
 | S3_MAX_RETRIES        | 3             | S3 max attempts in case of failure.                                      |

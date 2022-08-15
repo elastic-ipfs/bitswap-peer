@@ -1,6 +1,6 @@
 'use strict'
 
-process.env.CACHE_BLOCKS_INFO = 'true'
+process.env.CACHE_BLOCK_INFO = 'true'
 process.env.CACHE_BLOCK_DATA = 'true'
 process.env.LOG_LEVEL = 'fatal'
 

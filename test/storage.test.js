@@ -246,8 +246,8 @@ t.test('searchCarInDynamoV1', async t => {
       length: 5,
       car: '{AWS_REGION}/test-cars/test-cid1.car'
     })
-    t.equal(logs.info[0].message, 'block not found in V1 table, fallback to V0')
-    t.match(logs.error.length, 0)
+    t.match(logs.info.length, 0)
+    t.equal(logs.error[0].message, 'block not found in V1 table but found in V0 table')
   })
 })
 

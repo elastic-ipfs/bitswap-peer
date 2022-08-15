@@ -79,7 +79,7 @@ function doHttpRequest(path, server) {
     const req = get({
       hostname: server?.address()?.address,
       port: server?.address()?.port,
-      path: path
+      path
     })
 
     req.on('response', res => {

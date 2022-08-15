@@ -1,15 +1,11 @@
 'use strict'
 
-const { Noise } = require('@web3-storage/libp2p-noise')
-const libp2p = require('libp2p')
-const Multiplex = require('libp2p-mplex')
-const Websockets = require('libp2p-websockets')
 const LRUCache = require('mnemonist/lru-cache')
 
 const { cacheBlockInfo, cacheBlockInfoSize, cacheBlockData, cacheBlockDataSize, port, peerAnnounceAddr } = require('./config')
 const { logger, serializeError } = require('./logging')
 const { Connection } = require('./networking')
-const { noiseCrypto } = require('./noise-crypto')
+// TODO const { noiseCrypto } = require('./noise-crypto')
 const { getPeerId } = require('../src/peer-id')
 const { startKeepAlive, stopKeepAlive } = require('./p2p-keep-alive.js')
 const {
@@ -214,6 +210,8 @@ function processWantlist(context) {
 
 async function startService({ peerId, currentPort, dispatcher, announceAddr } = {}) {
   try {
+    const [{ createLibp2p }, { WebSockets }, { Noise }, { Mplex }] = await loadEsmModules(['libp2p', '@libp2p/websockets', '@chainsafe/libp2p-noise', '@libp2p/mplex'])
+
     if (!peerId) {
       peerId = await getPeerId()
     }
@@ -230,17 +228,16 @@ async function startService({ peerId, currentPort, dispatcher, announceAddr } = 
       announceAddr = peerAnnounceAddr
     }
 
-    const service = await libp2p.create({
+    const service = await createLibp2p({
       peerId,
       addresses: {
         listen: [`/ip4/0.0.0.0/tcp/${currentPort}/ws`],
         announce: announceAddr ? [announceAddr] : undefined
       },
-      modules: {
-        transport: [Websockets],
-        streamMuxer: [Multiplex],
-        connEncryption: [new Noise(null, null, noiseCrypto)]
-      }
+      transports: [new WebSockets()],
+      streamMuxers: [new Mplex()],
+      connectionEncryption: [new Noise()]
+      // TODO connectionEncryption: [new Noise(null, null, noiseCrypto)]
     })
 
     service.on('error', err => {

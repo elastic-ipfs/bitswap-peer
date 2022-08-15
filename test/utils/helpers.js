@@ -1,18 +1,14 @@
 'use strict'
 
-const { Noise } = require('@web3-storage/libp2p-noise')
 const dagPB = require('@ipld/dag-pb')
 const { EventEmitter } = require('events')
-const libp2p = require('libp2p')
-const Multiplex = require('libp2p-mplex')
-const Websockets = require('libp2p-websockets')
 const { equals } = require('multiformats/hashes/digest')
 const { sha256 } = require('multiformats/hashes/sha2')
 const PeerId = require('peer-id')
 
-const { loadEsmModule } = require('../../src/esm-loader')
+const { loadEsmModule, loadEsmModules } = require('../../src/esm-loader')
 const { Connection } = require('../../src/networking')
-const { noiseCrypto } = require('../../src/noise-crypto')
+// const { noiseCrypto } = require('../../src/noise-crypto')
 const { Message, RawMessage } = require('../../src/protocol')
 const { startService } = require('../../src/service')
 const { mockAWS } = require('./mock')
@@ -20,12 +16,13 @@ const { mockAWS } = require('./mock')
 let currentPort = 53000 + parseInt(process.env.TAP_CHILD_ID) * 100
 
 async function createClient(peerId, port, protocol) {
-  const node = await libp2p.create({
-    modules: {
-      transport: [Websockets],
-      streamMuxer: [Multiplex],
-      connEncryption: [new Noise(null, null, noiseCrypto)]
-    }
+  const [{ createLibp2p }, { WebSockets }, { Noise }, { Mplex }] = await loadEsmModules(['libp2p', '@libp2p/websockets', '@chainsafe/libp2p-noise', '@libp2p/mplex'])
+
+  const node = await createLibp2p({
+    transports: [new WebSockets()],
+    streamMuxers: [new Mplex()],
+    connectionEncryption: [new Noise()]
+    // TODO connectionEncryption: [new Noise(null, null, noiseCrypto)]
   })
 
   const connection = await node.dial(`/ip4/127.0.0.1/tcp/${port}/ws/p2p/${peerId}`)

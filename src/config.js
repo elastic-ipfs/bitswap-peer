@@ -59,7 +59,7 @@ module.exports = {
   linkTableBlockKey: 'blockmultihash',
   linkTableCarKey: 'carpath',
 
-  enableKeepAlive: enableKeepAlive === 'true',
+  enableKeepAlive: enableKeepAlive ?? 'true',
   pingPeriodSecs: pingPeriodSecs ?? 10,
 
   concurrency: !isNaN(concurrency) && concurrency > 0 ? concurrency : 128,

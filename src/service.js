@@ -12,6 +12,7 @@ const { Connection } = require('./networking')
 const { noiseCrypto } = require('./noise-crypto')
 const { getPeerId } = require('../src/peer-id')
 const { startKeepAlive, stopKeepAlive } = require('./p2p-keep-alive.js')
+const { enableKeepAlive } = require('./config')
 const {
   BITSWAP_V_120,
   Block,
@@ -301,7 +302,7 @@ async function startService({ peerId, currentPort, dispatcher, announceAddr } = 
 
     service.connectionManager.on('peer:connect', connection => {
       try {
-        startKeepAlive(connection.remotePeer, service)
+        if (enableKeepAlive) { startKeepAlive(connection.remotePeer, service) }
         telemetry.increaseCount('bitswap-total-connections')
         telemetry.increaseCount('bitswap-active-connections')
       } catch (err) {
@@ -311,7 +312,7 @@ async function startService({ peerId, currentPort, dispatcher, announceAddr } = 
 
     service.connectionManager.on('peer:disconnect', connection => {
       try {
-        stopKeepAlive(connection.remotePeer)
+        if (enableKeepAlive) { stopKeepAlive(connection.remotePeer) }
         telemetry.decreaseCount('bitswap-active-connections')
       } catch (err) {
         logger.warn({ err, remotePeer: connection.remotePeer }, `Error while peer disconnecting: ${serializeError(err)}`)

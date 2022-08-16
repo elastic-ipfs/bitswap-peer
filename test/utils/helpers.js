@@ -4,7 +4,6 @@ const dagPB = require('@ipld/dag-pb')
 const { EventEmitter } = require('events')
 const { equals } = require('multiformats/hashes/digest')
 const { sha256 } = require('multiformats/hashes/sha2')
-const PeerId = require('peer-id')
 
 const { loadEsmModule, loadEsmModules } = require('../../src/esm-loader')
 const { Connection } = require('../../src/networking')
@@ -25,7 +24,7 @@ async function createClient(peerId, port, protocol) {
     // TODO connectionEncryption: [new Noise(null, null, noiseCrypto)]
   })
 
-  const connection = await node.dial(`/ip4/127.0.0.1/tcp/${port}/ws/p2p/${peerId}`)
+  const connection = await node.dial(`/ip4/127.0.0.1/tcp/${port}/ws/p2p/${peerId.toString()}`)
   const { stream } = await connection.newStream(protocol)
   const receiver = new EventEmitter()
 
@@ -37,7 +36,7 @@ async function createClient(peerId, port, protocol) {
     })
   })
 
-  return { connection, stream, receiver, node }
+  return { stream, receiver, node }
 }
 
 async function getFreePort() {
@@ -46,7 +45,9 @@ async function getFreePort() {
 }
 
 async function prepare(t, protocol, dispatcher) {
-  const peerId = await PeerId.create()
+  const { createEd25519PeerId } = await loadEsmModule('@libp2p/peer-id-factory')
+
+  const peerId = await createEd25519PeerId()
   const port = await getFreePort()
 
   if (!dispatcher) {

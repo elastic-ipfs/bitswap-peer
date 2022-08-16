@@ -2,13 +2,18 @@
 
 process.env.LOG_LEVEL = 'fatal'
 
-const PeerId = require('peer-id')
 const t = require('tap')
 
+const { loadEsmModule } = require('../src/esm-loader')
 const { Connection } = require('../src/networking')
 const { BITSWAP_V_100: protocol } = require('../src/protocol')
 const { startService } = require('../src/service')
 const { getFreePort, createClient, prepare, teardown } = require('./utils/helpers')
+
+let createEd25519PeerId
+t.before(async () => {
+  createEd25519PeerId = (await loadEsmModule('@libp2p/peer-id-factory')).createEd25519PeerId
+})
 
 t.test('send - after closing behavior', async t => {
   const { client, service, connection } = await prepare(t, protocol)
@@ -30,7 +35,7 @@ t.test('send - after closing behavior', async t => {
 t.test('error handling', async t => {
   t.plan(2)
 
-  const peerId = await PeerId.create()
+  const peerId = await createEd25519PeerId()
   const { port, service } = await startService({ peerId, currentPort: await getFreePort() })
   const { stream, node: client } = await createClient(peerId, port, protocol)
 
@@ -69,7 +74,7 @@ t.test('announced multiaddr', async t => {
   t.plan(2)
 
   const announceAddr = '/dns4/example.com/tcp/3000/ws'
-  const peerId = await PeerId.create()
+  const peerId = await createEd25519PeerId()
   const { port, service } = await startService({ peerId, currentPort: await getFreePort(), announceAddr })
   const { stream, node: client } = await createClient(peerId, port, protocol)
 

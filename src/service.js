@@ -3,6 +3,7 @@
 const LRUCache = require('mnemonist/lru-cache')
 
 const { cacheBlockInfo, cacheBlockInfoSize, cacheBlockData, cacheBlockDataSize, port, peerAnnounceAddr } = require('./config')
+const { loadEsmModules } = require('./esm-loader')
 const { logger, serializeError } = require('./logging')
 const { Connection } = require('./networking')
 // TODO const { noiseCrypto } = require('./noise-crypto')
@@ -240,9 +241,10 @@ async function startService({ peerId, currentPort, dispatcher, announceAddr } = 
       // TODO connectionEncryption: [new Noise(null, null, noiseCrypto)]
     })
 
-    service.on('error', err => {
-      logger.warn({ err }, `libp2p error: ${serializeError(err)}`)
-    })
+    // TODO?
+    // service.on('error', err => {
+    //   logger.error({ err }, `libp2p error: ${serializeError(err)}`)
+    // })
 
     service.handle(protocols, async ({ connection: dial, stream, protocol }) => {
       try {
@@ -296,7 +298,7 @@ async function startService({ peerId, currentPort, dispatcher, announceAddr } = 
       }
     })
 
-    service.connectionManager.on('peer:connect', connection => {
+    service.connectionManager.onConnect(connection => {
       try {
         startKeepAlive(connection.remotePeer, service)
         telemetry.increaseCount('bitswap-total-connections')
@@ -306,7 +308,7 @@ async function startService({ peerId, currentPort, dispatcher, announceAddr } = 
       }
     })
 
-    service.connectionManager.on('peer:disconnect', connection => {
+    service.connectionManager.onDisconnect(connection => {
       try {
         stopKeepAlive(connection.remotePeer)
         telemetry.decreaseCount('bitswap-active-connections')
@@ -315,23 +317,15 @@ async function startService({ peerId, currentPort, dispatcher, announceAddr } = 
       }
     })
 
-    service.connectionManager.on('error', err => {
-      logger.error({ err }, `libp2p connectionManager.error: ${serializeError(err)}`)
-    })
-
-    service.connectionManager.on('connection', connection => {
-      logger.debug({ connection }, ' ******** connectionManager.on connection')
-    })
-
-    service.connectionManager.on('connectionEnd', connection => {
-      logger.debug({ connection }, ' ******** connectionManager.on connectionEnd')
-    })
+    // service.connectionManager.on('error', err => {
+    //   logger.error({ err }, `libp2p connectionManager.error: ${serializeError(err)}`)
+    // })
 
     await service.start()
 
     logger.info(
-      { address: service.transportManager.getAddrs() },
-      `BitSwap peer started with PeerId ${service.peerId} and listening on port ${currentPort} ...`
+      { address: service.components.getTransportManager().getAddrs() },
+      `BitSwap peer started with PeerId ${service.peerId.toString()} and listening on port ${currentPort} ...`
     )
 
     return { service, port: currentPort, peerId }

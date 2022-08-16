@@ -1,9 +1,9 @@
 'use strict'
 
 const { readFile, writeFile } = require('fs/promises')
-const PeerId = require('peer-id')
 
 const { peerIdJsonFile, peerIdJsonPath } = require('./config')
+const { loadEsmModule } = require('./esm-loader')
 const { logger } = require('./logging')
 const { defaultDispatcher, fetchBlockFromS3 } = require('./storage')
 
@@ -20,15 +20,17 @@ async function downloadPeerIdFile(dispatcher) {
 }
 
 async function getPeerId(dispatcher = defaultDispatcher) {
+  const { createFromJSON, createEd25519PeerId } = await loadEsmModule('@libp2p/peer-id-factory')
+
   if (process.env.PEER_ID_S3_BUCKET) {
     await downloadPeerIdFile(dispatcher)
   }
 
   try {
     const peerIdJson = JSON.parse(await readFile(peerIdJsonPath, 'utf-8'))
-    return await PeerId.createFromJSON(peerIdJson)
+    return await createFromJSON(peerIdJson)
   } catch (e) {
-    return PeerId.create()
+    return createEd25519PeerId()
   }
 }
 

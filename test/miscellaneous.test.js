@@ -18,10 +18,10 @@ process.env.HTTP_PORT = '3001'
 const { readFile } = require('fs/promises')
 const { get } = require('http')
 const { resolve } = require('path')
-const { createFromJSON } = require('peer-id')
 const t = require('tap')
 
 const { concurrency, blocksTable, carsTable, port, httpPort } = require('../src/config')
+const { loadEsmModule } = require('../src/esm-loader')
 const { logger, serializeError } = require('../src/logging')
 const { ensureAwsCredentials } = require('../src/storage')
 const signerWorker = require('../src/signer-worker')
@@ -30,7 +30,11 @@ const { httpServer } = require('../src/http-server')
 const { getPeerId } = require('../src/peer-id')
 const { createMockAgent } = require('./utils/mock')
 
-t.before(ensureAwsCredentials)
+let createFromJSON
+t.before(async () => {
+  await ensureAwsCredentials()
+  createFromJSON = (await loadEsmModule('@libp2p/peer-id-factory')).createFromJSON
+})
 
 t.test('config - download the peerId from S3', async t => {
   t.plan(1)
@@ -140,7 +144,7 @@ t.test('telemetry - export', async t => {
 
   telemetry.metrics.clear()
   telemetry.logger = {
-    info(arg) {}
+    info(arg) { }
   }
 
   const server = await httpServer.startServer(0)

@@ -32,7 +32,7 @@
     "piscina": "^3.2.0",
     "protobufjs": "^7.0.0",
     "sodium-native": "^3.4.1",
-    "undici": "^4.16.0",
+    "undici": "^5.8.2",
     "xml-js": "^1.6.11"
   },
   "devDependencies": {

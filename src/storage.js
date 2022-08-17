@@ -378,7 +378,7 @@ async function recoverV0Tables(car, queue = 'indexer-topic') {
 
     recovering.set(car, 1)
   } catch (error) {
-    logger.error({ car }, 'unable recover the car')
+    logger.error({ car, error: serializeError(error) }, 'unable recover the car')
   }
 }
 

@@ -131,6 +131,9 @@ async function searchCarInDynamoV1({
   const fallback = await searchCarInDynamoV0(dispatcher, blocksTable, blocksTablePrimaryKey, blockKey, retries, retryDelay)
   if (fallback) {
     logger.error({ block: key, car: fallback.car }, 'block not found in V1 table but found in V0 table')
+    if (process.env.NODE_ENV === 'production') {
+      recoverV0Tables(fallback.car)
+    }
     return fallback
   }
 }
@@ -347,6 +350,36 @@ async function fetchFromS3(dispatcher, url, headers) {
   }
 
   return buffer.slice()
+}
+
+// --- temporary solution to lazy recover missing car files
+// will send to the indexer queue the missing car file, using the list to avoid to send the same car multiple times
+// TODO when the v0 tables will not be used anymore, following dependencies will be removed
+
+const { SQSClient, SendMessageCommand } = require('@aws-sdk/client-sqs')
+const { NodeHttpHandler } = require('@aws-sdk/node-http-handler')
+const LRU = require('lru-cache')
+
+const recovering = new LRU({
+  ttl: 12 * 60 * 60 * 1000, // 12 h in ms
+  ttlResolution: 10e3, // ttl check rate 10 s
+  max: 10e3 // max 10k entries in the recovering list
+})
+const sqsClient = new SQSClient({
+  requestHandler: new NodeHttpHandler({ httpsAgent: new Agent({ keepAlive: true, keepAliveMsecs: 60000 }) })
+})
+
+async function recoverV0Tables(car, queue = 'indexer-topic') {
+  try {
+    if (recovering.has(car)) { return }
+    logger.info({ car }, 'recovering car')
+
+    await sqsClient.send(new SendMessageCommand({ QueueUrl: queue, MessageBody: `{"body":"${car}",skipExists:true}` }))
+
+    recovering.set(car, 1)
+  } catch (error) {
+    logger.error({ car }, 'unable recover the car')
+  }
 }
 
 module.exports = {

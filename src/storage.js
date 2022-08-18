@@ -374,11 +374,11 @@ async function recoverV0Tables(car, queue = 'indexer-topic') {
     if (recovering.has(car)) { return }
     logger.info({ car }, 'recovering car')
 
-    await sqsClient.send(new SendMessageCommand({ QueueUrl: queue, MessageBody: `{"body":"${car}",skipExists:true}` }))
+    await sqsClient.send(new SendMessageCommand({ QueueUrl: queue, MessageBody: car }))
 
     recovering.set(car, 1)
   } catch (error) {
-    logger.error({ car }, 'unable recover the car')
+    logger.error({ car, error: serializeError(error) }, 'unable to recover the car')
   }
 }
 

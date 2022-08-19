@@ -359,6 +359,7 @@ async function fetchFromS3(dispatcher, url, headers) {
 const { SQSClient, SendMessageCommand } = require('@aws-sdk/client-sqs')
 const { NodeHttpHandler } = require('@aws-sdk/node-http-handler')
 const LRU = require('lru-cache')
+const { Agent: HttpsAgent } = require('https')
 
 const recovering = new LRU({
   ttl: 12 * 60 * 60 * 1000, // 12 h in ms
@@ -366,7 +367,7 @@ const recovering = new LRU({
   max: 10e3 // max 10k entries in the recovering list
 })
 const sqsClient = new SQSClient({
-  requestHandler: new NodeHttpHandler({ httpsAgent: new Agent({ keepAlive: true, keepAliveMsecs: 60000 }) })
+  requestHandler: new NodeHttpHandler({ httpsAgent: new HttpsAgent({ keepAlive: true, keepAliveMsecs: 60000 }) })
 })
 
 async function recoverV0Tables(car, queue = 'indexer-topic') {

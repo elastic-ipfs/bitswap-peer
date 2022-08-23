@@ -6,6 +6,8 @@ const { join, resolve } = require('path')
 require('dotenv').config({ path: process.env.ENV_FILE_PATH || resolve(process.cwd(), '.env') })
 
 const {
+  TRACK_RESPONSE_TIME: trackResponseTime,
+
   CACHE_BLOCK_INFO: cacheBlockInfo,
   CACHE_BLOCK_INFO_SIZE: cacheBlockInfoSize,
 
@@ -72,5 +74,7 @@ module.exports = {
   dynamoMaxRetries: dynamoMaxRetries ?? 3,
   dynamoRetryDelay: dynamoRetryDelay ?? 100, // ms
   s3MaxRetries: s3MaxRetries ?? 3,
-  s3RetryDelay: s3RetryDelay ?? 100 // ms
+  s3RetryDelay: s3RetryDelay ?? 100, // ms
+
+  trackResponseTime: trackResponseTime === 'true'
 }

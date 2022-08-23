@@ -6,7 +6,7 @@ const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
 const LRUCache = require('mnemonist/lru-cache')
 
-const { cacheBlockInfo, cacheBlockInfoSize, cacheBlockData, cacheBlockDataSize, port, peerAnnounceAddr } = require('./config')
+const { trackResponseTime, cacheBlockInfo, cacheBlockInfoSize, cacheBlockData, cacheBlockDataSize, port, peerAnnounceAddr } = require('./config')
 const { logger, serializeError } = require('./logging')
 const { Connection } = require('./networking')
 const { noiseCrypto } = require('./noise-crypto')
@@ -33,6 +33,12 @@ function createEmptyMessage(blocks = [], presences = []) {
   return new Message(emptyWantList, blocks, presences, 0)
 }
 
+// size of block object in bytes
+// block is { car: string, offset: number, length: number }
+function sizeofBlock(block) {
+  return block.car.length * 2 + 16
+}
+
 async function getBlockInfo(dispatcher, cid) {
   const key = cidToKey(cid)
   const cached = blockInfoCache.get(key)
@@ -47,7 +53,7 @@ async function getBlockInfo(dispatcher, cid) {
 
   telemetry.increaseCount('dynamo-reads')
   const item = await telemetry.trackDuration(
-    'dynamo-reads',
+    'dynamo-request',
     searchCarInDynamoV1({ dispatcher, blockKey: key, logger })
   )
 
@@ -130,11 +136,11 @@ async function processEntry(entry, context) {
       const raw = await fetchBlock(context.dispatcher, entry.cid)
 
       if (raw) {
-        telemetry.increaseCount('bitswap-block-hits')
+        telemetry.increaseCount('bitswap-block-data-hits')
         telemetry.increaseCount('bitswap-sent-data', raw.length)
         newBlock = new Block(entry.cid, raw)
       } else if (entry.sendDontHave && context.protocol === BITSWAP_V_120) {
-        telemetry.increaseCount('bitswap-block-misses')
+        telemetry.increaseCount('bitswap-block-data-misses')
         newPresence = new BlockPresence(entry.cid, BlockPresence.Type.DontHave)
         logger.warn({ entry, cid: entry.cid.toString() }, 'Block not found')
       }
@@ -143,10 +149,11 @@ async function processEntry(entry, context) {
       const existing = await getBlockInfo(context.dispatcher, entry.cid)
 
       if (existing) {
-        telemetry.increaseCount('bitswap-block-hits')
+        telemetry.increaseCount('bitswap-block-info-hits')
+        telemetry.increaseCount('bitswap-sent-info', sizeofBlock(existing))
         newPresence = new BlockPresence(entry.cid, BlockPresence.Type.Have)
       } else if (entry.sendDontHave) {
-        telemetry.increaseCount('bitswap-block-misses')
+        telemetry.increaseCount('bitswap-block-info-misses')
         newPresence = new BlockPresence(entry.cid, BlockPresence.Type.DontHave)
         logger.warn({ entry, cid: entry.cid.toString() }, 'Block not found')
       }
@@ -201,7 +208,14 @@ function processWantlist(context) {
       continue
     }
 
-    processEntry(batch[i], context)
+    if (trackResponseTime) {
+      telemetry.trackDuration(
+        `bitswap-response-time-${batch[i].wantType === Entry.WantType.Block ? 'data' : 'block'}`,
+        processEntry(batch[i], context)
+      )
+    } else {
+      processEntry(batch[i], context)
+    }
   }
 
   // The list only contains cancels
@@ -264,8 +278,8 @@ async function startService({ peerId, currentPort, dispatcher, announceAddr } = 
             return
           }
 
+          const entries = message.wantlist.entries.length
           try {
-            const entries = message.wantlist.entries.length
             const context = {
               service,
               dispatcher,
@@ -278,7 +292,7 @@ async function startService({ peerId, currentPort, dispatcher, announceAddr } = 
             }
 
             telemetry.increaseCount('bitswap-total-entries', context.total)
-            telemetry.increaseCount('bitswap-pending-entries', context.total)
+            telemetry.increaseCount('bitswap-pending-entries', entries.total)
             process.nextTick(processWantlist, context)
           } catch (err) {
             logger.warn({ err }, `Error while preparing wantList context: ${serializeError(err)}`)

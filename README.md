@@ -23,6 +23,7 @@ _Variables in bold are required._
 | DYNAMO_RETRY_DELAY    | 500           | DynamoDB delay between attempts in case of failure, in milliseconds.     |
 | S3_MAX_RETRIES        | 3             | S3 max attempts in case of failure.                                      |
 | S3_RETRY_DELAY        | 500           | S3 delay between attempts in case of failure, in milliseconds.           |
+| TRACK_RESPONSE_TIME   | `false`       | Track respose time for metrics `bitswap-response-time-data` and `bitswap-response-time-info`. |
 | ENV_FILE_PATH         | `$PWD/.env`   | The environment file to load.                                            |
 | NODE_DEBUG            |               | If it contains `aws-ipfs`, debug mode is enabled.                        |
 | NODE_ENV              |               | Set to `production` to disable pretty logging.                           |

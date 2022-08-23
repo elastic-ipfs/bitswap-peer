@@ -12,9 +12,9 @@
     "lint": "eslint src test"
   },
   "dependencies": {
-    "@aws-sdk/client-sqs": "^3.150.0",
+    "@aws-sdk/client-sqs": "^3.154.0",
     "@aws-sdk/node-http-handler": "^3.127.0",
-    "@aws-sdk/util-dynamodb": "^3.118.1",
+    "@aws-sdk/util-dynamodb": "^3.154.0",
     "@web3-storage/libp2p-noise": "^6.0.0",
     "bl": "^5.0.0",
     "dotenv": "^16.0.1",
@@ -28,11 +28,11 @@
     "lru-cache": "^7.14.0",
     "make-promises-safe": "^5.1.0",
     "mnemonist": "^0.39.2",
-    "pino": "^8.4.1",
+    "pino": "^8.4.2",
     "piscina": "^3.2.0",
     "protobufjs": "^7.0.0",
     "sodium-native": "^3.4.1",
-    "undici": "^5.8.2",
+    "undici": "^5.9.1",
     "xml-js": "^1.6.11"
   },
   "devDependencies": {
@@ -48,7 +48,7 @@
     "ipfs-car": "^0.8.1",
     "libp2p-gossipsub": "^0.13.0",
     "libp2p-tcp": "^0.17.2",
-    "pino-pretty": "^9.0.0",
+    "pino-pretty": "^9.0.1",
     "prettier": "^2.7.1",
     "sinon": "^14.0.0",
     "tap": "^16.3.0"

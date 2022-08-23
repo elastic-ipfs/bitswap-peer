@@ -1,9 +1,7 @@
 'use strict'
 
 const { EventEmitter } = require('events')
-const lengthPrefixedMessage = require('it-length-prefixed')
-const pipe = require('it-pipe')
-
+const { loadEsmModules } = require('./esm-loader')
 const { logger, serializeError } = require('./logging')
 
 class Connection extends EventEmitter {
@@ -16,36 +14,38 @@ class Connection extends EventEmitter {
     this.resolves = []
     this.shouldClose = false
 
-    // Prepare for receiving
-    pipe(stream.source, lengthPrefixedMessage.decode(), async source => {
-      for await (const data of source) {
-        /*
-          This variable declaration is important
-          If you use data.slice() within the nextTick you will always emit the last received packet
-        */
-        const payload = data.slice()
-        process.nextTick(() => this.emit('data', payload))
-      }
-    })
-      .then(() => {
-        this.emit('end:receive')
+    loadEsmModules(['it-length-prefixed', 'it-pipe']).then(([lengthPrefixedMessage, { pipe }]) => {
+      // Prepare for receiving
+      pipe(stream.source, lengthPrefixedMessage.decode(), async source => {
+        for await (const data of source) {
+          /*
+            This variable declaration is important
+            If you use data.slice() within the nextTick you will always emit the last received packet
+          */
+          const payload = data.slice()
+          process.nextTick(() => this.emit('data', payload))
+        }
       })
-      .catch(err => {
-        this.emit('error', err)
-        this.emit('error:receive', err)
-        logger.debug({ err }, `Cannot receive data: ${serializeError(err)}`)
-      })
+        .then(() => {
+          this.emit('end:receive')
+        })
+        .catch(err => {
+          this.emit('error', err)
+          this.emit('error:receive', err)
+          logger.debug({ err }, `Cannot receive data: ${serializeError(err)}`)
+        })
 
-    // Prepare for sending
-    pipe(this, lengthPrefixedMessage.encode(), stream.sink)
-      .then(() => {
-        this.emit('end:send')
-      })
-      .catch(err => {
-        this.emit('error', err)
-        this.emit('error:send', err)
-        logger.debug({ err }, `Cannot send data: ${serializeError(err)}`)
-      })
+      // Prepare for sending
+      pipe(this, lengthPrefixedMessage.encode(), stream.sink)
+        .then(() => {
+          this.emit('end:send')
+        })
+        .catch(err => {
+          this.emit('error', err)
+          this.emit('error:send', err)
+          logger.debug({ err }, `Cannot send data: ${serializeError(err)}`)
+        })
+    })
   }
 
   send(value) {

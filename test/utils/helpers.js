@@ -3,7 +3,6 @@
 const { Noise } = require('@web3-storage/libp2p-noise')
 const dagPB = require('@ipld/dag-pb')
 const { EventEmitter } = require('events')
-const getPort = require('get-port')
 const libp2p = require('libp2p')
 const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
@@ -11,6 +10,7 @@ const { equals } = require('multiformats/hashes/digest')
 const { sha256 } = require('multiformats/hashes/sha2')
 const PeerId = require('peer-id')
 
+const { loadEsmModule } = require('../../src/esm-loader')
 const { Connection } = require('../../src/networking')
 const { noiseCrypto } = require('../../src/noise-crypto')
 const { Message, RawMessage } = require('../../src/protocol')
@@ -43,7 +43,8 @@ async function createClient(peerId, port, protocol) {
   return { connection, stream, receiver, node }
 }
 
-function getFreePort() {
+async function getFreePort() {
+  const getPort = await loadEsmModule('get-port')
   return getPort({ port: currentPort++ })
 }
 

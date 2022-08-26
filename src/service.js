@@ -208,14 +208,7 @@ function processWantlist(context) {
       continue
     }
 
-    if (trackResponseTime) {
-      telemetry.trackDuration(
-        `bitswap-response-time-${batch[i].wantType === Entry.WantType.Block ? 'data' : 'block'}`,
-        processEntry(batch[i], context)
-      )
-    } else {
-      processEntry(batch[i], context)
-    }
+    processEntry(batch[i], context)
   }
 
   // The list only contains cancels

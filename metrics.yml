@@ -11,8 +11,6 @@ metrics:
   bitswap-block-info-misses: Info block not found
   bitswap-sent-data: Amount of data sent for data blocks, in bytes
   bitswap-sent-info: Amount of data sent for info blocks, in bytes
-  bitswap-response-time-data: Response time for data blocks
-  bitswap-response-time-info: Response time for info blocks
   s3-fetchs: AWS S3 GetObject requests
   s3-request: AWS S3 GetObject duration
   dynamo-reads: AWS DynamoDB GetItem requests

@@ -6,7 +6,7 @@ const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
 const LRUCache = require('mnemonist/lru-cache')
 
-const { trackResponseTime, cacheBlockInfo, cacheBlockInfoSize, cacheBlockData, cacheBlockDataSize, port, peerAnnounceAddr } = require('./config')
+const { cacheBlockInfo, cacheBlockInfoSize, cacheBlockData, cacheBlockDataSize, port, peerAnnounceAddr } = require('./config')
 const { logger, serializeError } = require('./logging')
 const { Connection } = require('./networking')
 const { noiseCrypto } = require('./noise-crypto')

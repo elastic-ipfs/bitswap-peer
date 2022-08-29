@@ -333,7 +333,7 @@ async function fetchBlockFromS3(
 
 async function fetchFromS3(dispatcher, url, headers) {
   const { statusCode, body } = await telemetry.trackDuration(
-    's3-fetchs',
+    's3-request',
     request(url, { method: 'GET', headers, dispatcher })
   )
 

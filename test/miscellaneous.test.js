@@ -5,13 +5,11 @@ process.env.ENV_FILE_PATH = '/dev/null'
 process.env.AWS_ACCESS_KEY_ID = 'FOO'
 process.env.AWS_REGION = 'us-west-2'
 process.env.AWS_SECRET_ACCESS_KEY = 'BAR'
-process.env.CONCURRENCY = '128'
 process.env.LOG_LEVEL = 'error'
 process.env.NODE_DEBUG = 'bitswap-peer'
 process.env.NOW = 'now'
 process.env.PEER_ID_FILE = 'peerId.json'
 process.env.PEER_ID_S3_BUCKET = 'idBucket'
-process.env.PIPELINING = '16'
 process.env.PORT = '3000'
 process.env.HTTP_PORT = '3001'
 
@@ -21,7 +19,7 @@ const { resolve } = require('path')
 const { createFromJSON } = require('peer-id')
 const t = require('tap')
 
-const { concurrency, blocksTable, carsTable, port, httpPort } = require('../src/config')
+const { blocksTable, carsTable, port, httpPort } = require('../src/config')
 const { logger, serializeError } = require('../src/logging')
 const { ensureAwsCredentials } = require('../src/storage')
 const signerWorker = require('../src/signer-worker')
@@ -65,7 +63,6 @@ t.test('config - creates a new PeerId if download fails', async t => {
 t.test('config - it exports reasonable defaults', t => {
   t.plan(5)
 
-  t.equal(concurrency, 128)
   t.equal(blocksTable, 'blocks')
   t.equal(carsTable, 'cars')
   t.equal(port, 3000)

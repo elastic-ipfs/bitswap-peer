@@ -23,7 +23,7 @@ const {
   Message,
   protocols
 } = require('./protocol')
-const { cidToKey, defaultDispatcher, fetchBlockFromS3, searchCarInDynamoV1 } = require('./storage')
+const { cidToKey, fetchS3, searchCarInDynamoV1 } = require('./storage')
 const { telemetry } = require('./telemetry')
 
 const blockInfoCache = new LRUCache(cacheBlockInfoSize)
@@ -39,7 +39,7 @@ function sizeofBlock(block) {
   return block.car.length * 2 + 16
 }
 
-async function getBlockInfo(dispatcher, cid) {
+async function getBlockInfo(cid) {
   const key = cidToKey(cid)
   const cached = blockInfoCache.get(key)
 
@@ -54,7 +54,7 @@ async function getBlockInfo(dispatcher, cid) {
   telemetry.increaseCount('dynamo-reads')
   const item = await telemetry.trackDuration(
     'dynamo-request',
-    searchCarInDynamoV1({ dispatcher, blockKey: key, logger })
+    searchCarInDynamoV1({ blockKey: key, logger })
   )
 
   if (item) {
@@ -64,8 +64,8 @@ async function getBlockInfo(dispatcher, cid) {
   return item
 }
 
-async function fetchBlock(dispatcher, cid) {
-  const info = await getBlockInfo(dispatcher, cid)
+async function fetchBlockData(cid) {
+  const info = await getBlockInfo(cid)
   if (!info) {
     return null
   }
@@ -86,8 +86,8 @@ async function fetchBlock(dispatcher, cid) {
     telemetry.increaseCount('cache-block-data-misses')
   }
 
-  const [, bucketRegion, bucketName, key] = car.match(/([^/]+)\/([^/]+)\/(.+)/)
-  const bytes = await fetchBlockFromS3(dispatcher, bucketRegion, bucketName, key, offset, length)
+  const [, region, bucket, key] = car.match(/([^/]+)\/([^/]+)\/(.+)/)
+  const bytes = await fetchS3({ region, bucket, key, offset, length, logger })
 
   if (cacheBlockData) {
     blockDataCache.set(cacheKey, bytes)
@@ -133,7 +133,7 @@ async function processEntry(entry, context) {
 
     if (entry.wantType === Entry.WantType.Block) {
       // Fetch the block and eventually append to the list of blocks
-      const raw = await fetchBlock(context.dispatcher, entry.cid)
+      const raw = await fetchBlockData(entry.cid)
 
       if (raw) {
         telemetry.increaseCount('bitswap-block-data-hits')
@@ -146,7 +146,7 @@ async function processEntry(entry, context) {
       }
     } else if (entry.wantType === Entry.WantType.Have && context.protocol === BITSWAP_V_120) {
       // Check if we have the block
-      const existing = await getBlockInfo(context.dispatcher, entry.cid)
+      const existing = await getBlockInfo(entry.cid)
 
       if (existing) {
         telemetry.increaseCount('bitswap-block-info-hits')
@@ -220,14 +220,10 @@ function processWantlist(context) {
   process.nextTick(processWantlist, context)
 }
 
-async function startService({ peerId, currentPort, dispatcher, announceAddr } = {}) {
+async function startService({ peerId, currentPort, announceAddr } = {}) {
   try {
     if (!peerId) {
       peerId = await getPeerId()
-    }
-
-    if (!dispatcher) {
-      dispatcher = defaultDispatcher
     }
 
     if (!currentPort) {
@@ -275,7 +271,6 @@ async function startService({ peerId, currentPort, dispatcher, announceAddr } = 
           try {
             const context = {
               service,
-              dispatcher,
               peer: dial.remotePeer,
               protocol,
               wantlist: message.wantlist,

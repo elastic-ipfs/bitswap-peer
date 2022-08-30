@@ -6,12 +6,15 @@ const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3')
 const { NodeHttpHandler } = require('@aws-sdk/node-http-handler')
 const { marshall, unmarshall } = require('@aws-sdk/util-dynamodb')
 const { base58btc: base58 } = require('multiformats/bases/base58')
+const LRUCache = require('mnemonist/lru-cache')
 const sleep = require('util').promisify(setTimeout)
 
 const {
   blocksTable, blocksTablePrimaryKey,
   linkTableV1, linkTableBlockKey, linkTableCarKey,
-  s3MaxRetries, s3RetryDelay, dynamoRetryDelay, dynamoMaxRetries
+  s3MaxRetries, s3RetryDelay, dynamoRetryDelay, dynamoMaxRetries,
+
+  cacheBlockInfo, cacheBlockInfoSize, cacheBlockData, cacheBlockDataSize
 } = require('./config')
 const { serializeError } = require('./logging')
 const { telemetry } = require('./telemetry')
@@ -27,6 +30,9 @@ s3Clients[defaultAwsRegion] = new S3Client({
   region: defaultAwsRegion,
   requestHandler: new NodeHttpHandler({ httpsAgent: new Agent(HTTP_AGENT_OPTIONS) })
 })
+
+const blockInfoCache = new LRUCache(cacheBlockInfoSize)
+const blockDataCache = new LRUCache(cacheBlockDataSize)
 
 function cidToKey(cid) {
   return base58.encode(cid.multihash.bytes)
@@ -201,6 +207,96 @@ async function sendDynamoCommand({
   throw new Error('Cannot send command to DynamoDB')
 }
 
+// -----
+
+async function fetchBlocksInfo(blocks) {
+  return Promise.all(blocks
+    .map((async ({ block, index }) => {
+      const content = await fetchBlockInfo(block)
+      return { content, index }
+    })()))
+}
+
+async function fetchBlocksData(blocks) {
+  return Promise.all(blocks
+    .map((async ({ block, index }) => {
+      const content = await fetchBlockData(block)
+      return { content, index }
+    })()))
+}
+
+async function fetchBlockData(block) {
+  // TODO config use sdk client
+  // TODO metrics
+  // TODO retry
+  // TODO use LRU cache
+  if (!block.key) { block.key = cidToKey(block.cid) }
+  // TODO config if USE_CUSTOM_AWS_CLIENT
+}
+
+async function fetchBlockInfo(block) {
+  // TODO use sdk client
+  // check RDU query with multiple keys
+  // TODO use LRU cache
+  // TODO metrics
+  // TODO retry
+  if (!block.key) { block.key = cidToKey(block.cid) }
+  // TODO config if USE_CUSTOM_AWS_CLIENT
+}
+
+async function OLDgetBlockInfo(dispatcher, cid) {
+  const key = cidToKey(cid)
+  const cached = blockInfoCache.get(key)
+
+  if (cacheBlockInfo) {
+    if (cached) {
+      telemetry.increaseCount('cache-block-info-hits')
+      return cached
+    }
+    telemetry.increaseCount('cache-block-info-misses')
+  }
+
+  telemetry.increaseCount('dynamo-reads')
+  const item = await telemetry.trackDuration(
+    'dynamo-reads',
+    searchCarInDynamoV1({ dispatcher, blockKey: key, logger })
+  )
+
+  if (item) {
+    blockInfoCache.set(key, item)
+  }
+
+  return item
+}
+
+async function OLDfetchBlock(dispatcher, cid) {
+  const info = await getBlockInfo(dispatcher, cid)
+  if (!info) {
+    return null
+  }
+
+  const { offset, length, car } = info
+
+  const cacheKey = cidToKey(cid)
+  if (cacheBlockData) {
+    const bytes = blockDataCache.get(cacheKey)
+    if (bytes) {
+      telemetry.increaseCount('cache-block-data-hits')
+      return bytes
+    }
+    telemetry.increaseCount('cache-block-data-misses')
+  }
+
+  const [, bucketRegion, bucketName, key] = car.match(/([^/]+)\/([^/]+)\/(.+)/)
+  const bytes = await fetchBlockFromS3(dispatcher, bucketRegion, bucketName, key, offset, length)
+
+  if (cacheBlockData) {
+    blockDataCache.set(cacheKey, bytes)
+  }
+
+  return bytes
+}
+
 // --- temporary solution to lazy recover missing car files
 // will send to the indexer queue the missing car file, using the list to avoid to send the same car multiple times
 // TODO when the v0 tables will not be used anymore, following dependencies will be removed
@@ -231,6 +327,9 @@ async function recoverV0Tables(car, logger, queue = 'indexer-topic') {
 }
 
 module.exports = {
+  fetchBlocksData,
+  fetchBlocksInfo,
+
   cidToKey,
   fetchS3,
   searchCarInDynamoV1,

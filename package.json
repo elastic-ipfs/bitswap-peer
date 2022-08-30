@@ -30,6 +30,7 @@
     "lru-cache": "^7.14.0",
     "make-promises-safe": "^5.1.0",
     "mnemonist": "^0.39.2",
+    "p-queue": "^7.3.0",
     "pino": "^8.4.2",
     "protobufjs": "^7.0.0",
     "sodium-native": "^3.4.1"

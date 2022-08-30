@@ -4,226 +4,26 @@ const { Noise } = require('@web3-storage/libp2p-noise')
 const libp2p = require('libp2p')
 const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
-const LRUCache = require('mnemonist/lru-cache')
 
-const { cacheBlockInfo, cacheBlockInfoSize, cacheBlockData, cacheBlockDataSize, port, peerAnnounceAddr } = require('./config')
+const { getPeerId } = require('../src/peer-id')
+const { enableKeepAlive, port, peerAnnounceAddr } = require('./config')
 const { logger, serializeError } = require('./logging')
 const { Connection } = require('./networking')
 const { noiseCrypto } = require('./noise-crypto')
-const { getPeerId } = require('../src/peer-id')
 const { startKeepAlive, stopKeepAlive } = require('./p2p-keep-alive.js')
-const { enableKeepAlive } = require('./config')
-const {
-  BITSWAP_V_120,
-  Block,
-  BlockPresence,
-  emptyWantList,
-  Entry,
-  maxBlockSize,
-  Message,
-  protocols
-} = require('./protocol')
-const { cidToKey, fetchS3, searchCarInDynamoV1 } = require('./storage')
+const { Message, protocols } = require('./protocol')
+const { defaultDispatcher } = require('./storage')
 const { telemetry } = require('./telemetry')
+const { handle } = require('./handler')
 
-const blockInfoCache = new LRUCache(cacheBlockInfoSize)
-const blockDataCache = new LRUCache(cacheBlockDataSize)
-
-function createEmptyMessage(blocks = [], presences = []) {
-  return new Message(emptyWantList, blocks, presences, 0)
-}
-
-// size of block object in bytes
-// block is { car: string, offset: number, length: number }
-function sizeofBlock(block) {
-  return block.car.length * 2 + 16
-}
-
-async function getBlockInfo(cid) {
-  const key = cidToKey(cid)
-  const cached = blockInfoCache.get(key)
-
-  if (cacheBlockInfo) {
-    if (cached) {
-      telemetry.increaseCount('cache-block-info-hits')
-      return cached
-    }
-    telemetry.increaseCount('cache-block-info-misses')
-  }
-
-  telemetry.increaseCount('dynamo-reads')
-  const item = await telemetry.trackDuration(
-    'dynamo-request',
-    searchCarInDynamoV1({ blockKey: key, logger })
-  )
-
-  if (item) {
-    blockInfoCache.set(key, item)
-  }
-
-  return item
-}
-
-async function fetchBlockData(cid) {
-  const info = await getBlockInfo(cid)
-  if (!info) {
-    return null
-  }
-
-  const { offset, length, car } = info
-
-  if (length > maxBlockSize) {
-    return null
-  }
-
-  const cacheKey = cidToKey(cid)
-  if (cacheBlockData) {
-    const bytes = blockDataCache.get(cacheKey)
-    if (bytes) {
-      telemetry.increaseCount('cache-block-data-hits')
-      return bytes
-    }
-    telemetry.increaseCount('cache-block-data-misses')
-  }
-
-  const [, region, bucket, key] = car.match(/([^/]+)\/([^/]+)\/(.+)/)
-  const bytes = await fetchS3({ region, bucket, key, offset, length, logger })
-
-  if (cacheBlockData) {
-    blockDataCache.set(cacheKey, bytes)
-  }
-
-  return bytes
-}
-
-async function sendMessage(context, encodedMessage) {
-  if (!context.connection) {
-    telemetry.increaseCount('bitswap-total-connections')
-    telemetry.increaseCount('bitswap-active-connections')
-
-    const dialConnection = await context.service.dial(context.peer)
-    const { stream } = await dialConnection.newStream(context.protocol)
-    context.connection = new Connection(stream)
-    context.connection.on('error', err => {
-      logger.warn({ err }, `Outgoing connection error: ${serializeError(err)}`)
-    })
-  }
-
-  context.connection.send(encodedMessage)
-}
-
-async function finalizeWantlist(context) {
-  telemetry.decreaseCount('bitswap-pending-entries', context.total)
-
-  // Once we have processed all blocks, see if there is anything else to send
-  if (context.message.blocks.length || context.message.blockPresences.length) {
-    await sendMessage(context, context.message.encode(context.protocol))
-  }
-
-  if (context.connection) {
-    telemetry.decreaseCount('bitswap-active-connections')
-    await context.connection.close()
-  }
-}
-
-async function processEntry(entry, context) {
-  try {
-    let newBlock
-    let newPresence
-
-    if (entry.wantType === Entry.WantType.Block) {
-      // Fetch the block and eventually append to the list of blocks
-      const raw = await fetchBlockData(entry.cid)
-
-      if (raw) {
-        telemetry.increaseCount('bitswap-block-data-hits')
-        telemetry.increaseCount('bitswap-sent-data', raw.length)
-        newBlock = new Block(entry.cid, raw)
-      } else if (entry.sendDontHave && context.protocol === BITSWAP_V_120) {
-        telemetry.increaseCount('bitswap-block-data-misses')
-        newPresence = new BlockPresence(entry.cid, BlockPresence.Type.DontHave)
-        logger.warn({ entry, cid: entry.cid.toString() }, 'Block not found')
-      }
-    } else if (entry.wantType === Entry.WantType.Have && context.protocol === BITSWAP_V_120) {
-      // Check if we have the block
-      const existing = await getBlockInfo(entry.cid)
-
-      if (existing) {
-        telemetry.increaseCount('bitswap-block-info-hits')
-        telemetry.increaseCount('bitswap-sent-info', sizeofBlock(existing))
-        newPresence = new BlockPresence(entry.cid, BlockPresence.Type.Have)
-      } else if (entry.sendDontHave) {
-        telemetry.increaseCount('bitswap-block-info-misses')
-        newPresence = new BlockPresence(entry.cid, BlockPresence.Type.DontHave)
-        logger.warn({ entry, cid: entry.cid.toString() }, 'Block not found')
-      }
-    }
-
-    /*
-    In the if-else below, addBlock and addPresence returns false if adding
-    the element would make the serialized message exceed the maximum allowed size.
-
-    In that case, we send the message without the new element and prepare a new message.
-
-    The reason why don't encode the message to send in sendMessage is because we need to
-    create a new message before sending is actually tried.
-    This is to avoid a race condition (and duplicate data sent) in environments when remote peer download
-    speed is comparable to Dynamo+S3 read time. (e.g. inter AWS peers).
-  */
-    if (newBlock) {
-      if (!context.message.addBlock(newBlock, context.protocol)) {
-        const toSend = context.message.encode(context.protocol)
-        context.message = createEmptyMessage([newBlock])
-        await sendMessage(context, toSend)
-      }
-    } else if (newPresence) {
-      if (!context.message.addBlockPresence(newPresence, context.protocol)) {
-        const toSend = context.message.encode(context.protocol)
-        context.message = createEmptyMessage([], [newPresence])
-        await sendMessage(context, toSend)
-      }
-    }
-
-    // TODO move outside this function
-    context.pending--
-    if (context.pending === 0) {
-      await finalizeWantlist(context)
-    }
-  } catch (err) {
-    logger.error({ err, entry }, `Cannot process an entry: ${serializeError(err)}`)
-  }
-}
-
-function processWantlist(context) {
-  if (!context.wantlist.entries.length) {
-    return
-  }
-
-  // Every tick we schedule up to 100 entries, this is not to block the Event Loop too long
-  const batch = context.wantlist.entries.splice(0, 100)
-
-  for (let i = 0, length = batch.length; i < length; i++) {
-    if (batch[i].cancel) {
-      context.pending--
-      continue
-    }
-
-    processEntry(batch[i], context)
-  }
-
-  // The list only contains cancels
-  if (context.pending === 0) {
-    finalizeWantlist(context)
-    return
-  }
-
-  process.nextTick(processWantlist, context)
-}
-
-async function startService({ peerId, currentPort, announceAddr } = {}) {
+async function startService({ peerId, currentPort, dispatcher, announceAddr } = {}) {
   try {
     if (!peerId) {
       peerId = await getPeerId()
+    }
+
+    if (!dispatcher) {
+      dispatcher = defaultDispatcher
     }
 
     if (!currentPort) {
@@ -258,33 +58,29 @@ async function startService({ peerId, currentPort, announceAddr } = {}) {
         // Open a send connection to the peer
         connection.on('data', data => {
           let message
-
           try {
             message = Message.decode(data, protocol)
           } catch (err) {
-            logger.warn({ err }, `Cannot decode received data: ${serializeError(err)}`)
+            logger.warn({ err: serializeError(err) }, 'Cannot decode received data')
             service.emit('error:receive', err)
             return
           }
 
-          const entries = message.wantlist.entries.length
+          let context
           try {
-            const context = {
+            context = {
               service,
+              dispatcher,
               peer: dial.remotePeer,
               protocol,
-              wantlist: message.wantlist,
-              total: entries,
-              pending: entries,
-              message: createEmptyMessage()
+              blocks: message.wantlist.entries
             }
-
-            telemetry.increaseCount('bitswap-total-entries', context.total)
-            telemetry.increaseCount('bitswap-pending-entries', entries.total)
-            process.nextTick(processWantlist, context)
           } catch (err) {
-            logger.warn({ err }, `Error while preparing wantList context: ${serializeError(err)}`)
+            logger.warn({ err: serializeError(err) }, 'Error while preparing request context')
+            return
           }
+
+          handle(context)
         })
 
         // When the incoming duplex stream finishes sending, close for writing.
@@ -323,14 +119,6 @@ async function startService({ peerId, currentPort, announceAddr } = {}) {
 
     service.connectionManager.on('error', err => {
       logger.error({ err }, `libp2p connectionManager.error: ${serializeError(err)}`)
-    })
-
-    service.connectionManager.on('connection', connection => {
-      logger.debug({ connection }, ' ******** connectionManager.on connection')
-    })
-
-    service.connectionManager.on('connectionEnd', connection => {
-      logger.debug({ connection }, ' ******** connectionManager.on connectionEnd')
     })
 
     await service.start()

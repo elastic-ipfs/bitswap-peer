@@ -13,14 +13,18 @@ const RawBlockPresenceType = definitions.lookupEnum('Message.BlockPresenceType')
 const RawBlockPresence = definitions.lookupType('Message.BlockPresence')
 const RawMessage = definitions.lookupType('Message')
 
+const { logger, serializeError } = require('../src/logging')
+
 const maxPriority = Math.pow(2, 31) - 1
-const maxBlockSize = 2 * 1024 * 1024 // 2 MB
-const maxMessageSize = 4 * 1024 * 1024 // 4 MB
 
 const BITSWAP_V_100 = '/ipfs/bitswap/1.0.0'
 const BITSWAP_V_110 = '/ipfs/bitswap/1.1.0'
 const BITSWAP_V_120 = '/ipfs/bitswap/1.2.0'
 const protocols = [BITSWAP_V_120, BITSWAP_V_110, BITSWAP_V_100]
+
+const BLOCK_TYPE_INFO = 1
+const BLOCK_TYPE_DATA = 2
+const BLOCK_TYPE_UNKNOWN = -1
 
 /*
   Breakdown of the constants below:
@@ -50,6 +54,7 @@ const addedEstimationPercentage = 0.1
 class Entry {
   constructor(cid, priority, cancel, wantType, sendDontHave) {
     this.cid = cid
+    // TODO implement priority?
     this.priority = priority
     this.cancel = Boolean(cancel)
     this.wantType = wantType
@@ -194,25 +199,16 @@ class BlockPresence {
   }
 }
 
+const emptyWantList = new WantList([], true)
+
 /*
-  As specified in the constants above, each Message can be 4MB maximum (after serialization).
-  Each block can be at most 2 MB.
   Each CID is roughly 40 byte.
 */
 class Message {
-  constructor(wantlist, blocks, blockPresences, pendingBytes) {
+  constructor(wantlist = emptyWantList, blocks = [], blockPresences = [], pendingBytes = 0) {
     this.wantlist = wantlist
-    this.blocks = blocks
-    this.blockPresences = blockPresences
+    this.blocks = { [BLOCK_TYPE_DATA]: blocks, [BLOCK_TYPE_INFO]: blockPresences }
     this.pendingBytes = pendingBytes
-
-    // Validate pendingBytes
-    if (isNaN(this.pendingBytes) || this.pendingBytes < 0) {
-      this.pendingBytes = 0
-    }
-
-    // Use module.exports here so that tests can eventually override
-    this.estimatedLength = this.encode(BITSWAP_V_120).length + module.exports.nonEmptyOverhead
   }
 
   static decode(encoded, protocol) {
@@ -235,24 +231,18 @@ class Message {
     )
   }
 
-  hasData() {
-    return Boolean(this.wantlist.entries.length || this.blocks.length || this.blockPresences.length)
-  }
-
   serialize(protocol) {
-    const { wantlist, blocks, blockPresences } = this
-
     if (protocol === BITSWAP_V_100) {
       return {
-        wantlist: wantlist.serialize(protocol),
-        blocks: blocks.map(b => b.data)
+        wantlist: this.wantlist.serialize(protocol),
+        blocks: this.blocks[BLOCK_TYPE_DATA].map(b => b.data)
       }
     }
 
     return {
-      wantlist: wantlist.serialize(protocol),
-      payload: blocks.map(b => b.serialize(protocol)),
-      blockPresences: blockPresences.map(b => b.serialize(protocol)),
+      wantlist: this.wantlist.serialize(protocol),
+      payload: this.blocks[BLOCK_TYPE_DATA].map(b => b.serialize(protocol)),
+      blockPresences: this.blocks[BLOCK_TYPE_INFO].map(b => b.serialize(protocol)),
       pendingBytes: this.pendingBytes * Number.MAX_SAFE_INTEGER
     }
   }
@@ -261,41 +251,51 @@ class Message {
     return RawMessage.encode(this.serialize(protocol)).finish()
   }
 
-  addBlock(block, protocol) {
-    // Use module.exports here so that tests can eventually override
-    const newBlockSize = module.exports.newBlockOverhead + block.data.length
+  /**
+   * push block to message, to be sent later
+   * note there are no size limit, because the purpose is to send responses asap **without buffering**
+   */
+  async push(block, context) {
+    if (block.cancel || (block.type !== BLOCK_TYPE_DATA && block.type !== BLOCK_TYPE_INFO)) { return }
 
-    if (this.estimateNewSizeAfter(newBlockSize) > maxMessageSize) {
-      return false
+    try {
+      const formattedBlock = format[block.type](block, context.protocol)
+      if (!formattedBlock) { return }
+
+      this.blocks[block.type].push(formattedBlock)
+    } catch (error) {
+      logger.error({ error: serializeError(error) }, 'error on Message.push')
     }
-
-    this.blocks.push(block)
-    this.estimatedLength += newBlockSize
-
-    return true
   }
 
-  addBlockPresence(presence, protocol) {
-    // Use module.exports here so that tests can eventually override
-    const newPresenceSize = module.exports.newPresenceOverhead + presence.cid.byteLength
-
-    if (this.estimateNewSizeAfter(newPresenceSize) > maxMessageSize) {
-      return false
+  async send(context) {
+    try {
+      const encoded = this.encode(context.protocol)
+      return context.connection.send(encoded)
+    } catch (error) {
+      logger.error({ error: serializeError(error) }, 'error on Message.send')
     }
-
-    this.blockPresences.push(presence)
-    this.estimatedLength += newPresenceSize
-
-    return true
-  }
-
-  estimateNewSizeAfter(newElement) {
-    // Use module.exports here so that tests can eventually override
-    return (this.estimatedLength + newElement) * (1 + module.exports.addedEstimationPercentage)
   }
 }
 
-const emptyWantList = new WantList([], true)
+const format = {
+  BLOCK_TYPE_INFO: (block, protocol) => {
+    if (block.content.found) {
+      return new Block(block.cid, block.content.data)
+    }
+    if (block.content.notFound && block.sendDontHave && protocol === BITSWAP_V_120) {
+      return new BlockPresence(block.cid, BlockPresence.Type.DontHave)
+    }
+  },
+  BLOCK_TYPE_DATA: (block, protocol) => {
+    if (block.content.found) {
+      return new BlockPresence(block.cid, BlockPresence.Type.Have)
+    }
+    if (block.content.notFound && block.sendDontHave && protocol === BITSWAP_V_120) {
+      return new BlockPresence(block.cid, BlockPresence.Type.DontHave)
+    }
+  }
+}
 
 Entry.WantType = RawWantType.values
 BlockPresence.Type = RawBlockPresenceType.values
@@ -309,8 +309,6 @@ module.exports = {
   BlockPresence,
   emptyWantList,
   Entry,
-  maxBlockSize,
-  maxMessageSize,
   maxPriority,
   Message,
   newBlockOverhead,
@@ -318,5 +316,8 @@ module.exports = {
   nonEmptyOverhead,
   protocols,
   RawMessage,
-  WantList
+  WantList,
+  BLOCK_TYPE_INFO,
+  BLOCK_TYPE_DATA,
+  BLOCK_TYPE_UNKNOWN
 }

@@ -333,7 +333,7 @@ t.test(`${protocol} - large presences skipping`, async t => {
   await sleep(10000)
 
   const originalPresenceOverhead = protocolEstimation.newPresenceOverhead
-  protocolEstimation.newPresenceOverhead = protocolEstimation.maxMessageSize * 0.4
+  protocolEstimation.newPresenceOverhead = 1024 * 1024 // 1 MB
 
   const { client, service, connection, receiver } = await prepare(t, protocol)
 

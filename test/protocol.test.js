@@ -7,30 +7,12 @@ const {
   Block,
   BlockPresence,
   Entry,
-  maxMessageSize,
   maxPriority,
-  Message,
   WantList
 } = require('../src/protocol')
 const { cid3 } = require('./fixtures/cids')
 
-t.test('protocol - safety checks', t => {
-  t.plan(7)
-
-  const message = new Message(new WantList([], true), [], [], -1)
-  t.notOk(message.hasData())
-
-  message.wantlist.entries.push(new Entry())
-  t.ok(message.hasData())
-
-  t.ok(message.addBlockPresence(new BlockPresence({ byteLength: 10 }, BlockPresence.Type.Have)))
-  t.ok(message.hasData())
-
-  t.ok(message.addBlock(new Block(cid3, Buffer.alloc(maxMessageSize * 0.89))))
-  t.ok(message.hasData())
-
-  t.notOk(message.addBlockPresence(new BlockPresence({ byteLength: 100000 }, BlockPresence.Type.Have)))
-})
+// TODO Message unit tests
 
 t.test('protocol - Protocol Buffers messages are properly sanitized and encoded', t => {
   t.plan(5)

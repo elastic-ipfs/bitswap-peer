@@ -16,12 +16,14 @@ const {
   safeGetDAGLinks,
   teardown
 } = require('./utils/helpers')
+const { mockAWS } = require('./utils/mock')
 
-t.jobs = 10
+const TIMEOUT_SHORT = 1500
+const TIMEOUT_LONG = 3000
+
+t.beforeEach(() => mockAWS())
 
 t.test(`${protocol} - uses the right fields when serializing and deserializing`, async t => {
-  t.plan(16)
-
   const wantList = new WantList(
     [
       new Entry(cid1, 1, false, Entry.WantType.Have, true),
@@ -44,7 +46,7 @@ t.test(`${protocol} - uses the right fields when serializing and deserializing`,
 
   const { client, service, connection, receiver } = await prepare(t, protocol)
   await connection.send(request.encode(protocol))
-  const [response] = await receiveMessages(receiver, protocol, 5000, 1, true)
+  const [response] = await receiveMessages(receiver, protocol, TIMEOUT_SHORT, 1, true)
   await teardown(t, client, service, connection)
 
   const cid2Blocks = response.payload.filter(p => p.prefix.equals(Buffer.from([0x01, 0x70, 0x12, 0x20])))
@@ -68,8 +70,6 @@ t.test(`${protocol} - uses the right fields when serializing and deserializing`,
 })
 
 t.test(`${protocol} - type=Mixed - cancel=true - no response received`, async t => {
-  t.plan(1)
-
   const { client, service, connection, receiver } = await prepare(t, protocol)
 
   const wantList = new WantList(
@@ -94,8 +94,6 @@ t.test(`${protocol} - type=Mixed - cancel=true - no response received`, async t 
 t.test(
   `${protocol} - type=Block - sendDontHave=true - 2 hits / 2 misses - 2 blocks / 2 negative presences received`,
   async t => {
-    t.plan(8)
-
     const { client, service, connection, receiver } = await prepare(t, protocol)
 
     const wantList = new WantList(
@@ -114,6 +112,7 @@ t.test(
     const [response] = await receiveMessages(receiver, protocol)
     await teardown(t, client, service, connection)
 
+    t.ok(response)
     t.equal(response.blocks.length, 2)
     t.equal(response.blockPresences.length, 2)
 
@@ -126,8 +125,6 @@ t.test(
 )
 
 t.test(`${protocol} - type=Block - sendDontHave=false - 2 hits / 2 misses - 2 blocks received`, async t => {
-  t.plan(4)
-
   const { client, service, connection, receiver } = await prepare(t, protocol)
 
   const wantList = new WantList(
@@ -156,8 +153,6 @@ t.test(`${protocol} - type=Block - sendDontHave=false - 2 hits / 2 misses - 2 bl
 t.test(
   `${protocol} - type=Have - sendDontHave=true - 2 hits / 2 misses - 2 positive presences / 2 negative presences received`,
   async t => {
-    t.plan(10)
-
     const { client, service, connection, receiver } = await prepare(t, protocol)
 
     const wantList = new WantList(
@@ -187,8 +182,6 @@ t.test(
 )
 
 t.test(`${protocol} - type=Have - sendDontHave=false - 2 hits / 2 misses - 2 positive presences received`, async t => {
-  t.plan(6)
-
   const { client, service, connection, receiver } = await prepare(t, protocol)
 
   const wantList = new WantList(
@@ -217,8 +210,6 @@ t.test(`${protocol} - type=Have - sendDontHave=false - 2 hits / 2 misses - 2 pos
 t.test(
   `${protocol} - type=Mixed - sendDontHave=true - 2 hits / 2 misses - 1 block / 1 positive presences / 2 negative presences received`,
   async t => {
-    t.plan(9)
-
     const { client, service, connection, receiver } = await prepare(t, protocol)
 
     const wantList = new WantList(
@@ -251,8 +242,6 @@ t.test(
 t.test(
   `${protocol} - type=Mixed - sendDontHave=false - 2 hits / 2 misses - 1 block / 1 positive presence received`,
   async t => {
-    t.plan(5)
-
     const { client, service, connection, receiver } = await prepare(t, protocol)
 
     const wantList = new WantList(
@@ -281,8 +270,6 @@ t.test(
 )
 
 t.test(`${protocol} - large blocks skipping`, async t => {
-  t.plan(7)
-
   const { client, service, connection, receiver } = await prepare(t, protocol)
 
   const wantList = new WantList(
@@ -298,7 +285,7 @@ t.test(`${protocol} - large blocks skipping`, async t => {
   const request = new Message(wantList, [], [], 0)
   await connection.send(request.encode(protocol))
 
-  const responses = await receiveMessages(receiver, protocol, 30000, 2)
+  const responses = await receiveMessages(receiver, protocol, TIMEOUT_LONG, 2)
   await teardown(t, client, service, connection)
 
   const blocks = [...responses[0].blocks, ...responses[1].blocks]
@@ -314,8 +301,6 @@ t.test(`${protocol} - large blocks skipping`, async t => {
 })
 
 t.test(`${protocol} - large messages skipping`, async t => {
-  t.plan(5)
-
   const { client, service, connection, receiver } = await prepare(t, protocol)
   const numPresences = 1e3
 
@@ -331,7 +316,7 @@ t.test(`${protocol} - large messages skipping`, async t => {
   const request = new Message(wantList, [], [], 0)
   await connection.send(request.encode(protocol))
 
-  const responses = await receiveMessages(receiver, protocol, 30000, 2)
+  const responses = await receiveMessages(receiver, protocol, TIMEOUT_LONG, 2)
   await teardown(t, client, service, connection)
 
   t.equal(responses.length, 2)
@@ -343,9 +328,8 @@ t.test(`${protocol} - large messages skipping`, async t => {
 })
 
 t.test(`${protocol} - large presences skipping`, async t => {
-  t.plan(9)
-
   // Delay this test so that overhead mocking is not impacting other tests
+  // TODO remove hardcoded timers
   await sleep(10000)
 
   const originalPresenceOverhead = protocolEstimation.newPresenceOverhead
@@ -365,7 +349,7 @@ t.test(`${protocol} - large presences skipping`, async t => {
   const request = new Message(wantList, [], [], 0)
   await connection.send(request.encode(protocol))
 
-  const responses = await receiveMessages(receiver, protocol, 5000, 2)
+  const responses = await receiveMessages(receiver, protocol, TIMEOUT_SHORT, 2)
   await teardown(t, client, service, connection)
   protocolEstimation.newPresenceOverhead = originalPresenceOverhead
 
@@ -379,18 +363,17 @@ t.test(`${protocol} - large presences skipping`, async t => {
 })
 
 t.test(`${protocol} - closes streams properly`, async t => {
-  t.plan(3)
-
   const { client, service, connection, receiver } = await prepare(t, protocol)
   const entry = new Entry(cid1, 1, false, Entry.WantType.Block, true)
   const wantList = new WantList([entry], false)
   const request = new Message(wantList, [], [], 0)
 
   connection.send(request.encode(protocol))
-  await receiveMessages(receiver, protocol, 5000, 1)
+  await receiveMessages(receiver, protocol, TIMEOUT_SHORT, 1)
   connection.close()
 
   // Wait for streams to be closed (happens asynchronously)
+  // TODO hardcoded timers
   await new Promise(resolve => setTimeout(resolve, 1000))
 
   const peerConnections = Array.from(service.connectionManager.connections.entries())

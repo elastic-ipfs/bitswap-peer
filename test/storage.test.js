@@ -5,11 +5,9 @@ process.env.LOG_LEVEL = 'fatal'
 const t = require('tap')
 const { Readable } = require('stream')
 const config = require('../src/config')
-const { logger } = require('../src/logging')
 
 const { fetchS3, searchCarInDynamoV0, searchCarInDynamoV1 } = require('../src/storage')
 const { mockDynamoGetItemCommand, mockDynamoQueryCommand, mockS3GetObject } = require('./utils/mock')
-const bucketRegion = process.env.AWS_REGION
 
 t.test('searchCarInDynamoV0', async t => {
   t.test('get result', async t => {

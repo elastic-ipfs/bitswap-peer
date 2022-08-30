@@ -1,20 +1,25 @@
 'use strict'
 
+const { Readable } = require('stream')
 const { readFileSync } = require('fs')
 const { resolve } = require('path')
 const { DynamoDBClient, GetItemCommand, QueryCommand } = require('@aws-sdk/client-dynamodb')
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3')
 const { marshall } = require('@aws-sdk/util-dynamodb')
 const { mockClient } = require('aws-sdk-client-mock')
+const { base58btc: base58 } = require('multiformats/bases/base58')
 
 const config = require('../../src/config')
 const { cid1, cid2, cid3, cid4, cid5, cid6, cid7, cid8, cid9 } = require('../fixtures/cids')
-const { cidToKey } = require('../../src/storage')
+
+function cidToKey(cid) {
+  return base58.encode(cid.multihash.bytes)
+}
 
 const dynamoMock = mockClient(DynamoDBClient)
 const s3Mock = mockClient(S3Client)
 
-function mockDynamoGetItemCommand({ table, keyName, keyValue, response }) {
+function mockDynamoGetItemCommand({ table, keyName, keyValue, response = null }) {
   const params = { TableName: table, Key: marshall({ [keyName]: keyValue }) }
 
   if (typeof response === 'function') {
@@ -24,7 +29,7 @@ function mockDynamoGetItemCommand({ table, keyName, keyValue, response }) {
   dynamoMock.on(GetItemCommand, params).resolves({ Item: response })
 }
 
-function mockDynamoQueryCommand({ table, keyName, keyValue, response }) {
+function mockDynamoQueryCommand({ table, keyName, keyValue, response = [] }) {
   const params = {
     TableName: table,
     Limit: 1,
@@ -39,7 +44,7 @@ function mockDynamoQueryCommand({ table, keyName, keyValue, response }) {
   dynamoMock.on(QueryCommand, params).resolves({ Items: response })
 }
 
-function mockS3GetObject({ bucket, key, length, response }) {
+function mockS3GetObject({ bucket, key, length, response = null }) {
   s3Mock
     .on(GetObjectCommand, {
       Bucket: bucket,
@@ -56,8 +61,11 @@ function mockS3GetObject({ bucket, key, length, response }) {
 
 function readData(file, from, to) {
   const buffer = readFileSync(resolve(process.cwd(), `test/fixtures/${file}`))
+  const response = new Readable()
+  response.push(from && to ? buffer.slice(from, to + 1) : buffer)
+  response.push(null)
 
-  return from && to ? buffer.slice(from, to + 1) : buffer
+  return response
 }
 
 function readBlock(file) {
@@ -65,42 +73,37 @@ function readBlock(file) {
   return JSON.parse(json.replaceAll('{AWS_REGION}', process.env.AWS_REGION))
 }
 
-async function mockAWS(t) {
-  //   const s3 = mockAgent.get(`https://test-cars.s3.${process.env.AWS_REGION}.amazonaws.com`)
-  //   const dynamo = mockAgent.get(`https://dynamodb.${process.env.AWS_REGION}.amazonaws.com`)
+async function mockAWS() {
+  // searchCarInDynamoV1
+  mockDynamoQueryCommand({ table: config.linkTableV1, keyName: config.linkTableBlockKey, keyValue: cidToKey(cid1), response: readBlock('blocks/db-v1/cid1.json') })
+  mockDynamoQueryCommand({ table: config.linkTableV1, keyName: config.linkTableBlockKey, keyValue: cidToKey(cid2), response: readBlock('blocks/db-v1/cid2.json') })
+  mockDynamoQueryCommand({ table: config.linkTableV1, keyName: config.linkTableBlockKey, keyValue: cidToKey(cid3) })
+  mockDynamoQueryCommand({ table: config.linkTableV1, keyName: config.linkTableBlockKey, keyValue: cidToKey(cid4) })
+  mockDynamoQueryCommand({ table: config.linkTableV1, keyName: config.linkTableBlockKey, keyValue: cidToKey(cid5), response: readBlock('blocks/db-v1/cid5.json') })
+  mockDynamoQueryCommand({ table: config.linkTableV1, keyName: config.linkTableBlockKey, keyValue: cidToKey(cid6), response: readBlock('blocks/db-v1/cid6.json') })
+  mockDynamoQueryCommand({ table: config.linkTableV1, keyName: config.linkTableBlockKey, keyValue: cidToKey(cid7), response: readBlock('blocks/db-v1/cid7.json') })
+  mockDynamoQueryCommand({ table: config.linkTableV1, keyName: config.linkTableBlockKey, keyValue: cidToKey(cid8), response: readBlock('blocks/db-v1/cid8.json') })
+  mockDynamoQueryCommand({ table: config.linkTableV1, keyName: config.linkTableBlockKey, keyValue: cidToKey(cid9), response: readBlock('blocks/db-v1/cid9.json') })
 
-  //   // used in searchCarInDynamoV1
-  //   mockDynamoQuery(dynamo, cid1, readBlock('blocks/db-v1/cid1.json'), 1e3 + 1)
-  //   mockDynamoQuery(dynamo, cid2, readBlock('blocks/db-v1/cid2.json'))
-  //   mockDynamoQuery(dynamo, cid3, false)
-  //   mockDynamoQuery(dynamo, cid4, false)
-  //   mockDynamoQuery(dynamo, cid5, readBlock('blocks/db-v1/cid5.json'))
-  //   mockDynamoQuery(dynamo, cid6, readBlock('blocks/db-v1/cid6.json'))
-  //   mockDynamoQuery(dynamo, cid7, readBlock('blocks/db-v1/cid7.json'))
-  //   mockDynamoQuery(dynamo, cid8, readBlock('blocks/db-v1/cid8.json'))
-  //   mockDynamoQuery(dynamo, cid9, readBlock('blocks/db-v1/cid9.json'), 1e3 + 1)
+  // // searchCarInDynamoV0
+  // mockDynamoGetItemCommand({ table: config.blocksTable, keyName: config.blocksTablePrimaryKey, keyValue: cidToKey(cid1), response: readBlock('blocks/db-v0/cid1.json') })
+  // mockDynamoGetItemCommand({ table: config.blocksTable, keyName: config.blocksTablePrimaryKey, keyValue: cidToKey(cid2), response: readBlock('blocks/db-v0/cid2.json') })
+  // mockDynamoGetItemCommand({ table: config.blocksTable, keyName: config.blocksTablePrimaryKey, keyValue: cidToKey(cid3) })
+  // mockDynamoGetItemCommand({ table: config.blocksTable, keyName: config.blocksTablePrimaryKey, keyValue: cidToKey(cid4) })
+  // mockDynamoGetItemCommand({ table: config.blocksTable, keyName: config.blocksTablePrimaryKey, keyValue: cidToKey(cid5), response: readBlock('blocks/db-v0/cid5.json') })
+  // mockDynamoGetItemCommand({ table: config.blocksTable, keyName: config.blocksTablePrimaryKey, keyValue: cidToKey(cid6), response: readBlock('blocks/db-v0/cid6.json') })
+  // mockDynamoGetItemCommand({ table: config.blocksTable, keyName: config.blocksTablePrimaryKey, keyValue: cidToKey(cid7), response: readBlock('blocks/db-v0/cid7.json') })
+  // mockDynamoGetItemCommand({ table: config.blocksTable, keyName: config.blocksTablePrimaryKey, keyValue: cidToKey(cid8), response: readBlock('blocks/db-v0/cid8.json') })
+  // mockDynamoGetItemCommand({ table: config.blocksTable, keyName: config.blocksTablePrimaryKey, keyValue: cidToKey(cid9), response: readBlock('blocks/db-v0/cid9.json') })
 
-  //   // searchCarInDynamoV0
-  //   mockDynamoItem(dynamo, cid1, readBlock('blocks/db-v0/cid1.json'), 1e3 + 1)
-  //   mockDynamoItem(dynamo, cid2, readBlock('blocks/db-v0/cid2.json'))
-  //   mockDynamoItem(dynamo, cid3, false)
-  //   mockDynamoItem(dynamo, cid4, false)
-  //   mockDynamoItem(dynamo, cid5, readBlock('blocks/db-v0/cid5.json'))
-  //   mockDynamoItem(dynamo, cid6, readBlock('blocks/db-v0/cid6.json'))
-  //   mockDynamoItem(dynamo, cid7, readBlock('blocks/db-v0/cid7.json'))
-  //   mockDynamoItem(dynamo, cid8, readBlock('blocks/db-v0/cid8.json'))
-  //   mockDynamoItem(dynamo, cid9, readBlock('blocks/db-v0/cid9.json'), 1e3 + 1)
-
-  //   mockS3Object(s3, 'test-cid1.car', 'bytes=96-100', readData('cars/test-cid1.car', 96, 100), 1e4)
-  //   mockS3Object(s3, 'test-cid2.car', 'bytes=96-147', readData('cars/test-cid2.car', 96, 147))
-  //   mockS3Object(s3, 'test-cid5.car', 'bytes=98-1500097', readData('cars/test-cid5.car', 98, 1500097), 1e4)
-  //   mockS3Object(s3, 'test-cid6.car', 'bytes=98-1500097', readData('cars/test-cid6.car', 98, 1500097))
-  //   mockS3Object(s3, 'test-cid7.car', 'bytes=98-1500097', readData('cars/test-cid7.car', 98, 1500097))
-  //   mockS3Object(s3, 'test-cid8.car', 'bytes=98-1500097', readData('cars/test-cid8.car', 98, 1500097))
-  //   mockS3Object(s3, 'test-cid9.car', 'bytes=98-2096749', readData('cars/test-cid9.car', 98, 2096749), 1e3 + 1)
-
-  //   t.context = { s3Pool: s3, dynamoPool: dynamo }
-  //   return mockAgent
+  // fetchS3
+  mockS3GetObject({ key: 'test-cid1.car', bucket: 'test-cars', range: 'bytes=96-100', response: readData('cars/test-cid1.car', 96, 100) })
+  mockS3GetObject({ key: 'test-cid2.car', bucket: 'test-cars', range: 'bytes=96-147', response: readData('cars/test-cid2.car', 96, 147) })
+  mockS3GetObject({ key: 'test-cid5.car', bucket: 'test-cars', range: 'bytes=98-1500097', response: readData('cars/test-cid5.car', 98, 1500097) })
+  mockS3GetObject({ key: 'test-cid6.car', bucket: 'test-cars', range: 'bytes=98-1500097', response: readData('cars/test-cid6.car', 98, 1500097) })
+  mockS3GetObject({ key: 'test-cid7.car', bucket: 'test-cars', range: 'bytes=98-1500097', response: readData('cars/test-cid7.car', 98, 1500097) })
+  mockS3GetObject({ key: 'test-cid8.car', bucket: 'test-cars', range: 'bytes=98-1500097', response: readData('cars/test-cid8.car', 98, 1500097) })
+  mockS3GetObject({ key: 'test-cid9.car', bucket: 'test-cars', range: 'bytes=98-2096749', response: readData('cars/test-cid9.car', 98, 2096749) })
 }
 
 module.exports = { mockAWS, mockDynamoGetItemCommand, mockDynamoQueryCommand, mockS3GetObject }

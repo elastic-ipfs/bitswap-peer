@@ -42,14 +42,11 @@ const BLOCK_TYPE_UNKNOWN = -1
     - 1 is the varint which declare the cid field
     - 1 is the varint which declare the type field
     - 1 is the varint of the type field value
-  - addedEstimationPercentage is arbitrary percentage added to minimize the probability of false negatives since
-    this is an estimated algorithm
   Note that for safety we are only considering BitSwap 1.2.0 since its overhead is the biggest.
 */
 const nonEmptyOverhead = 2 + 8
 const newBlockOverhead = 1 + 1 + 4 + 4
 const newPresenceOverhead = 1 + 1 + 1 + 1
-const addedEstimationPercentage = 0.1
 
 class Entry {
   constructor(cid, priority, cancel, wantType, sendDontHave) {
@@ -59,6 +56,11 @@ class Entry {
     this.cancel = Boolean(cancel)
     this.wantType = wantType
     this.sendDontHave = Boolean(sendDontHave)
+
+    this.key = null
+    this.type = BLOCK_TYPE_INFO
+    this.data = null
+    this.info = null
 
     // Validate priority
     if (isNaN(this.priority) || this.priority < 0) {
@@ -240,6 +242,7 @@ class Message {
     }
 
     return {
+      // !TODO check must be sent back or not
       wantlist: this.wantlist.serialize(protocol),
       payload: this.blocks[BLOCK_TYPE_DATA].map(b => b.serialize(protocol)),
       blockPresences: this.blocks[BLOCK_TYPE_INFO].map(b => b.serialize(protocol)),
@@ -259,10 +262,11 @@ class Message {
     if (block.cancel || (block.type !== BLOCK_TYPE_DATA && block.type !== BLOCK_TYPE_INFO)) { return }
 
     try {
-      const formattedBlock = format[block.type](block, context.protocol)
-      if (!formattedBlock) { return }
+      const responseBlock = response[block.type](block, context.protocol)
+      if (!responseBlock) { return }
 
-      this.blocks[block.type].push(formattedBlock)
+      const { type, b } = responseBlock
+      this.blocks[type].push(b)
     } catch (error) {
       logger.error({ error: serializeError(error) }, 'error on Message.push')
     }
@@ -271,28 +275,31 @@ class Message {
   async send(context) {
     try {
       const encoded = this.encode(context.protocol)
-      return context.connection.send(encoded)
+      await context.connection.send(encoded)
+      // TODO maybe not necessary, check and remove after memory issues fix
+      this.blocks[BLOCK_TYPE_DATA] = []
+      this.blocks[BLOCK_TYPE_INFO] = []
     } catch (error) {
       logger.error({ error: serializeError(error) }, 'error on Message.send')
     }
   }
 }
 
-const format = {
-  BLOCK_TYPE_INFO: (block, protocol) => {
-    if (block.content.found) {
-      return new Block(block.cid, block.content.data)
+const response = {
+  [BLOCK_TYPE_DATA]: (block, protocol) => {
+    if (block.data?.found) {
+      return { type: BLOCK_TYPE_DATA, b: new Block(block.cid, block.data.content) }
     }
-    if (block.content.notFound && block.sendDontHave && protocol === BITSWAP_V_120) {
-      return new BlockPresence(block.cid, BlockPresence.Type.DontHave)
+    if (block.data?.notFound && block.sendDontHave && protocol === BITSWAP_V_120) {
+      return { type: BLOCK_TYPE_INFO, b: new BlockPresence(block.cid, BlockPresence.Type.DontHave) }
     }
   },
-  BLOCK_TYPE_DATA: (block, protocol) => {
-    if (block.content.found) {
-      return new BlockPresence(block.cid, BlockPresence.Type.Have)
+  [BLOCK_TYPE_INFO]: (block, protocol) => {
+    if (block.info?.found) {
+      return { type: BLOCK_TYPE_INFO, b: new BlockPresence(block.cid, BlockPresence.Type.Have) }
     }
-    if (block.content.notFound && block.sendDontHave && protocol === BITSWAP_V_120) {
-      return new BlockPresence(block.cid, BlockPresence.Type.DontHave)
+    if (block.info?.notFound && block.sendDontHave && protocol === BITSWAP_V_120) {
+      return { type: BLOCK_TYPE_INFO, b: new BlockPresence(block.cid, BlockPresence.Type.DontHave) }
     }
   }
 }
@@ -301,7 +308,6 @@ Entry.WantType = RawWantType.values
 BlockPresence.Type = RawBlockPresenceType.values
 
 module.exports = {
-  addedEstimationPercentage,
   BITSWAP_V_100,
   BITSWAP_V_110,
   BITSWAP_V_120,

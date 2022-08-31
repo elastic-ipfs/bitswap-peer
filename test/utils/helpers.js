@@ -63,7 +63,7 @@ async function teardown(t, client, service, connection) {
   await Promise.allSettled([connection.close(), client.stop(), service.stop()])
 }
 
-// TODO remove hardcoded timers
+// TODO remove hardcoded timers, use tap timeout
 async function receiveMessages(receiver, protocol, timeout = 2000, limit = 1, raw = false) {
   let timeoutHandle
   const responses = []
@@ -99,7 +99,7 @@ async function receiveMessages(receiver, protocol, timeout = 2000, limit = 1, ra
       }
     })
   }).finally(() => {
-    clearTimeout(timeoutHandle)
+    timeoutHandle && clearTimeout(timeoutHandle)
     receiver.removeAllListeners('message')
   })
 }

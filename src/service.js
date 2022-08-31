@@ -12,18 +12,13 @@ const { Connection } = require('./networking')
 const { noiseCrypto } = require('./noise-crypto')
 const { startKeepAlive, stopKeepAlive } = require('./p2p-keep-alive.js')
 const { Message, protocols } = require('./protocol')
-const { defaultDispatcher } = require('./storage')
 const { telemetry } = require('./telemetry')
 const { handle } = require('./handler')
 
-async function startService({ peerId, currentPort, dispatcher, announceAddr } = {}) {
+async function startService({ peerId, currentPort, announceAddr } = {}) {
   try {
     if (!peerId) {
       peerId = await getPeerId()
-    }
-
-    if (!dispatcher) {
-      dispatcher = defaultDispatcher
     }
 
     if (!currentPort) {
@@ -63,6 +58,7 @@ async function startService({ peerId, currentPort, dispatcher, announceAddr } = 
           } catch (err) {
             logger.warn({ err: serializeError(err) }, 'Cannot decode received data')
             service.emit('error:receive', err)
+            // TODO add? telemetry.increaseCount('bitswap-block-error')
             return
           }
 
@@ -70,17 +66,17 @@ async function startService({ peerId, currentPort, dispatcher, announceAddr } = 
           try {
             context = {
               service,
-              dispatcher,
               peer: dial.remotePeer,
               protocol,
               blocks: message.wantlist.entries
             }
           } catch (err) {
             logger.warn({ err: serializeError(err) }, 'Error while preparing request context')
+            // TODO add? telemetry.increaseCount('bitswap-block-error')
             return
           }
 
-          handle(context)
+          handle({ context, logger })
         })
 
         // When the incoming duplex stream finishes sending, close for writing.

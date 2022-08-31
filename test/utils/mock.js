@@ -7,14 +7,10 @@ const { DynamoDBClient, GetItemCommand, QueryCommand } = require('@aws-sdk/clien
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3')
 const { marshall } = require('@aws-sdk/util-dynamodb')
 const { mockClient } = require('aws-sdk-client-mock')
-const { base58btc: base58 } = require('multiformats/bases/base58')
 
 const config = require('../../src/config')
 const { cid1, cid2, cid3, cid4, cid5, cid6, cid7, cid8, cid9 } = require('../fixtures/cids')
-
-function cidToKey(cid) {
-  return base58.encode(cid.multihash.bytes)
-}
+const { cidToKey } = require('../../src/util')
 
 const dynamoMock = mockClient(DynamoDBClient)
 const s3Mock = mockClient(S3Client)

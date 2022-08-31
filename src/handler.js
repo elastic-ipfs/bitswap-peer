@@ -1,12 +1,13 @@
 'use strict'
 
 const { loadEsmModule } = require('./esm-loader')
-const { logger, serializeError } = require('./logging')
+const { serializeError } = require('./logging')
 const { Entry, BITSWAP_V_120, BLOCK_TYPE_INFO, BLOCK_TYPE_DATA, BLOCK_TYPE_UNKNOWN } = require('./protocol')
 const { Connection } = require('./networking')
 const { Message } = require('./protocol')
 const { fetchBlocksData, fetchBlocksInfo } = require('./storage')
 const { telemetry } = require('./telemetry')
+const { cidToKey, sizeofBlockInfo } = require('./util')
 
 // TODO move to config
 const HANDLING_BLOCKS_BATCH_SIZE = 64
@@ -18,11 +19,8 @@ process.nextTick(async () => {
   processingQueue = new PQueue({ concurrency: PROCESSING_QUEUE_CONCURRENCY })
 })
 
-async function peerConnect(context) {
-  if (context.connection) {
-    return
-  }
-
+async function peerConnect(context, logger) {
+  // TODO concurrency
   const dialConnection = await context.service.dial(context.peer)
   const { stream } = await dialConnection.newStream(context.protocol)
 
@@ -32,11 +30,11 @@ async function peerConnect(context) {
   context.connection = new Connection(stream)
   context.connection.on('error', err => {
     logger.warn({ err: serializeError(err) }, 'Outgoing connection error')
-    peerClose(context)
-    // TODO throw
+    peerClose(context, logger)
+    // TODO throw connection failed
   })
 
-  context.connection.on('close', () => { peerClose(context) })
+  context.connection.on('close', () => { peerClose(context, logger) })
 
   // TODO context.connection.on('connected', resolve
 }
@@ -44,13 +42,13 @@ async function peerConnect(context) {
 /**
  * TODO test
  */
-function handle(context) {
-  if (!context.blocks.length < 1) {
+function handle({ context, logger, batchSize = HANDLING_BLOCKS_BATCH_SIZE }) {
+  if (context.blocks.length < 1) {
     return
   }
 
   let i = 0
-  let batchSize
+  let blocksLength
 
   context.done = 0
   context.todo = context.blocks.length
@@ -58,105 +56,96 @@ function handle(context) {
   telemetry.increaseCount('bitswap-pending-entries', context.todo)
 
   do {
-    const blocks = context.blocks.splice(i, HANDLING_BLOCKS_BATCH_SIZE)
-    batchSize = blocks.length
+    const blocks = context.blocks.splice(i, batchSize)
+    blocksLength = blocks.length
 
     processingQueue.add(async () => {
       // append content to its block
       // TODO abort on error, es. if connection error, abort queued blocks fetch & send
-      await batchFetch(blocks, context)
-      await batchResponse(blocks, context)
+      await batchFetch(blocks, context, logger)
+      await batchResponse(blocks, context, logger)
     })
-    i += batchSize
-  } while (batchSize > 0)
+    i += blocksLength
+  } while (blocksLength === batchSize)
 
   // TODO metrics response time
 }
 
 /**
- * fetch content blocks from storage, both for `data` type > s3 and `info` type > dynamo
+ * fetch blocks content from storage
  * append content to its block
  */
-async function batchFetch(blocks, context) {
+async function batchFetch(blocks, context, logger) {
   try {
     const dataBlocks = []
     const infoBlocks = []
-    for (let index = 0; index < blocks.length; index++) {
-      const block = blocks[index]
-
-      if (blocks[index].cancel) {
-        continue
-      }
+    for (let i = 0; i < blocks.length; i++) {
+      const block = blocks[i]
 
       if (block.wantType === Entry.WantType.Block) {
         block.type = BLOCK_TYPE_DATA
-        dataBlocks.push({ index, block })
+        block.key = cidToKey(block.cid)
+        dataBlocks.push(block)
         continue
       }
       if (block.wantType === Entry.WantType.Have && context.protocol === BITSWAP_V_120) {
         block.type = BLOCK_TYPE_INFO
-        infoBlocks.push({ index, block })
+        block.key = cidToKey(block.cid)
+        infoBlocks.push(block)
         continue
       }
+
       block.type = BLOCK_TYPE_UNKNOWN
+      // TODO add? telemetry.increaseCount('bitswap-block-error')
       logger.warn({ block }, 'unsupported block type')
     }
 
-    const contents = (await Promise.all([fetchBlocksData(dataBlocks), fetchBlocksInfo(infoBlocks)])).flat(1)
-
-    for (let i = 0; i < contents.length; i++) {
-      const content = contents[i]
-      const index = content.index
-      const block = content[index]
-
-      // block may has been canceled meanwhile
-      if (block.cancel) {
-        continue
-      }
-      block.content = content
-
-      // TODO metrics
-      // content.found
-      //   ? telemetry.increaseCount('bitswap-block-$type-hits')
-      //   : telemetry.increaseCount('bitswap-block-$type-misses')
-    }
+    await Promise.all([
+      fetchBlocksInfo({ blocks: infoBlocks, logger }),
+      fetchBlocksData({ blocks: dataBlocks, logger })
+    ])
   } catch (error) {
     logger.error({ error: serializeError(error) }, 'error on handler#batchFetch')
   }
 }
 
-async function batchResponse(blocks, context) {
+async function batchResponse(blocks, context, logger) {
   try {
-    if (context.done === 0) {
-      await peerConnect(context)
+    if (context.done === 0 || !context.connection) {
+      await peerConnect(context, logger)
     }
 
     const message = new Message()
 
-    await Promise.all(blocks.map((async (block) => {
-      // TODO metrics
-      // telemetry.increaseCount('bitswap-sent-data', block.content.length)
-      // telemetry.increaseCount('bitswap-sent-info', sizeofBlock(block.content))
-      return message.push(block, context)
-    })()))
+    for (let i = 0; i < blocks.length; i++) {
+      const block = blocks[i]
+      if (block.type === BLOCK_TYPE_INFO) {
+        block.info?.found && telemetry.increaseCount('bitswap-sent-info', sizeofBlockInfo(block.info))
+      } else {
+        block.data?.found && telemetry.increaseCount('bitswap-sent-data', block.data.content.length)
+      }
+      message.push(block, context)
+    }
+
     await message.send(context)
 
     telemetry.decreaseCount('bitswap-pending-entries', context.done)
     context.done += blocks.length
 
     if (context.done >= context.todo) {
-      peerClose(context)
+      // note: not awaiting
+      peerClose(context, logger)
     }
   } catch (error) {
     logger.error({ error: serializeError(error) }, 'error on handler#batchResponse')
   }
 }
 
-async function peerClose(context) {
+async function peerClose(context, logger) {
   telemetry.decreaseCount('bitswap-active-connections')
 
   try {
-    await context.connection.close()
+    context.connection && (await context.connection.close())
     context.connection = null
   } catch (error) {
     logger.error({ error: serializeError(error) }, 'error on handler#peerClose')

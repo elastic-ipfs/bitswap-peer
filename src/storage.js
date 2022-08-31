@@ -5,7 +5,6 @@ const { DynamoDBClient, GetItemCommand, QueryCommand } = require('@aws-sdk/clien
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3')
 const { NodeHttpHandler } = require('@aws-sdk/node-http-handler')
 const { marshall, unmarshall } = require('@aws-sdk/util-dynamodb')
-const { base58btc: base58 } = require('multiformats/bases/base58')
 const LRUCache = require('mnemonist/lru-cache')
 const sleep = require('util').promisify(setTimeout)
 
@@ -31,12 +30,8 @@ s3Clients[defaultAwsRegion] = new S3Client({
   requestHandler: new NodeHttpHandler({ httpsAgent: new Agent(HTTP_AGENT_OPTIONS) })
 })
 
-const blockInfoCache = new LRUCache(cacheBlockInfoSize)
-const blockDataCache = new LRUCache(cacheBlockDataSize)
-
-function cidToKey(cid) {
-  return base58.encode(cid.multihash.bytes)
-}
+const blockInfoCache = cacheBlockInfo ? new LRUCache(cacheBlockInfoSize) : null
+const blockDataCache = cacheBlockData ? new LRUCache(cacheBlockDataSize) : null
 
 async function fetchS3({ region, bucket, key, offset, length, logger, retries = s3MaxRetries, retryDelay = s3RetryDelay }) {
   if (length === 0) {
@@ -209,92 +204,107 @@ async function sendDynamoCommand({
 
 // -----
 
-async function fetchBlocksInfo(blocks) {
-  return Promise.all(blocks
-    .map((async ({ block, index }) => {
-      const content = await fetchBlockInfo(block)
-      return { content, index }
-    })()))
+/**
+ * content will be appended to each block
+ */
+async function fetchBlocksData({ blocks, logger }) {
+  // load blocks info to get offset and length
+  await fetchBlocksInfo({ blocks, logger })
+
+  await Promise.allSettled(blocks
+    .map(block => fetchBlockData({ block, logger })))
 }
 
-async function fetchBlocksData(blocks) {
-  return Promise.all(blocks
-    .map((async ({ block, index }) => {
-      const content = await fetchBlockData(block)
-      return { content, index }
-    })()))
-}
-
-async function fetchBlockData(block) {
-  // TODO config use sdk client
-  // TODO metrics
-  // TODO retry
-  // TODO use LRU cache
-  if (!block.key) { block.key = cidToKey(block.cid) }
-  // TODO config if USE_CUSTOM_AWS_CLIENT
-}
-
-async function fetchBlockInfo(block) {
-  // TODO use sdk client
-  // check RDU query with multiple keys
-  // TODO use LRU cache
-  // TODO metrics
-  // TODO retry
-  if (!block.key) { block.key = cidToKey(block.cid) }
-  // TODO config if USE_CUSTOM_AWS_CLIENT
-}
-
-async function OLDgetBlockInfo(dispatcher, cid) {
-  const key = cidToKey(cid)
-  const cached = blockInfoCache.get(key)
-
-  if (cacheBlockInfo) {
-    if (cached) {
-      telemetry.increaseCount('cache-block-info-hits')
-      return cached
-    }
-    telemetry.increaseCount('cache-block-info-misses')
+async function fetchBlockData({ block, logger }) {
+  if (block.cancel) {
+    telemetry.increaseCount('bitswap-block-data-canceled')
+    return
   }
 
-  telemetry.increaseCount('dynamo-reads')
-  const item = await telemetry.trackDuration(
-    'dynamo-reads',
-    searchCarInDynamoV1({ dispatcher, blockKey: key, logger })
-  )
-
-  if (item) {
-    blockInfoCache.set(key, item)
+  if (!block.key) {
+    logger.error({ block }, 'invalid block, missing key')
+    telemetry.increaseCount('bitswap-block-data-error')
+    return
   }
 
-  return item
-}
-
-async function OLDfetchBlock(dispatcher, cid) {
-  const info = await getBlockInfo(dispatcher, cid)
-  if (!info) {
-    return null
+  if (!block.info?.car) {
+    block.data = { notFound: true }
+    telemetry.increaseCount('bitswap-block-data-misses')
+    return
   }
 
-  const { offset, length, car } = info
-
-  const cacheKey = cidToKey(cid)
+  let cacheKey
   if (cacheBlockData) {
-    const bytes = blockDataCache.get(cacheKey)
-    if (bytes) {
+    cacheKey = block.key + '-' + block.info.offset + '-' + block.info.length
+    const cached = blockDataCache.get(cacheKey)
+    if (cached) {
       telemetry.increaseCount('cache-block-data-hits')
-      return bytes
+      telemetry.increaseCount('bitswap-block-data-hits')
+      block.data = { content: cached, found: true }
+      return
     }
     telemetry.increaseCount('cache-block-data-misses')
   }
 
-  const [, bucketRegion, bucketName, key] = car.match(/([^/]+)\/([^/]+)\/(.+)/)
-  const bytes = await fetchBlockFromS3(dispatcher, bucketRegion, bucketName, key, offset, length)
-
-  if (cacheBlockData) {
-    blockDataCache.set(cacheKey, bytes)
+  try {
+    const [, region, bucket, key] = block.info.car.match(/([^/]+)\/([^/]+)\/(.+)/)
+    // TODO test const [region, bucket, ...key] = block.info.car.split('/') // TODO OLD car.match(/([^/]+)\/([^/]+)\/(.+)/)
+    const content = await fetchS3({ region, bucket, key, offset: block.info.offset, length: block.info.length, logger })
+    block.data = { content, found: true }
+    telemetry.increaseCount('bitswap-block-data-hits')
+    cacheBlockData && blockInfoCache.set(cacheKey, block.data.content)
+    return
+  } catch (error) {
+    telemetry.increaseCount('bitswap-block-data-error')
   }
 
-  return bytes
+  block.data = { notFound: true }
+  telemetry.increaseCount('bitswap-block-data-misses')
+}
+
+async function fetchBlocksInfo({ blocks, logger }) {
+  await Promise.allSettled(blocks
+    .map(block => fetchBlockInfo({ block, logger })))
+}
+
+// TODO try query with multiple keys at once, check RDU
+async function fetchBlockInfo({ block, logger }) {
+  if (block.cancel) {
+    telemetry.increaseCount('bitswap-block-info-canceled')
+    return
+  }
+
+  if (!block.key) {
+    logger.error({ block }, 'invalid block, missing key')
+    telemetry.increaseCount('bitswap-block-info-error')
+    return
+  }
+
+  if (cacheBlockInfo) {
+    const cached = blockInfoCache.get(block.key)
+    if (cached) {
+      telemetry.increaseCount('cache-block-info-hits')
+      telemetry.increaseCount('bitswap-block-info-hits')
+      block.info = { ...cached, found: true }
+      return
+    }
+    telemetry.increaseCount('cache-block-info-misses')
+  }
+
+  try {
+    const info = await searchCarInDynamoV1({ blockKey: block.key, logger })
+    if (info) {
+      block.info = { ...info, found: true }
+      telemetry.increaseCount('bitswap-block-info-hits')
+      cacheBlockInfo && blockInfoCache.set(block.key, info)
+      return
+    }
+  } catch (error) {
+    telemetry.increaseCount('bitswap-block-info-error')
+  }
+
+  block.info = { notFound: true }
+  telemetry.increaseCount('bitswap-block-info-misses')
 }
 
 // --- temporary solution to lazy recover missing car files
@@ -330,7 +340,6 @@ module.exports = {
   fetchBlocksData,
   fetchBlocksInfo,
 
-  cidToKey,
   fetchS3,
   searchCarInDynamoV1,
   searchCarInDynamoV0

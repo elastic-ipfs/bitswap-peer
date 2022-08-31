@@ -119,12 +119,13 @@ async function batchResponse(blocks, context, logger) {
 
     for (let i = 0; i < blocks.length; i++) {
       const block = blocks[i]
-      if (block.type === BLOCK_TYPE_INFO) {
-        block.info?.found && telemetry.increaseCount('bitswap-sent-info', sizeofBlockInfo(block.info))
-      } else {
-        block.data?.found && telemetry.increaseCount('bitswap-sent-data', block.data.content.length)
+      if (message.push(block, context)) {
+        if (block.type === BLOCK_TYPE_INFO) {
+          block.info?.found && telemetry.increaseCount('bitswap-sent-info', sizeofBlockInfo(block.info))
+        } else {
+          block.data?.found && telemetry.increaseCount('bitswap-sent-data', block.data.content.length)
+        }
       }
-      message.push(block, context)
     }
 
     await message.send(context)

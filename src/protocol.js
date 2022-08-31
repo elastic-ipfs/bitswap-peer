@@ -209,7 +209,8 @@ const emptyWantList = new WantList([], true)
 class Message {
   constructor(wantlist = emptyWantList, blocks = [], blockPresences = [], pendingBytes = 0) {
     this.wantlist = wantlist
-    this.blocks = { [BLOCK_TYPE_DATA]: blocks, [BLOCK_TYPE_INFO]: blockPresences }
+    this.blocks = blocks
+    this.blockPresences = blockPresences
     this.pendingBytes = pendingBytes
   }
 
@@ -237,15 +238,14 @@ class Message {
     if (protocol === BITSWAP_V_100) {
       return {
         wantlist: this.wantlist.serialize(protocol),
-        blocks: this.blocks[BLOCK_TYPE_DATA].map(b => b.data)
+        blocks: this.blocks.map(b => b.data)
       }
     }
 
     return {
-      // !TODO check must be sent back or not
       wantlist: this.wantlist.serialize(protocol),
-      payload: this.blocks[BLOCK_TYPE_DATA].map(b => b.serialize(protocol)),
-      blockPresences: this.blocks[BLOCK_TYPE_INFO].map(b => b.serialize(protocol)),
+      payload: this.blocks.map(b => b.serialize(protocol)),
+      blockPresences: this.blockPresences.map(b => b.serialize(protocol)),
       pendingBytes: this.pendingBytes * Number.MAX_SAFE_INTEGER
     }
   }
@@ -258,27 +258,36 @@ class Message {
    * push block to message, to be sent later
    * note there are no size limit, because the purpose is to send responses asap **without buffering**
    */
-  async push(block, context) {
-    if (block.cancel || (block.type !== BLOCK_TYPE_DATA && block.type !== BLOCK_TYPE_INFO)) { return }
+  push(block, context) {
+    if (block.cancel) { return false }
+    if (block.type !== BLOCK_TYPE_DATA && block.type !== BLOCK_TYPE_INFO) {
+      logger.error('unsupported type in Message.push')
+      return false
+    }
 
     try {
       const responseBlock = response[block.type](block, context.protocol)
       if (!responseBlock) { return }
 
-      const { type, b } = responseBlock
-      this.blocks[type].push(b)
+      responseBlock.type === BLOCK_TYPE_DATA
+        ? this.blocks.push(responseBlock.block)
+        : this.blockPresences.push(responseBlock.block)
+      return true
     } catch (error) {
       logger.error({ error: serializeError(error) }, 'error on Message.push')
     }
+    return false
   }
 
   async send(context) {
     try {
-      const encoded = this.encode(context.protocol)
-      await context.connection.send(encoded)
-      // TODO maybe not necessary, check and remove after memory issues fix
-      this.blocks[BLOCK_TYPE_DATA] = []
-      this.blocks[BLOCK_TYPE_INFO] = []
+      if (this.blocks.length > 0 || this.blockPresences.length > 0) {
+        const encoded = this.encode(context.protocol)
+        await context.connection.send(encoded)
+        // TODO maybe not necessary, check and remove after memory issues fix
+        this.blocks = []
+        this.blockPresences = []
+      }
     } catch (error) {
       logger.error({ error: serializeError(error) }, 'error on Message.send')
     }
@@ -288,18 +297,18 @@ class Message {
 const response = {
   [BLOCK_TYPE_DATA]: (block, protocol) => {
     if (block.data?.found) {
-      return { type: BLOCK_TYPE_DATA, b: new Block(block.cid, block.data.content) }
+      return { type: BLOCK_TYPE_DATA, block: new Block(block.cid, block.data.content) }
     }
     if (block.data?.notFound && block.sendDontHave && protocol === BITSWAP_V_120) {
-      return { type: BLOCK_TYPE_INFO, b: new BlockPresence(block.cid, BlockPresence.Type.DontHave) }
+      return { type: BLOCK_TYPE_INFO, block: new BlockPresence(block.cid, BlockPresence.Type.DontHave) }
     }
   },
   [BLOCK_TYPE_INFO]: (block, protocol) => {
     if (block.info?.found) {
-      return { type: BLOCK_TYPE_INFO, b: new BlockPresence(block.cid, BlockPresence.Type.Have) }
+      return { type: BLOCK_TYPE_INFO, block: new BlockPresence(block.cid, BlockPresence.Type.Have) }
     }
     if (block.info?.notFound && block.sendDontHave && protocol === BITSWAP_V_120) {
-      return { type: BLOCK_TYPE_INFO, b: new BlockPresence(block.cid, BlockPresence.Type.DontHave) }
+      return { type: BLOCK_TYPE_INFO, block: new BlockPresence(block.cid, BlockPresence.Type.DontHave) }
     }
   }
 }

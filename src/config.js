@@ -6,6 +6,12 @@ const { join, resolve } = require('path')
 require('dotenv').config({ path: process.env.ENV_FILE_PATH || resolve(process.cwd(), '.env') })
 
 const {
+  MAX_BLOCK_DATA_SIZE: maxBlockDataSize,
+  MAX_MESSAGE_SIZE: maxMessageSize,
+
+  PROCESSING_QUEUE_CONCURRENCY: processingQueueConcurrency,
+  BLOCKS_BATCH_SIZE: blocksBatchSize,
+
   CACHE_BLOCK_INFO: cacheBlockInfo,
   CACHE_BLOCK_INFO_SIZE: cacheBlockInfoSize,
 
@@ -37,6 +43,11 @@ const port = parseInt(rawPort)
 const httpPort = parseInt(rawHttpPort)
 
 module.exports = {
+  maxBlockDataSize: maxBlockDataSize ? parseInt(maxBlockDataSize) : 2 * 1024 * 1024, // 2 MB
+  maxMessageSize: maxMessageSize ? parseInt(maxMessageSize) : 4 * 1024 * 1024, // 4 MB
+  processingQueueConcurrency: processingQueueConcurrency ? parseInt(processingQueueConcurrency) : 32,
+  blocksBatchSize: blocksBatchSize ? parseInt(blocksBatchSize) : 32,
+
   blocksTable: blocksTable ?? 'blocks',
 
   cacheBlockInfo: cacheBlockInfo ? cacheBlockInfo === 'true' : true, // default is true

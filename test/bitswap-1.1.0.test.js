@@ -15,8 +15,7 @@ const {
 } = require('./utils/helpers')
 const { mockAWS } = require('./utils/mock')
 
-const TIMEOUT_SHORT = 1500
-const TIMEOUT_LONG = 3000
+const TIMEOUT = 1500
 
 t.beforeEach(() => mockAWS())
 
@@ -43,7 +42,7 @@ t.test(`${protocol} - uses the right fields when serializing and deserializing`,
 
   const { client, service, connection, receiver } = await prepare(t, protocol)
   await connection.send(request.encode(protocol))
-  const [response] = await receiveMessages(receiver, protocol, TIMEOUT_SHORT, 1, true)
+  const [response] = await receiveMessages(receiver, protocol, TIMEOUT, 1, true)
   await teardown(t, client, service, connection)
 
   const cid1Blocks = response.payload.filter(p => p.prefix.equals(Buffer.from([0x01, 0x55, 0x12, 0x20])))
@@ -231,7 +230,7 @@ t.test(`${protocol} - type=Mixed - cancel=true - no response received`, async t 
   const request = new Message(wantList, [], [], 0)
   await connection.send(request.encode(protocol))
 
-  const responses = await receiveMessages(receiver, protocol, TIMEOUT_SHORT)
+  const responses = await receiveMessages(receiver, protocol, TIMEOUT)
   await teardown(t, client, service, connection)
 
   t.equal(responses.length, 0)
@@ -253,7 +252,7 @@ t.test(`${protocol} - large blocks skipping`, async t => {
   const request = new Message(wantList, [], [], 0)
   await connection.send(request.encode(protocol))
 
-  const responses = await receiveMessages(receiver, protocol, TIMEOUT_LONG, 2)
+  const responses = await receiveMessages(receiver, protocol, TIMEOUT, 2)
   await teardown(t, client, service, connection)
 
   const blocks = [...responses[0].blocks, ...responses[1].blocks]

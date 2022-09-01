@@ -89,7 +89,7 @@ async function receiveMessages(receiver, protocol, timeout = 2000, limit = 1, ra
       try {
         responses.push(raw ? RawMessage.decode(message) : Message.decode(message, protocol))
 
-        if (responses.length === limit) {
+        if (limit > 0 && responses.length === limit) {
           resolved = true
           resolve(responses)
         }

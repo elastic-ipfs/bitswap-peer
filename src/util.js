@@ -6,9 +6,12 @@ function cidToKey(cid) {
   return base58.encode(cid.multihash.bytes)
 }
 
-// block is { car: string, offset: number, length: number }
+/**
+ * TODO jsdoc
+ * blockInfo is { car: string, offset: number, length: number }
+ */
 function sizeofBlockInfo(blockInfo) {
-  return blockInfo.car.length * 2 + 16
+  return blockInfo?.car?.length ? blockInfo.car.length * 2 + 16 : 0
 }
 
 module.exports = { cidToKey, sizeofBlockInfo }

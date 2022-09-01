@@ -3,8 +3,8 @@
 const t = require('tap')
 const { setTimeout: sleep } = require('timers/promises')
 
+const config = require('../src/config')
 const { BITSWAP_V_120: protocol, BlockPresence, Entry, Message, WantList } = require('../src/protocol')
-const protocolEstimation = require('../src/protocol')
 const { cid1, cid1Content, cid2, cid2Link, cid3, cid4, cid5, cid6, cid7, cid8, cid9 } = require('./fixtures/cids')
 const {
   getPresence,
@@ -18,8 +18,7 @@ const {
 } = require('./utils/helpers')
 const { mockAWS } = require('./utils/mock')
 
-const TIMEOUT_SHORT = 1500
-const TIMEOUT_LONG = 3000
+const TIMEOUT = 1500
 
 t.beforeEach(() => mockAWS())
 
@@ -46,7 +45,7 @@ t.test(`${protocol} - uses the right fields when serializing and deserializing`,
 
   const { client, service, connection, receiver } = await prepare(t, protocol)
   await connection.send(request.encode(protocol))
-  const [response] = await receiveMessages(receiver, protocol, TIMEOUT_SHORT, 1, true)
+  const [response] = await receiveMessages(receiver, protocol, TIMEOUT, 1, true)
   await teardown(t, client, service, connection)
 
   const cid2Blocks = response.payload.filter(p => p.prefix.equals(Buffer.from([0x01, 0x70, 0x12, 0x20])))
@@ -285,7 +284,7 @@ t.test(`${protocol} - large blocks skipping`, async t => {
   const request = new Message(wantList, [], [], 0)
   await connection.send(request.encode(protocol))
 
-  const responses = await receiveMessages(receiver, protocol, TIMEOUT_LONG, 2)
+  const responses = await receiveMessages(receiver, protocol, TIMEOUT, 2)
   await teardown(t, client, service, connection)
 
   const blocks = [...responses[0].blocks, ...responses[1].blocks]
@@ -300,9 +299,9 @@ t.test(`${protocol} - large blocks skipping`, async t => {
   await hasSingleBlockWithHash(t, { blocks }, cid8.multihash, true)
 })
 
-t.test(`${protocol} - large messages skipping`, async t => {
+t.test(`${protocol} - messages splitting`, async t => {
   const { client, service, connection, receiver } = await prepare(t, protocol)
-  const numPresences = 1e3
+  const numPresences = 456
 
   const wantList = new WantList(
     [
@@ -316,25 +315,16 @@ t.test(`${protocol} - large messages skipping`, async t => {
   const request = new Message(wantList, [], [], 0)
   await connection.send(request.encode(protocol))
 
-  const responses = await receiveMessages(receiver, protocol, TIMEOUT_LONG, 2)
+  const responses = await receiveMessages(receiver, protocol, TIMEOUT, -1)
   await teardown(t, client, service, connection)
 
-  t.equal(responses.length, 2)
-
-  t.equal(responses[0].blocks.length + responses[1].blocks.length, 2)
-  t.ok(responses[0].blockPresences.length <= numPresences)
-  t.ok(responses[1].blockPresences.length <= numPresences)
-  t.equal(responses[0].blockPresences.length + responses[1].blockPresences.length, numPresences)
+  t.equal(responses.reduce((t, r) => t + r.blocks.length, 0), 2)
+  t.equal(responses.reduce((t, r) => t + r.blockPresences.length, 0), numPresences)
+  t.ok(responses.length >= Math.ceil(wantList.entries.length / config.blocksBatchSize))
 })
 
-t.test(`${protocol} - large presences skipping`, async t => {
-  // Delay this test so that overhead mocking is not impacting other tests
-  // TODO remove hardcoded timers
-  await sleep(10000)
-
-  const originalPresenceOverhead = protocolEstimation.newPresenceOverhead
-  protocolEstimation.newPresenceOverhead = 1024 * 1024 // 1 MB
-
+t.test(`${protocol} - large presences splitting - single block is smaller than MAX_MESSAGE_SIZE`, async t => {
+  config.maxMessageSize = 150
   const { client, service, connection, receiver } = await prepare(t, protocol)
 
   const wantList = new WantList(
@@ -349,17 +339,14 @@ t.test(`${protocol} - large presences skipping`, async t => {
   const request = new Message(wantList, [], [], 0)
   await connection.send(request.encode(protocol))
 
-  const responses = await receiveMessages(receiver, protocol, TIMEOUT_SHORT, 2)
+  const responses = await receiveMessages(receiver, protocol, TIMEOUT, -1)
   await teardown(t, client, service, connection)
-  protocolEstimation.newPresenceOverhead = originalPresenceOverhead
 
-  t.equal(responses.length, 2)
-  t.equal(responses[0].blockPresences.length, 2)
-  t.equal(responses[1].blockPresences.length, 1)
+  t.equal(responses.length, wantList.entries.length)
 
   t.equal(getPresence(t, responses[0], cid1).type, BlockPresence.Type.Have)
-  t.equal(getPresence(t, responses[0], cid2).type, BlockPresence.Type.Have)
-  t.equal(getPresence(t, responses[1], cid5).type, BlockPresence.Type.Have)
+  t.equal(getPresence(t, responses[1], cid2).type, BlockPresence.Type.Have)
+  t.equal(getPresence(t, responses[2], cid5).type, BlockPresence.Type.Have)
 })
 
 t.test(`${protocol} - closes streams properly`, async t => {
@@ -369,12 +356,12 @@ t.test(`${protocol} - closes streams properly`, async t => {
   const request = new Message(wantList, [], [], 0)
 
   connection.send(request.encode(protocol))
-  await receiveMessages(receiver, protocol, TIMEOUT_SHORT, 1)
+  await receiveMessages(receiver, protocol, TIMEOUT, 1)
   connection.close()
 
   // Wait for streams to be closed (happens asynchronously)
   // TODO hardcoded timers
-  await new Promise(resolve => setTimeout(resolve, 1000))
+  await sleep(1000)
 
   const peerConnections = Array.from(service.connectionManager.connections.entries())
   t.equal(peerConnections.length, 1, 'Service has only 1 peer with connections')

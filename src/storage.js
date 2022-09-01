@@ -12,7 +12,7 @@ const {
   blocksTable, blocksTablePrimaryKey,
   linkTableV1, linkTableBlockKey, linkTableCarKey,
   s3MaxRetries, s3RetryDelay, dynamoRetryDelay, dynamoMaxRetries,
-
+  maxBlockDataSize,
   cacheBlockInfo, cacheBlockInfoSize, cacheBlockData, cacheBlockDataSize
 } = require('./config')
 const { serializeError } = require('./logging')
@@ -202,8 +202,6 @@ async function sendDynamoCommand({
   throw new Error('Cannot send command to DynamoDB')
 }
 
-// -----
-
 /**
  * content will be appended to each block
  */
@@ -233,6 +231,15 @@ async function fetchBlockData({ block, logger }) {
     return
   }
 
+  if (block.info.length > maxBlockDataSize) {
+    logger.error({ block }, 'invalid block, length is greater than max allowed')
+    telemetry.increaseCount('bitswap-block-data-error')
+    // TODO send not found on large blocks as error?
+    // block.data = { found: true, content: Buffer.allocUnsafe(0) }
+    block.data = { notFound: true }
+    return
+  }
+
   let cacheKey
   if (cacheBlockData) {
     cacheKey = block.key + '-' + block.info.offset + '-' + block.info.length
@@ -248,7 +255,6 @@ async function fetchBlockData({ block, logger }) {
 
   try {
     const [, region, bucket, key] = block.info.car.match(/([^/]+)\/([^/]+)\/(.+)/)
-    // TODO test const [region, bucket, ...key] = block.info.car.split('/') // TODO OLD car.match(/([^/]+)\/([^/]+)\/(.+)/)
     const content = await fetchS3({ region, bucket, key, offset: block.info.offset, length: block.info.length, logger })
     block.data = { content, found: true }
     telemetry.increaseCount('bitswap-block-data-hits')

@@ -48,6 +48,8 @@ const nonEmptyOverhead = 2 + 8
 const newBlockOverhead = 1 + 1 + 4 + 4
 const newPresenceOverhead = 1 + 1 + 1 + 1
 
+const EMPTY_MESSAGE_OVERHEAD_SIZE = 16 // 16 = Message.encode(BITSWAP_V_120).length + nonEmptyOverhead on empty message
+
 class Entry {
   constructor(cid, priority, cancel, wantType, sendDontHave) {
     this.cid = cid
@@ -203,15 +205,17 @@ class BlockPresence {
 
 const emptyWantList = new WantList([], true)
 
-/*
-  Each CID is roughly 40 byte.
-*/
 class Message {
   constructor(wantlist = emptyWantList, blocks = [], blockPresences = [], pendingBytes = 0) {
     this.wantlist = wantlist
     this.blocks = blocks
     this.blockPresences = blockPresences
     this.pendingBytes = pendingBytes
+    this.blocksSize = this.isEmpty() ? EMPTY_MESSAGE_OVERHEAD_SIZE : this.encode(BITSWAP_V_120).length + nonEmptyOverhead
+  }
+
+  isEmpty () {
+    return this.wantlist.entries.length + this.blocks.length + this.blockPresences.length < 1
   }
 
   static decode(encoded, protocol) {
@@ -258,7 +262,7 @@ class Message {
    * push block to message, to be sent later
    * note there are no size limit, because the purpose is to send responses asap **without buffering**
    */
-  push(block, context) {
+  push(block, size, context) {
     if (block.cancel) { return false }
     if (block.type !== BLOCK_TYPE_DATA && block.type !== BLOCK_TYPE_INFO) {
       logger.error('unsupported type in Message.push')
@@ -269,14 +273,22 @@ class Message {
       const responseBlock = response[block.type](block, context.protocol)
       if (!responseBlock) { return }
 
-      responseBlock.type === BLOCK_TYPE_DATA
-        ? this.blocks.push(responseBlock.block)
-        : this.blockPresences.push(responseBlock.block)
+      if (responseBlock.type === BLOCK_TYPE_DATA) {
+        this.blocks.push(responseBlock.block)
+        this.blocksSize += newBlockOverhead + size
+      } else {
+        this.blockPresences.push(responseBlock.block)
+        this.blocksSize += newPresenceOverhead + size
+      }
       return true
     } catch (error) {
       logger.error({ error: serializeError(error) }, 'error on Message.push')
     }
     return false
+  }
+
+  size() {
+    return this.blocksSize
   }
 
   async send(context) {
@@ -328,7 +340,6 @@ module.exports = {
   Message,
   newBlockOverhead,
   newPresenceOverhead,
-  nonEmptyOverhead,
   protocols,
   RawMessage,
   WantList,

@@ -9,7 +9,12 @@ _Variables in bold are required._
 | AWS_ACCESS_KEY_ID     |               | The AWS key ID.                                                          |
 | AWS_REGION            |               | The AWS region.                                                          |
 | AWS_SECRET_ACCESS_KEY |               | The AWS access key.                                                      |
-| AWS_ROLE_ARN |               | The AWS role arn |
+
+| MAX_BLOCK_DATA_SIZE | `2 MB` | Maximum size for data block |
+| MAX_MESSAGE_SIZE | `4 MB` | Maximum size response message, must be larger than a single block info/data |
+| HANDLING_BLOCKS_BATCH_SIZE | `32` | Batch size of handling blocks - how many requested blocks are being processed in a batch |
+| PROCESSING_QUEUE_CONCURRENCY | `32` | Concurrent responding operations - how many operations are been executed in parallel for responding |
+
 | CACHE_BLOCK_INFO      | `true`       | Set to `true` to cache block informations with in a in-memory LRU cache. |
 | CACHE_BLOCK_INFO_SIZE | `10000`       | Max entries of the block info cache.                                     |
 | CACHE_BLOCK_DATA      | `false`       | Set to `true` to cache block data with in a in-memory LRU cache.         |

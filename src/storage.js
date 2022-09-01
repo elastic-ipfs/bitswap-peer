@@ -52,6 +52,7 @@ async function fetchS3({ region, bucket, key, offset, length, logger, retries = 
   let error
   let response
   const request = { Bucket: bucket, Key: key }
+  // TODO test real s3 request
   if (length > 0) {
     if (!offset) { offset = 0 }
     request.Range = 'bytes=' + offset + '-' + (length - 1)
@@ -81,6 +82,10 @@ async function fetchS3({ region, bucket, key, offset, length, logger, retries = 
       logger.error({ error: serializeError(error), region, bucket, key }, `Cannot open file S3 after ${attempts} attempts`)
     }
     throw error
+  }
+
+  if (!response) {
+    throw new Error('invalid response form s3 client')
   }
 
   return streamToBuffer(response.Body)
@@ -133,6 +138,7 @@ async function searchCarInDynamoV1({
   const fallback = await searchCarInDynamoV0({ blockKey, logger, retries, retryDelay })
   if (fallback) {
     logger.error({ block: key, car: fallback.car }, 'block not found in V1 table but found in V0 table')
+    /* c8 ignore next 3 */
     if (process.env.NODE_ENV === 'production') {
       recoverV0Tables(fallback.car, logger)
     }
@@ -234,8 +240,7 @@ async function fetchBlockData({ block, logger }) {
   if (block.info.length > maxBlockDataSize) {
     logger.error({ block }, 'invalid block, length is greater than max allowed')
     telemetry.increaseCount('bitswap-block-data-error')
-    // TODO send not found on large blocks as error?
-    // block.data = { found: true, content: Buffer.allocUnsafe(0) }
+    // TODO should send error?
     block.data = { notFound: true }
     return
   }
@@ -258,7 +263,7 @@ async function fetchBlockData({ block, logger }) {
     const content = await fetchS3({ region, bucket, key, offset: block.info.offset, length: block.info.length, logger })
     block.data = { content, found: true }
     telemetry.increaseCount('bitswap-block-data-hits')
-    cacheBlockData && blockInfoCache.set(cacheKey, block.data.content)
+    cacheBlockData && blockDataCache.set(cacheKey, content)
     return
   } catch (error) {
     telemetry.increaseCount('bitswap-block-data-error')
@@ -268,12 +273,14 @@ async function fetchBlockData({ block, logger }) {
   telemetry.increaseCount('bitswap-block-data-misses')
 }
 
+/**
+ * info will be appended to each block
+ */
 async function fetchBlocksInfo({ blocks, logger }) {
   await Promise.allSettled(blocks
     .map(block => fetchBlockInfo({ block, logger })))
 }
 
-// TODO try query with multiple keys at once, check RDU
 async function fetchBlockInfo({ block, logger }) {
   if (block.cancel) {
     telemetry.increaseCount('bitswap-block-info-canceled')
@@ -329,6 +336,7 @@ const sqsClient = new SQSClient({
   requestHandler: new NodeHttpHandler({ httpsAgent: new Agent(HTTP_AGENT_OPTIONS) })
 })
 
+/* c8 ignore start */
 async function recoverV0Tables(car, logger, queue = 'indexer-topic') {
   try {
     if (recovering.has(car)) { return }
@@ -341,10 +349,14 @@ async function recoverV0Tables(car, logger, queue = 'indexer-topic') {
     logger.error({ car, error: serializeError(error) }, 'unable to recover the car')
   }
 }
+/* c8 ignore stop */
 
 module.exports = {
   fetchBlocksData,
   fetchBlocksInfo,
+
+  blockInfoCache,
+  blockDataCache,
 
   fetchS3,
   searchCarInDynamoV1,

@@ -8,7 +8,7 @@ const {
   hasSingleBlockWithHash,
   hasSingleDAGBlock,
   hasSingleRawBlock,
-  prepare,
+  setupService,
   receiveMessages,
   safeGetDAGLinks,
   teardown
@@ -38,7 +38,7 @@ t.test(`${protocol} - uses the right fields when serializing and deserializing`,
   t.equal(entry.block[0], 0x12)
   t.equal(entry.block[1], 0x20)
 
-  const { client, service, connection, receiver } = await prepare(t, protocol)
+  const { client, service, connection, receiver } = await setupService({ protocol })
   await connection.send(request.encode(protocol))
   const [response] = await receiveMessages(receiver, protocol, TIMEOUT, 1, true)
 
@@ -59,7 +59,7 @@ t.test(`${protocol} - uses the right fields when serializing and deserializing`,
 })
 
 t.test(`${protocol} - type=Block - sendDontHave=true - 2 hits / 2 misses - 2 blocks received`, async t => {
-  const { client, service, connection, receiver } = await prepare(t, protocol)
+  const { client, service, connection, receiver } = await setupService({ protocol })
 
   const wantList = new WantList(
     [
@@ -85,7 +85,7 @@ t.test(`${protocol} - type=Block - sendDontHave=true - 2 hits / 2 misses - 2 blo
 })
 
 t.test(`${protocol} - type=Block - sendDontHave=false - 2 hits / 2 misses - 2 blocks received`, async t => {
-  const { client, service, connection, receiver } = await prepare(t, protocol)
+  const { client, service, connection, receiver } = await setupService({ protocol })
 
   const wantList = new WantList(
     [
@@ -111,7 +111,7 @@ t.test(`${protocol} - type=Block - sendDontHave=false - 2 hits / 2 misses - 2 bl
 })
 
 t.test(`${protocol} - type=Have - sendDontHave=true - 2 hits / 2 misses - 2 blocks received`, async t => {
-  const { client, service, connection, receiver } = await prepare(t, protocol)
+  const { client, service, connection, receiver } = await setupService({ protocol })
 
   const wantList = new WantList(
     [
@@ -137,7 +137,7 @@ t.test(`${protocol} - type=Have - sendDontHave=true - 2 hits / 2 misses - 2 bloc
 })
 
 t.test(`${protocol} - type=Have - sendDontHave=false - 2 hits / 2 misses - 2 blocks received`, async t => {
-  const { client, service, connection, receiver } = await prepare(t, protocol)
+  const { client, service, connection, receiver } = await setupService({ protocol })
 
   const wantList = new WantList(
     [
@@ -163,7 +163,7 @@ t.test(`${protocol} - type=Have - sendDontHave=false - 2 hits / 2 misses - 2 blo
 })
 
 t.test(`${protocol} - type=Mixed - sendDontHave=true - 2 blocks received`, async t => {
-  const { client, service, connection, receiver } = await prepare(t, protocol)
+  const { client, service, connection, receiver } = await setupService({ protocol })
 
   const wantList = new WantList(
     [
@@ -189,7 +189,7 @@ t.test(`${protocol} - type=Mixed - sendDontHave=true - 2 blocks received`, async
 })
 
 t.test(`${protocol} - type=Mixed - sendDontHave=false - 2 blocks received`, async t => {
-  const { client, service, connection, receiver } = await prepare(t, protocol)
+  const { client, service, connection, receiver } = await setupService({ protocol })
 
   const wantList = new WantList(
     [
@@ -215,7 +215,7 @@ t.test(`${protocol} - type=Mixed - sendDontHave=false - 2 blocks received`, asyn
 })
 
 t.test(`${protocol} - type=Mixed - cancel=true - no response received`, async t => {
-  const { client, service, connection, receiver } = await prepare(t, protocol)
+  const { client, service, connection, receiver } = await setupService({ protocol })
 
   const wantList = new WantList(
     [
@@ -237,7 +237,7 @@ t.test(`${protocol} - type=Mixed - cancel=true - no response received`, async t 
 })
 
 t.test(`${protocol} - large blocks skipping`, async t => {
-  const { client, service, connection, receiver } = await prepare(t, protocol)
+  const { client, service, connection, receiver } = await setupService({ protocol })
 
   const wantList = new WantList(
     [

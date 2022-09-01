@@ -296,9 +296,6 @@ class Message {
       if (this.blocks.length > 0 || this.blockPresences.length > 0) {
         const encoded = this.encode(context.protocol)
         await context.connection.send(encoded)
-        // TODO maybe not necessary, check and remove after memory issues fix
-        this.blocks = []
-        this.blockPresences = []
       }
     } catch (error) {
       logger.error({ error: serializeError(error) }, 'error on Message.send')

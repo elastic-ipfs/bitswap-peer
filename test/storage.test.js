@@ -6,8 +6,9 @@ const t = require('tap')
 const { Readable } = require('stream')
 const config = require('../src/config')
 
-const { fetchS3, searchCarInDynamoV0, searchCarInDynamoV1 } = require('../src/storage')
-const { mockDynamoGetItemCommand, mockDynamoQueryCommand, mockS3GetObject } = require('./utils/mock')
+const { fetchS3, searchCarInDynamoV0, searchCarInDynamoV1, fetchBlocksData, fetchBlocksInfo } = require('../src/storage')
+const { mockDynamoGetItemCommand, mockDynamoQueryCommand, mockS3GetObject, mockBlockInfoSource, mockBlockDataSource } = require('./utils/mock')
+const { dummyLogger, spyLogger } = require('./utils/helpers')
 
 t.test('searchCarInDynamoV0', async t => {
   t.test('get result', async t => {
@@ -142,7 +143,7 @@ t.test('fetchS3', async t => {
     const response = new Readable()
     response.push('content')
     response.push(null)
-    mockS3GetObject({ bucket: 'the-bucket', key: 'the-key', length: 56789, response })
+    mockS3GetObject({ bucket: 'the-bucket', key: 'the-key', offset: 12345, length: 56789, response })
 
     const content = await fetchS3({ region: 'the-region', bucket: 'the-bucket', key: 'the-key', offset: 12345, length: 56789 })
 
@@ -200,5 +201,220 @@ t.test('fetchS3', async t => {
 
     t.equal(messages.debug.length, 0)
     t.same(messages.error, ['S3 does not exists'])
+  })
+})
+
+t.test('fetchBlocksData', async t => {
+  t.test('should retrieve data blocks successfully', async t => {
+    const blocks = [{ key: '123' }, { key: '456' }, { key: '789' }]
+
+    mockBlockInfoSource({ key: blocks[0].key, info: { offset: 0, length: 8, car: 'region/bucket/abc' } })
+    mockBlockInfoSource({ key: blocks[1].key, info: { offset: 12, length: 2, car: 'region/bucket/abc' } })
+    mockBlockInfoSource({ key: blocks[2].key, info: { offset: 14, length: 2, car: 'region/bucket/abc' } })
+
+    mockBlockDataSource({ region: 'region', bucket: 'bucket', key: 'abc', offset: 0, length: 8, data: '12345678' })
+    mockBlockDataSource({ region: 'region', bucket: 'bucket', key: 'abc', offset: 12, length: 2, data: 'bb' })
+    mockBlockDataSource({ region: 'region', bucket: 'bucket', key: 'abc', offset: 14, length: 2, data: 'cc' })
+
+    await fetchBlocksData({ blocks, logger: dummyLogger() })
+
+    t.same(blocks, [
+      {
+        key: '123',
+        info: { offset: 0, length: 8, car: 'region/bucket/abc', found: true },
+        data: { content: Buffer.from('12345678'), found: true }
+      },
+      {
+        key: '456',
+        info: { offset: 12, length: 2, car: 'region/bucket/abc', found: true },
+        data: { content: Buffer.from('bb'), found: true }
+      },
+      {
+        key: '789',
+        info: { offset: 14, length: 2, car: 'region/bucket/abc', found: true },
+        data: { content: Buffer.from('cc'), found: true }
+      }
+    ])
+  })
+
+  t.test('should get error on block without key', async t => {
+    const blocks = [{ key: '123' }, { }, { key: '789' }]
+
+    mockBlockInfoSource({ key: blocks[0].key, info: { offset: 0, length: 8, car: 'region/bucket/abc' } })
+    mockBlockInfoSource({ key: blocks[2].key, info: { offset: 14, length: 2, car: 'region/bucket/abc' } })
+
+    mockBlockDataSource({ region: 'region', bucket: 'bucket', key: 'abc', offset: 0, length: 8, data: '12345678' })
+    mockBlockDataSource({ region: 'region', bucket: 'bucket', key: 'abc', offset: 14, length: 2, data: 'cc' })
+
+    const spy = spyLogger()
+    await fetchBlocksData({ blocks, logger: spy })
+
+    t.same(blocks, [
+      {
+        key: '123',
+        info: { offset: 0, length: 8, car: 'region/bucket/abc', found: true },
+        data: { content: Buffer.from('12345678'), found: true }
+      },
+      { },
+      {
+        key: '789',
+        info: { offset: 14, length: 2, car: 'region/bucket/abc', found: true },
+        data: { content: Buffer.from('cc'), found: true }
+      }
+    ])
+
+    t.equal(spy.messages.error[0][1], 'invalid block, missing key')
+    t.equal(spy.messages.error[1][1], 'invalid block, missing key')
+    t.equal(spy.messages.error.length, 2)
+  })
+
+  t.test('should get error on block length greater than max allowed', async t => {
+    const blocks = [{ key: '123' }, { key: '456' }, { key: '789' }]
+
+    mockBlockInfoSource({ key: blocks[0].key, info: { offset: 0, length: 10e9, car: 'region/bucket/abc' } })
+    mockBlockInfoSource({ key: blocks[1].key, info: { offset: 14, length: 2, car: 'region/bucket/abc' } })
+    mockBlockInfoSource({ key: blocks[2].key, info: { offset: 14, length: 2, car: 'region/bucket/abc' } })
+
+    mockBlockDataSource({ region: 'region', bucket: 'bucket', key: 'abc', offset: 14, length: 2, data: 'aa' })
+    mockBlockDataSource({ region: 'region', bucket: 'bucket', key: 'abc', offset: 14, length: 2, data: 'aa' })
+
+    const spy = spyLogger()
+    await fetchBlocksData({ blocks, logger: spy })
+
+    t.same(blocks, [
+      {
+        key: '123',
+        info: { offset: 0, length: 10e9, car: 'region/bucket/abc', found: true },
+        data: { notFound: true }
+      },
+      {
+        key: '456',
+        info: { offset: 14, length: 2, car: 'region/bucket/abc', found: true },
+        data: { content: Buffer.from('aa'), found: true }
+      },
+      {
+        key: '789',
+        info: { offset: 14, length: 2, car: 'region/bucket/abc', found: true },
+        data: { content: Buffer.from('aa'), found: true }
+      }
+    ])
+
+    t.equal(spy.messages.error[0][0].block.key, '123')
+    t.equal(spy.messages.error[0][1], 'invalid block, length is greater than max allowed')
+    t.equal(spy.messages.error.length, 1)
+  })
+
+  t.test('should get not found on block non-existings blocks', async t => {
+    const blocks = [{ key: '123' }, { key: '456' }, { key: '789' }]
+
+    mockBlockInfoSource({ key: blocks[0].key, info: { } })
+    mockBlockInfoSource({ key: blocks[1].key, info: { offset: 14, length: 2, car: 'region/bucket/abc' } })
+    mockBlockInfoSource({ key: blocks[2].key, info: { offset: 14, length: 2, car: 'region/bucket/abc' } })
+
+    mockBlockDataSource({ region: 'region', bucket: 'bucket', key: 'abc', offset: 14, length: 2, data: 'aa' })
+    mockBlockDataSource({ region: 'region', bucket: 'bucket', key: 'abc', offset: 14, length: 2, data: 'aa' })
+
+    const spy = spyLogger()
+    await fetchBlocksData({ blocks, logger: spy })
+
+    t.same(blocks, [
+      {
+        key: '123',
+        info: { notFound: true },
+        data: { notFound: true }
+      },
+      {
+        key: '456',
+        info: { offset: 14, length: 2, car: 'region/bucket/abc', found: true },
+        data: { content: Buffer.from('aa'), found: true }
+      },
+      {
+        key: '789',
+        info: { offset: 14, length: 2, car: 'region/bucket/abc', found: true },
+        data: { content: Buffer.from('aa'), found: true }
+      }
+    ])
+
+    t.equal(spy.messages.error.length, 0)
+  })
+})
+
+t.test('fetchBlocksInfo', async t => {
+  t.test('should retrieve info blocks successfully', async t => {
+    const blocks = [{ key: '123' }, { key: '456' }, { key: '789' }]
+
+    mockBlockInfoSource({ key: blocks[0].key, info: { offset: 0, length: 8, car: 'region/bucket/abc' } })
+    mockBlockInfoSource({ key: blocks[1].key, info: { offset: 12, length: 2, car: 'region/bucket/abc' } })
+    mockBlockInfoSource({ key: blocks[2].key, info: { offset: 14, length: 2, car: 'region/bucket/abc' } })
+
+    await fetchBlocksInfo({ blocks, logger: dummyLogger() })
+
+    t.same(blocks, [
+      {
+        key: '123',
+        info: { offset: 0, length: 8, car: 'region/bucket/abc', found: true }
+      },
+      {
+        key: '456',
+        info: { offset: 12, length: 2, car: 'region/bucket/abc', found: true }
+      },
+      {
+        key: '789',
+        info: { offset: 14, length: 2, car: 'region/bucket/abc', found: true }
+      }
+    ])
+  })
+
+  t.test('should get error on block without key', async t => {
+    const blocks = [{ key: '123' }, { }, { key: '789' }]
+
+    mockBlockInfoSource({ key: blocks[0].key, info: { offset: 0, length: 8, car: 'region/bucket/abc' } })
+    mockBlockInfoSource({ key: blocks[2].key, info: { offset: 14, length: 2, car: 'region/bucket/abc' } })
+
+    const spy = spyLogger()
+    await fetchBlocksInfo({ blocks, logger: spy })
+
+    t.same(blocks, [
+      {
+        key: '123',
+        info: { offset: 0, length: 8, car: 'region/bucket/abc', found: true }
+      },
+      { },
+      {
+        key: '789',
+        info: { offset: 14, length: 2, car: 'region/bucket/abc', found: true }
+      }
+    ])
+
+    t.equal(spy.messages.error[0][1], 'invalid block, missing key')
+    t.equal(spy.messages.error.length, 1)
+  })
+
+  t.test('should get not found on block non-existings blocks', async t => {
+    const blocks = [{ key: '123' }, { key: '456' }, { key: '789' }]
+
+    mockBlockInfoSource({ key: blocks[0].key, info: { } })
+    mockBlockInfoSource({ key: blocks[1].key, info: { offset: 214, length: 2, car: 'region/bucket/abc' } })
+    mockBlockInfoSource({ key: blocks[2].key, info: { offset: 14, length: 2, car: 'region/bucket/abc' } })
+
+    const spy = spyLogger()
+    await fetchBlocksInfo({ blocks, logger: spy })
+
+    t.same(blocks, [
+      {
+        key: '123',
+        info: { notFound: true }
+      },
+      {
+        key: '456',
+        info: { offset: 214, length: 2, car: 'region/bucket/abc', found: true }
+      },
+      {
+        key: '789',
+        info: { offset: 14, length: 2, car: 'region/bucket/abc', found: true }
+      }
+    ])
+
+    t.equal(spy.messages.error.length, 0)
   })
 })

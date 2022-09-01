@@ -8,10 +8,10 @@ const t = require('tap')
 const { Connection } = require('../src/networking')
 const { BITSWAP_V_100: protocol } = require('../src/protocol')
 const { startService } = require('../src/service')
-const { getFreePort, createClient, prepare, teardown } = require('./utils/helpers')
+const { getFreePort, createClient, setupService, teardown } = require('./utils/helpers')
 
 t.test('send - after closing behavior', async t => {
-  const { client, service, connection } = await prepare(t, protocol)
+  const { client, service, connection } = await setupService({ protocol })
 
   connection.close()
 

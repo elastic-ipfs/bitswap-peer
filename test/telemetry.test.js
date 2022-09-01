@@ -1,70 +1,13 @@
 'use strict'
 
-process.env.ENV_FILE_PATH = '/dev/null'
-
-process.env.AWS_ACCESS_KEY_ID = 'FOO'
-process.env.AWS_REGION = 'us-west-2'
-process.env.AWS_SECRET_ACCESS_KEY = 'BAR'
-process.env.LOG_LEVEL = 'error'
-process.env.NODE_DEBUG = 'bitswap-peer'
 process.env.NOW = 'now'
-process.env.PEER_ID_FILE = 'peerId.json'
-process.env.PEER_ID_S3_BUCKET = 'idBucket'
-process.env.PORT = '3000'
-process.env.HTTP_PORT = '3001'
 
-const { readFile } = require('fs/promises')
-const { Readable } = require('stream')
 const { get } = require('http')
-const { resolve } = require('path')
-const { createFromJSON } = require('peer-id')
 const t = require('tap')
 
-const { blocksTable, carsTable, port, httpPort } = require('../src/config')
-const { logger, serializeError } = require('../src/logging')
+const { logger } = require('../src/logging')
 const { telemetry } = require('../src/telemetry')
 const { httpServer } = require('../src/http-server')
-const { getPeerId } = require('../src/peer-id')
-const { mockS3GetObject } = require('./utils/mock')
-
-t.test('config - download the peerId from S3', async t => {
-  const rawPeer = await readFile(resolve(process.cwd(), 'test/fixtures/peerId.json'), 'utf-8')
-  const response = new Readable()
-  response.push(rawPeer)
-  response.push(null)
-
-  mockS3GetObject({ bucket: 'idBucket', key: 'peerId.json', response })
-
-  t.equal((await getPeerId()).toB58String(), (await createFromJSON(JSON.parse(rawPeer))).toB58String())
-})
-
-t.test('config - creates a new PeerId if download fails', async t => {
-  const rawPeer = await readFile(resolve(process.cwd(), 'test/fixtures/peerId.json'))
-  const response = new Readable()
-  response.push('INVALID-JSON')
-  response.push(null)
-
-  mockS3GetObject({ bucket: 'idBucket', key: 'peerId.json', response })
-
-  t.not((await getPeerId()).toB58String(), (await createFromJSON(JSON.parse(rawPeer))).toB58String())
-})
-
-t.test('config - it exports reasonable defaults', async t => {
-  t.equal(blocksTable, 'blocks')
-  t.equal(carsTable, 'cars')
-  t.equal(port, 3000)
-  t.equal(httpPort, 3001)
-})
-
-t.test('logging - an error is properly serialized', async t => {
-  const errorWithCode = new Error('FAILED')
-  errorWithCode.code = 'CODE'
-
-  const error = new Error('FAILED')
-
-  t.match(serializeError(error), '[Error] FAILED')
-  t.match(serializeError(errorWithCode), '[CODE] FAILED')
-})
 
 t.test('telemetry - ensure all metrics are defined in YAML file', async t => {
   t.throws(() => telemetry.decreaseCount('unknown'), 'Metrics unknown not found.')

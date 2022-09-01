@@ -10,7 +10,7 @@ const t = require('tap')
 const { port } = require('../src/config')
 const { BITSWAP_V_100: protocol, Entry, Message, WantList } = require('../src/protocol')
 const { startService } = require('../src/service')
-const { prepare, receiveMessages, teardown } = require('./utils/helpers')
+const { setupService, receiveMessages, teardown } = require('./utils/helpers')
 const { mockAWS, mockS3GetObject } = require('./utils/mock')
 
 t.beforeEach(() => mockAWS())
@@ -24,7 +24,7 @@ t.test('service - uses the default port', async t => {
 })
 
 t.test('service - handles connection error', async t => {
-  const { client, service, connection } = await prepare(t, protocol)
+  const { client, service, connection } = await setupService({ protocol })
 
   connection.send(Buffer.from([0, 1, 2, 3]))
   const [error] = await once(service, 'error:receive')
@@ -38,7 +38,7 @@ t.test('service - handles connection error', async t => {
 t.test('service - handles blocks error', async t => {
   mockS3GetObject({ bucket: 'the-bucket', key: 'the-key', response: () => { throw new Error('FAILED') } })
 
-  const { client, service, connection, receiver } = await prepare(t, protocol)
+  const { client, service, connection, receiver } = await setupService({ protocol })
 
   const wantList = new WantList([new Entry('the-key', 1, false, Entry.WantType.Block, true)], false)
 

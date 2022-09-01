@@ -12,8 +12,6 @@ const {
 } = require('../src/protocol')
 const { cid3 } = require('./fixtures/cids')
 
-// TODO Message unit tests
-
 t.test('protocol - Protocol Buffers messages are properly sanitized and encoded', t => {
   t.plan(5)
 

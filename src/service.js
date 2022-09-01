@@ -7,7 +7,7 @@ const Websockets = require('libp2p-websockets')
 
 const { getPeerId } = require('../src/peer-id')
 const { enableKeepAlive, port, peerAnnounceAddr } = require('./config')
-const { logger, serializeError } = require('./logging')
+const { logger: defaultLogger, serializeError } = require('./logging')
 const { Connection } = require('./networking')
 const { noiseCrypto } = require('./noise-crypto')
 const { startKeepAlive, stopKeepAlive } = require('./p2p-keep-alive.js')
@@ -15,7 +15,7 @@ const { Message, protocols } = require('./protocol')
 const { telemetry } = require('./telemetry')
 const { handle } = require('./handler')
 
-async function startService({ peerId, currentPort, announceAddr } = {}) {
+async function startService({ peerId, currentPort, announceAddr, logger = defaultLogger } = {}) {
   try {
     if (!peerId) {
       peerId = await getPeerId()
@@ -58,6 +58,7 @@ async function startService({ peerId, currentPort, announceAddr } = {}) {
           } catch (err) {
             logger.warn({ err: serializeError(err) }, 'Cannot decode received data')
             service.emit('error:receive', err)
+            // TODO close connection
             // TODO add? telemetry.increaseCount('bitswap-block-error')
             return
           }
@@ -72,6 +73,7 @@ async function startService({ peerId, currentPort, announceAddr } = {}) {
             }
           } catch (err) {
             logger.warn({ err: serializeError(err) }, 'Error while preparing request context')
+            // TODO close connection
             // TODO add? telemetry.increaseCount('bitswap-block-error')
             return
           }

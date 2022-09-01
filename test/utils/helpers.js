@@ -18,6 +18,8 @@ const { startService } = require('../../src/service')
 
 let currentPort = 53000 + parseInt(process.env.TAP_CHILD_ID) * 100
 
+function noop() { }
+
 async function createClient(peerId, port, protocol) {
   const node = await libp2p.create({
     modules: {
@@ -47,11 +49,27 @@ async function getFreePort() {
   return getPort({ port: currentPort++ })
 }
 
-async function prepare(t, protocol) {
+function dummyLogger() {
+  return { error: noop, warn: noop, info: noop, debug: noop }
+}
+
+function spyLogger() {
+  const spy = { messages: {} }
+  for (const l of ['error', 'error', 'warn', 'info', 'debug']) {
+    spy.messages[l] = []
+    spy[l] = (...args) => { spy.messages[l].push(args) }
+  }
+  return spy
+}
+
+async function setupService({ protocol, logger }) {
+  if (!logger) {
+    logger = dummyLogger()
+  }
   const peerId = await PeerId.create()
   const port = await getFreePort()
 
-  const { service } = await startService({ peerId, currentPort: port })
+  const { service } = await startService({ peerId, currentPort: port, logger })
   const { stream, receiver, node } = await createClient(peerId, port, protocol)
 
   const connection = new Connection(stream)
@@ -159,8 +177,10 @@ module.exports = {
   hasSingleBlockWithHash,
   hasSingleDAGBlock,
   hasSingleRawBlock,
-  prepare,
+  setupService,
   receiveMessages,
   safeGetDAGLinks,
-  teardown
+  teardown,
+  dummyLogger,
+  spyLogger
 }

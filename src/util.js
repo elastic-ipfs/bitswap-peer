@@ -7,8 +7,7 @@ function cidToKey(cid) {
 }
 
 /**
- * TODO jsdoc
- * blockInfo is { car: string, offset: number, length: number }
+ * @param {{ car: string, offset: number, length: number }} - blockInfo
  */
 function sizeofBlockInfo(blockInfo) {
   return blockInfo?.car?.length ? blockInfo.car.length * 2 + 16 : 0

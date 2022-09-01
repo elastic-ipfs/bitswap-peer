@@ -40,19 +40,41 @@ function mockDynamoQueryCommand({ table, keyName, keyValue, response = [] }) {
   dynamoMock.on(QueryCommand, params).resolves({ Items: response })
 }
 
-function mockS3GetObject({ bucket, key, length, response = null }) {
+function mockS3GetObject({ bucket, key, offset, length, response = null }) {
+  const params = { Bucket: bucket, Key: key }
+  if (offset || length) {
+    params.Range = (offset ?? 0) + '-' + length
+  }
+
   s3Mock
-    .on(GetObjectCommand, {
-      Bucket: bucket,
-      Key: key
-    })
+    .on(GetObjectCommand, params)
     .callsFake(async () => {
       if (typeof response === 'function') {
         response = await response()
       }
 
-      return { Body: response, ContentLength: length, LastModified: new Date() }
+      return { Body: response, LastModified: new Date() }
     })
+}
+
+function mockBlockInfoSource({ key, info }) {
+  mockDynamoQueryCommand({
+    table: config.linkTableV1,
+    keyName: config.linkTableBlockKey,
+    keyValue: key,
+    response: [{
+      offset: { N: info.offset },
+      length: { N: info.length },
+      carpath: { S: info.car }
+    }]
+  })
+}
+
+function mockBlockDataSource({ bucket, offset, length, key, data }) {
+  const response = new Readable()
+  response.push(data)
+  response.push(null)
+  mockS3GetObject({ bucket, key, offset, length, response })
 }
 
 function readData(file, from, to) {
@@ -82,13 +104,20 @@ async function mockAWS() {
   mockDynamoQueryCommand({ table: config.linkTableV1, keyName: config.linkTableBlockKey, keyValue: cidToKey(cid9), response: readBlock('blocks/db-v1/cid9.json') })
 
   // fetchS3
-  mockS3GetObject({ key: 'test-cid1.car', bucket: 'test-cars', range: 'bytes=96-100', response: readData('cars/test-cid1.car', 96, 100) })
-  mockS3GetObject({ key: 'test-cid2.car', bucket: 'test-cars', range: 'bytes=96-147', response: readData('cars/test-cid2.car', 96, 147) })
-  mockS3GetObject({ key: 'test-cid5.car', bucket: 'test-cars', range: 'bytes=98-1500097', response: readData('cars/test-cid5.car', 98, 1500097) })
-  mockS3GetObject({ key: 'test-cid6.car', bucket: 'test-cars', range: 'bytes=98-1500097', response: readData('cars/test-cid6.car', 98, 1500097) })
-  mockS3GetObject({ key: 'test-cid7.car', bucket: 'test-cars', range: 'bytes=98-1500097', response: readData('cars/test-cid7.car', 98, 1500097) })
-  mockS3GetObject({ key: 'test-cid8.car', bucket: 'test-cars', range: 'bytes=98-1500097', response: readData('cars/test-cid8.car', 98, 1500097) })
-  mockS3GetObject({ key: 'test-cid9.car', bucket: 'test-cars', range: 'bytes=98-2096749', response: readData('cars/test-cid9.car', 98, 2096749) })
+  mockS3GetObject({ key: 'test-cid1.car', bucket: 'test-cars', offset: 96, length: 100, response: readData('cars/test-cid1.car', 96, 100) })
+  mockS3GetObject({ key: 'test-cid2.car', bucket: 'test-cars', offset: 96, length: 147, response: readData('cars/test-cid2.car', 96, 147) })
+  mockS3GetObject({ key: 'test-cid5.car', bucket: 'test-cars', offset: 98, length: 1500097, response: readData('cars/test-cid5.car', 98, 1500097) })
+  mockS3GetObject({ key: 'test-cid6.car', bucket: 'test-cars', offset: 98, length: 1500097, response: readData('cars/test-cid6.car', 98, 1500097) })
+  mockS3GetObject({ key: 'test-cid7.car', bucket: 'test-cars', offset: 98, length: 1500097, response: readData('cars/test-cid7.car', 98, 1500097) })
+  mockS3GetObject({ key: 'test-cid8.car', bucket: 'test-cars', offset: 98, length: 1500097, response: readData('cars/test-cid8.car', 98, 1500097) })
+  mockS3GetObject({ key: 'test-cid9.car', bucket: 'test-cars', offset: 98, length: 2096749, response: readData('cars/test-cid9.car', 98, 2096749) })
 }
 
-module.exports = { mockAWS, mockDynamoGetItemCommand, mockDynamoQueryCommand, mockS3GetObject }
+module.exports = {
+  mockAWS,
+  mockDynamoGetItemCommand,
+  mockDynamoQueryCommand,
+  mockS3GetObject,
+  mockBlockInfoSource,
+  mockBlockDataSource
+}

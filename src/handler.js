@@ -60,9 +60,6 @@ async function peerConnect(context, logger) {
   await connect(context, stream, logger)
 }
 
-/**
- * TODO test
- */
 function handle({ context, logger, batchSize = config.blocksBatchSize }) {
   if (context.blocks.length < 1) {
     return
@@ -132,6 +129,7 @@ const messageSize = {
   [BLOCK_TYPE_INFO]: (block) => sizeofBlockInfo(block.info)
 }
 
+// not accurate, not considering fixed overhead
 const sentMetrics = {
   [BLOCK_TYPE_DATA]: (block, size) => {
     block.data?.found && telemetry.increaseCount('bitswap-sent-data', size)
@@ -154,8 +152,6 @@ async function batchResponse(blocks, context, logger) {
       const size = messageSize[block.type](block)
       // maxMessageSize MUST BE larger than a single block info/data
       if (message.size() + size > config.maxMessageSize) {
-        // TODO use a sending queue instead of awaiting?
-        // consider also connection open/close task - can't be parallel
         await message.send(context)
         message = new Message()
       }
@@ -165,7 +161,6 @@ async function batchResponse(blocks, context, logger) {
       }
     }
 
-    // TODO same as above: use a sending queue instead of awaiting?
     await message.send(context)
 
     telemetry.decreaseCount('bitswap-pending-entries', context.done)

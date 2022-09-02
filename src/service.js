@@ -13,7 +13,7 @@ const { noiseCrypto } = require('./noise-crypto')
 const { startKeepAlive, stopKeepAlive } = require('./p2p-keep-alive.js')
 const { Message, protocols } = require('./protocol')
 const { telemetry } = require('./telemetry')
-const { handle } = require('./handler')
+const { handle, createContext } = require('./handler')
 
 async function startService({ peerId, currentPort, announceAddr, logger = defaultLogger } = {}) {
   try {
@@ -58,27 +58,15 @@ async function startService({ peerId, currentPort, announceAddr, logger = defaul
           } catch (err) {
             logger.warn({ err: serializeError(err) }, 'Cannot decode received data')
             service.emit('error:receive', err)
-            // TODO close connection
-            // TODO add? telemetry.increaseCount('bitswap-block-error')
             return
           }
 
-          let context
           try {
-            context = {
-              service,
-              peer: dial.remotePeer,
-              protocol,
-              blocks: message.wantlist.entries
-            }
+            const context = createContext({ service, peer: dial.remotePeer, protocol, wantlist: message.wantlist })
+            handle({ context, logger })
           } catch (err) {
-            logger.warn({ err: serializeError(err) }, 'Error while preparing request context')
-            // TODO close connection
-            // TODO add? telemetry.increaseCount('bitswap-block-error')
-            return
+            logger.error({ err: serializeError(err) }, 'Error on request handle')
           }
-
-          handle({ context, logger })
         })
 
         // When the incoming duplex stream finishes sending, close for writing.
@@ -86,10 +74,11 @@ async function startService({ peerId, currentPort, announceAddr, logger = defaul
         // another multiplexed stream.
         connection.on('end:receive', () => connection.close())
 
-        /* c8 ignore next 4 */
+        /* c8 ignore next 5 */
         connection.on('error', err => {
           logger.error({ err, dial, stream, protocol }, `Connection error: ${serializeError(err)}`)
           service.emit('error:connection', err)
+          connection.close()
         })
       } catch (err) {
         logger.error({ err, dial, stream, protocol }, `Error while creating connection: ${serializeError(err)}`)

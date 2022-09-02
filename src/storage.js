@@ -52,7 +52,6 @@ async function fetchS3({ region, bucket, key, offset, length, logger, retries = 
   let error
   let response
   const request = { Bucket: bucket, Key: key }
-  // TODO test real s3 request
   if (length > 0) {
     if (!offset) { offset = 0 }
     request.Range = 'bytes=' + offset + '-' + (length - 1)

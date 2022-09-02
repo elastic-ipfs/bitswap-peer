@@ -5,6 +5,7 @@ metrics:
   bitswap-active-connections: BitSwap Active Connections
   bitswap-total-entries: BitSwap Total Entries served
   bitswap-pending-entries: BitSwap Pending Entries to serve
+  bitswap-block-error: Block error (on parsing)
   bitswap-block-data-error: Data Block error
   bitswap-block-info-error: Info Block error
   bitswap-block-data-canceled: Data Block canceled

@@ -24,7 +24,6 @@ const protocols = [BITSWAP_V_120, BITSWAP_V_110, BITSWAP_V_100]
 
 const BLOCK_TYPE_INFO = 1
 const BLOCK_TYPE_DATA = 2
-const BLOCK_TYPE_UNKNOWN = -1
 
 /*
   Breakdown of the constants below:
@@ -117,7 +116,7 @@ class Entry {
 }
 
 class WantList {
-  constructor(entries, full) {
+  constructor(entries, full = false) {
     this.entries = entries
     this.full = Boolean(full)
   }
@@ -214,7 +213,7 @@ class Message {
     this.blocksSize = this.isEmpty() ? EMPTY_MESSAGE_OVERHEAD_SIZE : this.encode(BITSWAP_V_120).length + nonEmptyOverhead
   }
 
-  isEmpty () {
+  isEmpty() {
     return this.wantlist.entries.length + this.blocks.length + this.blockPresences.length < 1
   }
 
@@ -262,29 +261,19 @@ class Message {
    * push block to message, to be sent later
    * note there are no size limit, because the purpose is to send responses asap **without buffering**
    */
-  push(block, size, context) {
+  push(block, size, protocol) {
     if (block.cancel) { return false }
-    if (block.type !== BLOCK_TYPE_DATA && block.type !== BLOCK_TYPE_INFO) {
-      logger.error('unsupported type in Message.push')
-      return false
-    }
 
-    try {
-      const responseBlock = response[block.type](block, context.protocol)
-      if (!responseBlock) { return }
+    const responseBlock = response[block.type](block, protocol)
+    if (!responseBlock) { return }
 
-      if (responseBlock.type === BLOCK_TYPE_DATA) {
-        this.blocks.push(responseBlock.block)
-        this.blocksSize += newBlockOverhead + size
-      } else {
-        this.blockPresences.push(responseBlock.block)
-        this.blocksSize += newPresenceOverhead + size
-      }
-      return true
-    } catch (error) {
-      logger.error({ error: serializeError(error) }, 'error on Message.push')
+    if (responseBlock.type === BLOCK_TYPE_DATA) {
+      this.blocks.push(responseBlock.block)
+      this.blocksSize += newBlockOverhead + size
+    } else {
+      this.blockPresences.push(responseBlock.block)
+      this.blocksSize += newPresenceOverhead + size
     }
-    return false
   }
 
   size() {
@@ -341,6 +330,5 @@ module.exports = {
   RawMessage,
   WantList,
   BLOCK_TYPE_INFO,
-  BLOCK_TYPE_DATA,
-  BLOCK_TYPE_UNKNOWN
+  BLOCK_TYPE_DATA
 }

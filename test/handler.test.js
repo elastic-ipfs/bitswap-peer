@@ -54,13 +54,11 @@ t.test('handle', async t => {
 
     await handle({ context: contextSpy, logger: loggerSpy })
 
-    const response = Buffer.from('0a0210011a0e0a040155122012066162632e2e2e22280a2401551220a883dafc480d466ee04e0d6da986bd78eb1fdd2178d04693723da3a8f95d42f410002800', 'hex')
-
     t.equal(connectionSpy.send.callCount, 1)
     t.equal(connectionSpy.close.callCount, 1)
     t.equal(loggerSpy.messages.error.length, 0)
     t.equal(loggerSpy.messages.warn.length, 0)
-    t.same(connectionSpy.send.args[0][0], response)
+    t.matchSnapshot(connectionSpy.send.args[0][0].toString('hex'))
   })
 
   t.test('should handle a request containing an invalid cid', async t => {
@@ -82,15 +80,13 @@ t.test('handle', async t => {
 
     await handle({ context: contextSpy, logger: loggerSpy })
 
-    const response = Buffer.from('0a0210011a0e0a040155122012066162632e2e2e2800', 'hex')
-
     t.equal(connectionSpy.send.callCount, 1)
     t.equal(connectionSpy.close.callCount, 1)
     t.equal(loggerSpy.messages.error.length, 1)
     t.equal(loggerSpy.messages.error[0][0].block.cid, 'not-a-cid')
     t.equal(loggerSpy.messages.error[0][1], 'invalid block cid')
     t.equal(loggerSpy.messages.warn.length, 0)
-    t.same(connectionSpy.send.args[0][0], response)
+    t.matchSnapshot(connectionSpy.send.args[0][0].toString('hex'))
   })
 
   t.test('should handle a request containing only invalid blocks', async t => {
@@ -144,7 +140,7 @@ t.test('handle', async t => {
     t.equal(loggerSpy.messages.warn.length, 0)
   })
 
-  t.todo('should handle multiple requests at the same time', async t => {
+  t.test('should handle multiple requests at the same time', async t => {
     mockAWS()
     const contextsSpy = [
       spyContext({
@@ -152,14 +148,16 @@ t.test('handle', async t => {
           new Entry(cid1, 1, false, Entry.WantType.Have, true),
           new Entry(cid2, 1, false, Entry.WantType.Block, true),
           new Entry(cid3, 1, false, Entry.WantType.Have, true),
-          new Entry(cid4, 1, false, Entry.WantType.Block, true)
+          new Entry(cid4, 1, false, Entry.WantType.Block, true),
+          new Entry('not-a-cid', 1, false, Entry.WantType.Block, true)
         ]
       }),
       spyContext({
         blocks: [
           new Entry(cid4, 1, false, Entry.WantType.Have, true),
           new Entry(cid5, 1, false, Entry.WantType.Block, true),
-          new Entry(cid6, 1, false, Entry.WantType.Have, true)
+          new Entry(cid6, 1, false, Entry.WantType.Have, true),
+          new Entry('not-a-cid', 1, false, Entry.WantType.Have, true)
         ]
       }),
       spyContext({
@@ -167,7 +165,8 @@ t.test('handle', async t => {
           new Entry(cid7, 1, false, Entry.WantType.Have, true),
           new Entry(cid8, 1, false, Entry.WantType.Block, true),
           new Entry(cid9, 1, false, Entry.WantType.Have, true),
-          new Entry(cid1, 1, false, Entry.WantType.Block, true)
+          new Entry(cid1, 1, false, Entry.WantType.Block, true),
+          new Entry(cid1, 1, true, Entry.WantType.Block, true) // canceled
         ]
       })
     ]
@@ -178,22 +177,25 @@ t.test('handle', async t => {
 
     await Promise.all(contextsSpy.map(context => handle({ context, logger: loggerSpy, processing: queue, batchSize: 2 })))
 
-    // TODO assertions
+    t.equal(connectionsSpy[0].send.callCount, 2)
+    t.equal(connectionsSpy[0].close.callCount, 1)
+    t.matchSnapshot(connectionsSpy[0].send.args[0][0].toString('hex'))
+    t.matchSnapshot(connectionsSpy[0].send.args[1][0].toString('hex'))
 
-    // t.equal(connectionsSpy[0].send.callCount, 8)
-    // t.equal(connectionsSpy[0].close.callCount, 1)
-    // t.same(connectionsSpy[0].send.args[0][0], response)
+    t.equal(connectionsSpy[1].send.callCount, 2)
+    t.equal(connectionsSpy[1].close.callCount, 1)
+    t.matchSnapshot(connectionsSpy[1].send.args[0][0].toString('hex'))
+    t.matchSnapshot(connectionsSpy[1].send.args[1][0].toString('hex'))
 
-    // t.equal(connectionsSpy[1].send.callCount, 8)
-    // t.equal(connectionsSpy[1].close.callCount, 1)
-    // t.same(connectionsSpy[0].send.args[0][0], response)
+    t.equal(connectionsSpy[2].send.callCount, 2)
+    t.equal(connectionsSpy[2].close.callCount, 1)
+    t.matchSnapshot(connectionsSpy[2].send.args[0][0].toString('hex'))
+    t.matchSnapshot(connectionsSpy[2].send.args[1][0].toString('hex'))
 
-    // t.equal(connectionsSpy[2].send.callCount, 8)
-    // t.equal(connectionsSpy[2].close.callCount, 1)
-    // t.same(connectionsSpy[0].send.args[0][0], response)
-
-  // t.equal(loggerSpy.messages.error.length, 0)
-  // t.equal(loggerSpy.messages.warn.length, 0)
+    t.equal(loggerSpy.messages.error.length, 2)
+    t.equal(loggerSpy.messages.error[0][1], 'invalid block cid')
+    t.equal(loggerSpy.messages.error[1][1], 'invalid block cid')
+    t.equal(loggerSpy.messages.warn.length, 0)
   })
 
   t.test('should handle and empty request', async t => {

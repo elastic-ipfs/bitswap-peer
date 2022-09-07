@@ -53,7 +53,7 @@ async function fetchS3({ region, bucket, key, offset, length, logger, retries = 
   const request = { Bucket: bucket, Key: key }
   if (length > 0) {
     if (!offset) { offset = 0 }
-    request.Range = offset + '-' + length
+    request.Range = 'bytes=' + offset + '-' + (length - 1)
   }
 
   do {

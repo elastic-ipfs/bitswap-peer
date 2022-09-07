@@ -43,7 +43,7 @@ function mockDynamoQueryCommand({ table, keyName, keyValue, response = [] }) {
 function mockS3GetObject({ bucket, key, offset, length, response = null }) {
   const params = { Bucket: bucket, Key: key }
   if (offset || length) {
-    params.Range = (offset ?? 0) + '-' + length
+    params.Range = `bytes=${(offset ?? 0)}-${(length - 1)}`
   }
 
   s3Mock

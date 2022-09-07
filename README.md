@@ -9,6 +9,7 @@ _Variables in bold are required._
 | AWS_ACCESS_KEY_ID     |               | The AWS key ID.                                                          |
 | AWS_REGION            |               | The AWS region.                                                          |
 | AWS_SECRET_ACCESS_KEY |               | The AWS access key.                                                      |
+| AWS_ROLE_ARN |               | The AWS role arn |
 | CACHE_BLOCK_INFO      | `true`       | Set to `true` to cache block informations with in a in-memory LRU cache. |
 | CACHE_BLOCK_INFO_SIZE | `10000`       | Max entries of the block info cache.                                     |
 | CACHE_BLOCK_DATA      | `false`       | Set to `true` to cache block data with in a in-memory LRU cache.         |

@@ -60,11 +60,12 @@ async function prepare(t, protocol) {
 }
 
 async function teardown(t, client, service, connection) {
-  await Promise.allSettled([connection.close(), client.stop(), service.stop()])
+  await connection.close()
+  await client.stop()
+  await service.stop()
 }
 
-// TODO remove hardcoded timers
-async function receiveMessages(receiver, protocol, timeout = 2000, limit = 1, raw = false) {
+async function receiveMessages(receiver, protocol, timeout = 10000, limit = 1, raw = false) {
   let timeoutHandle
   const responses = []
 
@@ -156,6 +157,7 @@ module.exports = {
   getPresence,
   hasBlockWithHash,
   hasDAGBlock,
+  hasRawBlock,
   hasSingleBlockWithHash,
   hasSingleDAGBlock,
   hasSingleRawBlock,

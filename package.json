@@ -1,6 +1,6 @@
 {
   "name": "bitswap-peer",
-  "version": "0.4.0",
+  "version": "0.3.9",
   "description": "Elastic IPFS BitSwap Peer",
   "homepage": "https://github.com/elastic-ipfs/bitswap-peer",
   "license": "(Apache-2.0 AND MIT)",

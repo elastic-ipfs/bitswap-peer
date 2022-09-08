@@ -6,9 +6,6 @@ _Variables in bold are required._
 
 | Name                  | Default       | Description                                                              |
 | --------------------- | ------------- | ------------------------------------------------------------------------ |
-| AWS_ACCESS_KEY_ID     |               | The AWS key ID.                                                          |
-| AWS_REGION            |               | The AWS region.                                                          |
-| AWS_SECRET_ACCESS_KEY |               | The AWS access key.                                                      |
 | CACHE_BLOCK_INFO     | `false`       | Set to `true` to cache block informations with in a in-memory LRU cache. |
 | CACHE_BLOCK_INFO_SIZE | `1000`       | Max entries of the block info cache.                                     |
 | CACHE_BLOCK_DATA      | `false`       | Set to `true` to cache block data with in a in-memory LRU cache.         |
@@ -35,5 +32,7 @@ _Variables in bold are required._
 | PING_PERIOD_SECONDS   | `10`          | Wait interval for ping connected peer (Keep Alive)                       |
 | PORT                  | `3000`        | The port number to listen on.                                            |
 | TELEMETRY_PORT        | `3001`        | The telemetry port number for the OpenTelemetry server to listen on.     |
+
+Also check [AWS specific configuration](https://github.com/elastic-ipfs/elastic-ipfs/blob/main/aws.md).
 
 **Note**: `DYNAMO_BLOCKS_TABLE` and `DYNAMO_CARS_TABLE` will be removed after the transition to the new database schema will be completed.

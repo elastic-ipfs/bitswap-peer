@@ -46,7 +46,6 @@ async function fetchS3({ region, bucket, key, offset, length, logger, retries = 
     })
     s3Client = s3Clients[region]
   }
-  telemetry.increaseCount('s3-fetchs')
 
   let attempts = 0
   let error
@@ -104,8 +103,6 @@ async function searchCarInDynamoV1({
   retries = dynamoMaxRetries,
   retryDelay = dynamoRetryDelay
 }) {
-  telemetry.increaseCount('dynamo-reads')
-
   const key = { name: linkTableBlockKey, value: blockKey }
   const record = await telemetry.trackDuration(
     'dynamo-request',
@@ -153,8 +150,6 @@ async function searchCarInDynamoV0({
   retries = dynamoMaxRetries,
   retryDelay = dynamoRetryDelay
 }) {
-  telemetry.increaseCount('dynamo-reads')
-
   const record = await telemetry.trackDuration(
     'dynamo-request',
     sendDynamoCommand({
@@ -188,7 +183,6 @@ async function sendDynamoCommand({
   retries = dynamoMaxRetries,
   retryDelay = dynamoRetryDelay
 }) {
-  telemetry.increaseCount('dynamo-reads')
   let attempts = 0
   let error
 

@@ -5,21 +5,23 @@ const PeerId = require('peer-id')
 
 const { peerIdJsonFile, peerIdJsonPath } = require('./config')
 const { logger } = require('./logging')
-const { fetchS3 } = require('./storage')
+const { defaultDispatcher, fetchBlockFromS3 } = require('./storage')
 
-async function downloadPeerIdFile() {
-  const contents = await fetchS3({
-    region: process.env.AWS_REGION,
-    bucket: process.env.PEER_ID_S3_BUCKET,
-    key: peerIdJsonFile,
-    logger
-  })
+async function downloadPeerIdFile(dispatcher) {
+  logger.debug(`Downloading PeerId from s3://${process.env.PEER_ID_S3_BUCKET}/${peerIdJsonFile}`)
+
+  const contents = await fetchBlockFromS3(
+    dispatcher,
+    process.env.AWS_REGION,
+    process.env.PEER_ID_S3_BUCKET,
+    peerIdJsonFile
+  )
   return writeFile(peerIdJsonPath, contents)
 }
 
-async function getPeerId() {
+async function getPeerId(dispatcher = defaultDispatcher) {
   if (process.env.PEER_ID_S3_BUCKET) {
-    await downloadPeerIdFile()
+    await downloadPeerIdFile(dispatcher)
   }
 
   try {

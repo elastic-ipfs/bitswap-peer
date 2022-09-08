@@ -12,11 +12,9 @@
     "lint": "eslint src test"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.159.0",
-    "@aws-sdk/client-s3": "^3.159.0",
     "@aws-sdk/client-sqs": "^3.154.0",
-    "@aws-sdk/node-http-handler": "^3.159.0",
-    "@aws-sdk/util-dynamodb": "^3.159.0",
+    "@aws-sdk/node-http-handler": "^3.127.0",
+    "@aws-sdk/util-dynamodb": "^3.154.0",
     "@web3-storage/libp2p-noise": "^6.0.0",
     "bl": "^5.0.0",
     "dotenv": "^16.0.1",
@@ -31,8 +29,11 @@
     "make-promises-safe": "^5.1.0",
     "mnemonist": "^0.39.2",
     "pino": "^8.4.2",
+    "piscina": "^3.2.0",
     "protobufjs": "^7.0.0",
-    "sodium-native": "^3.4.1"
+    "sodium-native": "^3.4.1",
+    "undici": "^5.9.1",
+    "xml-js": "^1.6.11"
   },
   "devDependencies": {
     "@ipld/car": "^4.1.4",

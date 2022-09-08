@@ -9,10 +9,11 @@ _Variables in bold are required._
 | AWS_ACCESS_KEY_ID     |               | The AWS key ID.                                                          |
 | AWS_REGION            |               | The AWS region.                                                          |
 | AWS_SECRET_ACCESS_KEY |               | The AWS access key.                                                      |
-| CACHE_BLOCK_INFO      | `true`       | Set to `true` to cache block informations with in a in-memory LRU cache. |
-| CACHE_BLOCK_INFO_SIZE | `10000`       | Max entries of the block info cache.                                     |
+| CACHE_BLOCK_INFO     | `false`       | Set to `true` to cache block informations with in a in-memory LRU cache. |
+| CACHE_BLOCK_INFO_SIZE | `1000`       | Max entries of the block info cache.                                     |
 | CACHE_BLOCK_DATA      | `false`       | Set to `true` to cache block data with in a in-memory LRU cache.         |
 | CACHE_BLOCK_DATA_SIZE | `1000`        | Max entries of the block data cache.                                     |
+| CONCURRENCY           | `128`         | The maximum concurrency when searching CIDs.                             |
 | DYNAMO_BLOCKS_TABLE   | `blocks`      | The DynamoDB table where store CIDs informations to.                     |
 | DYNAMO_CARS_TABLE     | `cars`        | The DynamoDB table where store CAR files informations to.                |
 | DYNAMO_BLOCKS_TABLE_V1| `v1-blocks`   | The DynamoDB table where store CIDs informations to.                     |
@@ -29,6 +30,7 @@ _Variables in bold are required._
 | PEER_ID_FILE          | `peerId.json` | The filename of the file containing the BitSwap PeerID in JSON format.   |
 | PEER_ID_S3_BUCKET     |               | The S3 bucket to download the BitSwap PeerID in JSON format.             |
 | PEER_ANNOUNCE_ADDR    |               | Swarm multiaddr to announce to the network (excluding peer ID).          |
+| PIPELINING            | `16`          | The maximum request to pipeline in a single HTTP connections in AWS.     |
 | ENABLE_KEEP_ALIVE   | `false`          | Enable Keep-alive for peers                       |
 | PING_PERIOD_SECONDS   | `10`          | Wait interval for ping connected peer (Keep Alive)                       |
 | PORT                  | `3000`        | The port number to listen on.                                            |

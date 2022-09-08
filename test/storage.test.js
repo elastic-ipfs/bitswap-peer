@@ -7,11 +7,58 @@ const sinon = require('sinon')
 const config = require('../src/config')
 const { logger } = require('../src/logging')
 
-const { fetchS3, searchCarInDynamoV0, searchCarInDynamoV1 } = require('../src/storage')
+const { fetchBlockFromS3, refreshAwsCredentials, searchCarInDynamoV0, searchCarInDynamoV1 } = require('../src/storage')
 const { createMockAgent } = require('./utils/mock')
 const bucketRegion = process.env.AWS_REGION
 
-t.todo('searchCarInDynamoV0', async t => {
+t.test('refreshAwsCredentials - signing', async t => {
+  t.plan(3)
+
+  const mockAgent = createMockAgent()
+  mockAgent
+    .get('https://sts.amazonaws.com')
+    .intercept({
+      method: 'GET',
+      path: '/?Version=2011-06-15&Action=AssumeRoleWithWebIdentity&RoleArn=role&RoleSessionName=bitswap-peer&WebIdentityToken=identity'
+    })
+    .reply(
+      200,
+      `
+      <AssumeRoleWithWebIdentityResponse>
+        <AssumeRoleWithWebIdentityResult>
+          <Credentials>
+            <SessionToken>sessionToken</SessionToken>
+            <SecretAccessKey>accessKey</SecretAccessKey>
+            <AccessKeyId>keyId</AccessKeyId>
+          </Credentials>
+        </AssumeRoleWithWebIdentityResult>
+      </AssumeRoleWithWebIdentityResponse>
+      `
+    )
+
+  const { keyId, accessKey, sessionToken } = await refreshAwsCredentials('role', 'identity', mockAgent)
+  t.equal(keyId, 'keyId')
+  t.equal(accessKey, 'accessKey')
+  t.equal(sessionToken, 'sessionToken')
+})
+
+t.test('refreshAwsCredentials - error handling', async t => {
+  // TODO spy logger
+  const mockAgent = createMockAgent()
+  mockAgent
+    .get('https://sts.amazonaws.com')
+    .intercept({
+      method: 'GET',
+      path: '/?Version=2011-06-15&Action=AssumeRoleWithWebIdentity&RoleArn=role&RoleSessionName=bitswap-peer&WebIdentityToken=identity'
+    })
+    .reply(400, 'FOO')
+
+  await t.rejects(() => refreshAwsCredentials('role', 'identity', mockAgent), {
+    message: 'Cannot refresh AWS credentials: AssumeRoleWithWebIdentity failed with HTTP error 400 and body: FOO'
+  })
+})
+
+t.test('searchCarInDynamoV0', async t => {
   const sandbox = sinon.createSandbox()
 
   t.beforeEach(() => {
@@ -22,7 +69,7 @@ t.todo('searchCarInDynamoV0', async t => {
     sandbox.restore()
   })
 
-  t.todo('HTTP error handling', async t => {
+  t.test('HTTP error handling', async t => {
     const mockAgent = createMockAgent()
     mockAgent
       .get('https://dynamodb.us-west-2.amazonaws.com')
@@ -47,7 +94,7 @@ t.todo('searchCarInDynamoV0', async t => {
     t.match(logger.error.getCall(0).lastArg, /from Dynamo after 2 attempts/)
   })
 
-  t.todo('error handling', async t => {
+  t.test('error handling', async t => {
     const error = new Error('FAILED')
     const mockAgent = createMockAgent()
     mockAgent
@@ -78,8 +125,8 @@ t.todo('searchCarInDynamoV0', async t => {
   })
 })
 
-t.todo('searchCarInDynamoV1', async t => {
-  t.todo('HTTP error handling', async t => {
+t.test('searchCarInDynamoV1', async t => {
+  t.test('HTTP error handling', async t => {
     const mockAgent = createMockAgent()
     mockAgent
       .get('https://dynamodb.us-west-2.amazonaws.com')
@@ -102,7 +149,7 @@ t.todo('searchCarInDynamoV1', async t => {
     await t.rejects(
       () =>
         searchCarInDynamoV1({
-          // dispatcher: mockAgent,
+          dispatcher: mockAgent,
           blockKey: 'not-a-key',
           logger: loggerSpy,
           retries: 2,
@@ -117,7 +164,7 @@ t.todo('searchCarInDynamoV1', async t => {
     t.match(logs.error[0].message, /query Dynamo after 2 attempts/)
   })
 
-  t.todo('error handling', async t => {
+  t.test('error handling', async t => {
     const error = new Error('FAILED')
     const mockAgent = createMockAgent()
     mockAgent
@@ -141,7 +188,7 @@ t.todo('searchCarInDynamoV1', async t => {
     await t.rejects(
       () =>
         searchCarInDynamoV1({
-          // dispatcher: mockAgent,
+          dispatcher: mockAgent,
           blockKey: 'not-a-key',
           logger: loggerSpy,
           retries: 3,
@@ -157,7 +204,7 @@ t.todo('searchCarInDynamoV1', async t => {
     t.match(logs.error[0].message, /query Dynamo after 3 attempts/)
   })
 
-  t.todo('fallback to v0', async t => {
+  t.test('fallback to v0', async t => {
     const blockKey = 'the-block-key'
     const mockAgent = createMockAgent()
     mockAgent
@@ -204,7 +251,7 @@ t.todo('searchCarInDynamoV1', async t => {
   })
 })
 
-t.todo('fetchS3', async t => {
+t.test('fetchBlockFromS3', async t => {
   const sandbox = sinon.createSandbox()
 
   t.beforeEach(() => {
@@ -215,15 +262,15 @@ t.todo('fetchS3', async t => {
     sandbox.restore()
   })
 
-  t.todo('safety checks', async t => {
+  t.test('safety checks', async t => {
     const mockAgent = createMockAgent()
-    const empty = await fetchS3(mockAgent, bucketRegion, 'bucket', 'key', 12345, 0)
+    const empty = await fetchBlockFromS3(mockAgent, bucketRegion, 'bucket', 'key', 12345, 0)
     t.ok(Buffer.isBuffer(empty))
     t.equal(empty.length, 0)
     t.ok(logger.warn.calledOnceWith({ key: 'key' }, 'Called fetch S3 with length 0'))
   })
 
-  t.todo('error handling, s3 request fails after all retries', async t => {
+  t.test('error handling, s3 request fails after all retries', async t => {
     const mockAgent = createMockAgent()
     mockAgent
       .get('https://bucket.s3.us-west-2.amazonaws.com')
@@ -231,7 +278,7 @@ t.todo('fetchS3', async t => {
       .reply(400, { message: 'FOO' })
 
     await t.rejects(
-      () => fetchS3(mockAgent, bucketRegion, 'bucket', 'error', 1, 1, 3, 0),
+      () => fetchBlockFromS3(mockAgent, bucketRegion, 'bucket', 'error', 1, 1, 3, 0),
       'Cannot download from S3 https://bucket.s3.us-west-2.amazonaws.com/error'
     )
     t.ok(
@@ -242,7 +289,7 @@ t.todo('fetchS3', async t => {
     )
   })
 
-  t.todo('error handling, s3 request fails fetching', async t => {
+  t.test('error handling, s3 request fails fetching', async t => {
     const error = new Error('FAILED')
 
     const mockAgent = createMockAgent()
@@ -251,10 +298,10 @@ t.todo('fetchS3', async t => {
       .intercept({ method: 'GET', path: '/error' })
       .replyWithError(error)
 
-    await t.rejects(() => fetchS3(mockAgent, bucketRegion, 'bucket', 'error', 1, 1, 3, 0), 'FAILED')
+    await t.rejects(() => fetchBlockFromS3(mockAgent, bucketRegion, 'bucket', 'error', 1, 1, 3, 0), 'FAILED')
   })
 
-  t.todo('error handling, s3 request fails because of not found', async t => {
+  t.test('error handling, s3 request fails because of not found', async t => {
     const mockAgent = createMockAgent()
     mockAgent
       .get('https://bucket.s3.us-west-2.amazonaws.com')
@@ -262,7 +309,7 @@ t.todo('fetchS3', async t => {
       .reply(404, { message: 'FOO' })
 
     await t.rejects(
-      () => fetchS3(mockAgent, bucketRegion, 'bucket', 'not-a-resource', 1, 1, 3, 0),
+      () => fetchBlockFromS3(mockAgent, bucketRegion, 'bucket', 'not-a-resource', 1, 1, 3, 0),
       'NOT_FOUND'
     )
     t.ok(logger.error.calledWith({ url: 'https://bucket.s3.us-west-2.amazonaws.com/not-a-resource' }, 'Not Found S3'))

@@ -33,10 +33,6 @@ function cidToKey(cid) {
 }
 
 async function fetchS3({ region, bucket, key, offset, length, logger, retries = s3MaxRetries, retryDelay = s3RetryDelay }) {
-  if (length === 0) {
-    logger.warn({ key }, 'Called fetch S3 with length 0')
-    return Buffer.alloc(0)
-  }
   let s3Client = s3Clients[region]
   if (!s3Client) {
     s3Clients[region] = new S3Client({
@@ -51,8 +47,7 @@ async function fetchS3({ region, bucket, key, offset, length, logger, retries = 
   let error
   let response
   const request = { Bucket: bucket, Key: key }
-  if (length > 0) {
-    if (!offset) { offset = 0 }
+  if (offset > 0 && length > 0) {
     request.Range = offset + '-' + length
   }
 
@@ -118,7 +113,7 @@ async function searchCarInDynamoV1({
     })
   )
 
-  if (record?.Items?.length > 0) {
+  if (record?.Items) {
     const cars = record.Items.map(i => unmarshall(i))
     // current implementation supports only 1 car per block, so the first one is picked
     const car = cars[0]

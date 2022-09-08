@@ -33,6 +33,6 @@ _Variables in bold are required._
 | PORT                  | `3000`        | The port number to listen on.                                            |
 | TELEMETRY_PORT        | `3001`        | The telemetry port number for the OpenTelemetry server to listen on.     |
 
-Also check [AWS specific configuration](https://github.com/elastic-ipfs/elastic-ipfs/blob/main/aws.md).
+Also check [AWS specifics configuration](https://github.com/elastic-ipfs/elastic-ipfs/blob/main/aws.md).
 
 **Note**: `DYNAMO_BLOCKS_TABLE` and `DYNAMO_CARS_TABLE` will be removed after the transition to the new database schema will be completed.

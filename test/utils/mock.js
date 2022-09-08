@@ -85,6 +85,17 @@ async function mockAWS() {
   mockDynamoQueryCommand({ table: config.linkTableV1, keyName: config.linkTableBlockKey, keyValue: cidToKey(cid8), response: readBlock('blocks/db-v1/cid8.json') })
   mockDynamoQueryCommand({ table: config.linkTableV1, keyName: config.linkTableBlockKey, keyValue: cidToKey(cid9), response: readBlock('blocks/db-v1/cid9.json') })
 
+  // // searchCarInDynamoV0
+  // mockDynamoGetItemCommand({ table: config.blocksTable, keyName: config.blocksTablePrimaryKey, keyValue: cidToKey(cid1), response: readBlock('blocks/db-v0/cid1.json') })
+  // mockDynamoGetItemCommand({ table: config.blocksTable, keyName: config.blocksTablePrimaryKey, keyValue: cidToKey(cid2), response: readBlock('blocks/db-v0/cid2.json') })
+  // mockDynamoGetItemCommand({ table: config.blocksTable, keyName: config.blocksTablePrimaryKey, keyValue: cidToKey(cid3) })
+  // mockDynamoGetItemCommand({ table: config.blocksTable, keyName: config.blocksTablePrimaryKey, keyValue: cidToKey(cid4) })
+  // mockDynamoGetItemCommand({ table: config.blocksTable, keyName: config.blocksTablePrimaryKey, keyValue: cidToKey(cid5), response: readBlock('blocks/db-v0/cid5.json') })
+  // mockDynamoGetItemCommand({ table: config.blocksTable, keyName: config.blocksTablePrimaryKey, keyValue: cidToKey(cid6), response: readBlock('blocks/db-v0/cid6.json') })
+  // mockDynamoGetItemCommand({ table: config.blocksTable, keyName: config.blocksTablePrimaryKey, keyValue: cidToKey(cid7), response: readBlock('blocks/db-v0/cid7.json') })
+  // mockDynamoGetItemCommand({ table: config.blocksTable, keyName: config.blocksTablePrimaryKey, keyValue: cidToKey(cid8), response: readBlock('blocks/db-v0/cid8.json') })
+  // mockDynamoGetItemCommand({ table: config.blocksTable, keyName: config.blocksTablePrimaryKey, keyValue: cidToKey(cid9), response: readBlock('blocks/db-v0/cid9.json') })
+
   // fetchS3
   mockS3GetObject({ key: 'test-cid1.car', bucket: 'test-cars', range: 'bytes=96-100', response: readData('cars/test-cid1.car', 96, 100) })
   mockS3GetObject({ key: 'test-cid2.car', bucket: 'test-cars', range: 'bytes=96-147', response: readData('cars/test-cid2.car', 96, 147) })

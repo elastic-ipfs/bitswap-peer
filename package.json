@@ -1,6 +1,6 @@
 {
   "name": "bitswap-peer",
-  "version": "0.4.0",
+  "version": "0.3.9",
   "description": "Elastic IPFS BitSwap Peer",
   "homepage": "https://github.com/elastic-ipfs/bitswap-peer",
   "license": "(Apache-2.0 AND MIT)",
@@ -12,11 +12,9 @@
     "lint": "eslint src test"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.159.0",
-    "@aws-sdk/client-s3": "^3.159.0",
     "@aws-sdk/client-sqs": "^3.154.0",
-    "@aws-sdk/node-http-handler": "^3.159.0",
-    "@aws-sdk/util-dynamodb": "^3.159.0",
+    "@aws-sdk/node-http-handler": "^3.127.0",
+    "@aws-sdk/util-dynamodb": "^3.154.0",
     "@web3-storage/libp2p-noise": "^6.0.0",
     "bl": "^5.0.0",
     "dotenv": "^16.0.1",
@@ -31,13 +29,15 @@
     "make-promises-safe": "^5.1.0",
     "mnemonist": "^0.39.2",
     "pino": "^8.4.2",
+    "piscina": "^3.2.0",
     "protobufjs": "^7.0.0",
-    "sodium-native": "^3.4.1"
+    "sodium-native": "^3.4.1",
+    "undici": "^5.9.1",
+    "xml-js": "^1.6.11"
   },
   "devDependencies": {
     "@ipld/car": "^4.1.4",
     "@ipld/dag-pb": "^2.1.17",
-    "aws-sdk-client-mock": "^2.0.0",
     "c8": "^7.12.0",
     "eslint": "^8.22.0",
     "eslint-config-standard": "^17.0.0",
@@ -50,6 +50,7 @@
     "libp2p-tcp": "^0.17.2",
     "pino-pretty": "^9.0.1",
     "prettier": "^2.7.1",
+    "sinon": "^14.0.0",
     "tap": "^16.3.0"
   },
   "engines": {

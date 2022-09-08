@@ -12,6 +12,8 @@ const {
   CACHE_BLOCK_DATA: cacheBlockData,
   CACHE_BLOCK_DATA_SIZE: cacheBlockDataSize,
 
+  CONCURRENCY: rawConcurrency,
+
   DYNAMO_BLOCKS_TABLE: blocksTable,
   DYNAMO_CARS_TABLE: carsTable,
   DYNAMO_BLOCKS_TABLE_V1: blocksTableV1,
@@ -21,6 +23,7 @@ const {
   PEER_ID_DIRECTORY: peerIdJsonDirectory,
   PEER_ID_FILE: peerIdJsonFile,
   PEER_ANNOUNCE_ADDR: peerAnnounceAddr,
+  PIPELINING: rawPipelining,
   PORT: rawPort,
   HTTP_PORT: rawHttpPort,
 
@@ -33,16 +36,17 @@ const {
   S3_RETRY_DELAY: s3RetryDelay
 } = process.env
 
+const concurrency = parseInt(rawConcurrency)
+const pipelining = parseInt(rawPipelining)
 const port = parseInt(rawPort)
 const httpPort = parseInt(rawHttpPort)
 
 module.exports = {
   blocksTable: blocksTable ?? 'blocks',
+  cacheBlockInfo: cacheBlockInfo === 'true',
+  cacheBlockInfoSize: cacheBlockInfoSize ? parseInt(cacheBlockInfoSize) : 1e3,
 
-  cacheBlockInfo: cacheBlockInfo ? cacheBlockInfo === 'true' : true, // default is true
-  cacheBlockInfoSize: cacheBlockInfoSize ? parseInt(cacheBlockInfoSize) : 1e4,
-
-  cacheBlockData: cacheBlockData === 'true', // default is false
+  cacheBlockData: cacheBlockData === 'true',
   cacheBlockDataSize: cacheBlockDataSize ? parseInt(cacheBlockDataSize) : 1e3,
 
   carsTable: carsTable ?? 'cars',
@@ -58,9 +62,11 @@ module.exports = {
   enableKeepAlive: enableKeepAlive ?? 'true',
   pingPeriodSecs: pingPeriodSecs ?? 10,
 
+  concurrency: !isNaN(concurrency) && concurrency > 0 ? concurrency : 128,
   peerIdJsonFile,
   peerIdJsonPath: join(peerIdJsonDirectory ?? '/tmp', peerIdJsonFile ?? 'peerId.json'),
   peerAnnounceAddr,
+  pipelining: !isNaN(pipelining) && pipelining > 0 ? pipelining : 16,
   port: !isNaN(port) && port > 0 ? port : 3000,
   httpPort: !isNaN(httpPort) && httpPort > 0 ? httpPort : 3001,
   dynamoMaxRetries: dynamoMaxRetries ?? 3,

@@ -15,6 +15,7 @@ const { Connection } = require('../../src/networking')
 const { noiseCrypto } = require('../../src/noise-crypto')
 const { Message, RawMessage } = require('../../src/protocol')
 const { startService } = require('../../src/service')
+const { mockAWS } = require('./mock')
 
 let currentPort = 53000 + parseInt(process.env.TAP_CHILD_ID) * 100
 
@@ -47,11 +48,15 @@ async function getFreePort() {
   return getPort({ port: currentPort++ })
 }
 
-async function prepare(t, protocol) {
+async function prepare(t, protocol, dispatcher) {
   const peerId = await PeerId.create()
   const port = await getFreePort()
 
-  const { service } = await startService({ peerId, currentPort: port })
+  if (!dispatcher) {
+    dispatcher = await mockAWS(t)
+  }
+
+  const { service } = await startService({ peerId, currentPort: port, dispatcher })
   const { stream, receiver, node } = await createClient(peerId, port, protocol)
 
   const connection = new Connection(stream)
@@ -60,11 +65,12 @@ async function prepare(t, protocol) {
 }
 
 async function teardown(t, client, service, connection) {
-  await Promise.allSettled([connection.close(), client.stop(), service.stop()])
+  await connection.close()
+  await client.stop()
+  await service.stop()
 }
 
-// TODO remove hardcoded timers
-async function receiveMessages(receiver, protocol, timeout = 2000, limit = 1, raw = false) {
+async function receiveMessages(receiver, protocol, timeout = 10000, limit = 1, raw = false) {
   let timeoutHandle
   const responses = []
 
@@ -156,6 +162,7 @@ module.exports = {
   getPresence,
   hasBlockWithHash,
   hasDAGBlock,
+  hasRawBlock,
   hasSingleBlockWithHash,
   hasSingleDAGBlock,
   hasSingleRawBlock,

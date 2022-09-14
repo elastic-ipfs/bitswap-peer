@@ -6,11 +6,10 @@ const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
 const LRUCache = require('mnemonist/lru-cache')
 
-const { cacheBlockInfo, cacheBlockInfoSize, cacheBlockData, cacheBlockDataSize, port, peerAnnounceAddr } = require('./config')
+const { cacheBlockInfo, cacheBlockInfoSize, cacheBlockData, cacheBlockDataSize } = require('./config')
 const { logger, serializeError } = require('./logging')
 const { Connection } = require('./networking')
 const { noiseCrypto } = require('./noise-crypto')
-const { getPeerId } = require('../src/peer-id')
 const { startKeepAlive, stopKeepAlive } = require('./p2p-keep-alive.js')
 const { enableKeepAlive } = require('./config')
 const {
@@ -23,7 +22,7 @@ const {
   Message,
   protocols
 } = require('./protocol')
-const { cidToKey, defaultDispatcher, fetchBlockFromS3, searchCarInDynamoV1 } = require('./storage')
+const { cidToKey, fetchBlockData, searchCarInDynamoV1 } = require('./storage')
 const { telemetry } = require('./telemetry')
 
 const blockInfoCache = new LRUCache(cacheBlockInfoSize)
@@ -39,61 +38,71 @@ function sizeofBlock(block) {
   return block.car.length * 2 + 16
 }
 
-async function getBlockInfo(dispatcher, cid) {
-  const key = cidToKey(cid)
-  const cached = blockInfoCache.get(key)
+async function getBlockInfo(awsClient, cid) {
+  try {
+    const key = cidToKey(cid)
+    const cached = blockInfoCache.get(key)
 
-  if (cacheBlockInfo) {
-    if (cached) {
-      telemetry.increaseCount('cache-block-info-hits')
-      return cached
+    if (cacheBlockInfo) {
+      if (cached) {
+        telemetry.increaseCount('cache-block-info-hits')
+        return cached
+      }
+      telemetry.increaseCount('cache-block-info-misses')
     }
-    telemetry.increaseCount('cache-block-info-misses')
+
+    const item = await telemetry.trackDuration(
+      'dynamo-request',
+      searchCarInDynamoV1({ awsClient, blockKey: key })
+    )
+
+    if (item) {
+      blockInfoCache.set(key, item)
+    }
+
+    return item
+  } catch (error) {
+    logger.error({ cid: cidToKey(cid), err: serializeError(error) }, 'Unable to get block info')
   }
-
-  telemetry.increaseCount('dynamo-reads')
-  const item = await telemetry.trackDuration(
-    'dynamo-request',
-    searchCarInDynamoV1({ dispatcher, blockKey: key, logger })
-  )
-
-  if (item) {
-    blockInfoCache.set(key, item)
-  }
-
-  return item
 }
 
-async function fetchBlock(dispatcher, cid) {
-  const info = await getBlockInfo(dispatcher, cid)
-  if (!info) {
-    return null
-  }
-
-  const { offset, length, car } = info
-
-  if (length > maxBlockSize) {
-    return null
-  }
-
-  const cacheKey = cidToKey(cid)
-  if (cacheBlockData) {
-    const bytes = blockDataCache.get(cacheKey)
-    if (bytes) {
-      telemetry.increaseCount('cache-block-data-hits')
-      return bytes
+async function fetchBlock(awsClient, cid) {
+  try {
+    const info = await getBlockInfo(awsClient, cid)
+    if (!info) {
+      return null
     }
-    telemetry.increaseCount('cache-block-data-misses')
+
+    const { offset, length, car } = info
+
+    if (length > maxBlockSize) {
+      return null
+    }
+
+    const cacheKey = cidToKey(cid)
+    if (cacheBlockData) {
+      const bytes = blockDataCache.get(cacheKey)
+      if (bytes) {
+        telemetry.increaseCount('cache-block-data-hits')
+        return bytes
+      }
+      telemetry.increaseCount('cache-block-data-misses')
+    }
+
+    const [, region, bucket, key] = car.match(/([^/]+)\/([^/]+)\/(.+)/)
+    const bytes = await telemetry.trackDuration(
+      's3-request',
+      fetchBlockData({ awsClient, region, bucket, key, offset, length })
+    )
+
+    if (cacheBlockData) {
+      blockDataCache.set(cacheKey, bytes)
+    }
+
+    return bytes
+  } catch (error) {
+    logger.error({ cid: cidToKey(cid), err: serializeError(error) }, 'Unable to get block data')
   }
-
-  const [, bucketRegion, bucketName, key] = car.match(/([^/]+)\/([^/]+)\/(.+)/)
-  const bytes = await fetchBlockFromS3(dispatcher, bucketRegion, bucketName, key, offset, length)
-
-  if (cacheBlockData) {
-    blockDataCache.set(cacheKey, bytes)
-  }
-
-  return bytes
 }
 
 async function sendMessage(context, encodedMessage) {
@@ -133,7 +142,7 @@ async function processEntry(entry, context) {
 
     if (entry.wantType === Entry.WantType.Block) {
       // Fetch the block and eventually append to the list of blocks
-      const raw = await fetchBlock(context.dispatcher, entry.cid)
+      const raw = await fetchBlock(context.awsClient, entry.cid)
 
       if (raw) {
         telemetry.increaseCount('bitswap-block-data-hits')
@@ -146,7 +155,7 @@ async function processEntry(entry, context) {
       }
     } else if (entry.wantType === Entry.WantType.Have && context.protocol === BITSWAP_V_120) {
       // Check if we have the block
-      const existing = await getBlockInfo(context.dispatcher, entry.cid)
+      const existing = await getBlockInfo(context.awsClient, entry.cid)
 
       if (existing) {
         telemetry.increaseCount('bitswap-block-info-hits')
@@ -220,29 +229,15 @@ function processWantlist(context) {
   process.nextTick(processWantlist, context)
 }
 
-async function startService({ peerId, currentPort, dispatcher, announceAddr } = {}) {
+async function startService({ peerId, port, peerAnnounceAddr, awsClient } = {}) {
   try {
-    if (!peerId) {
-      peerId = await getPeerId()
-    }
-
-    if (!dispatcher) {
-      dispatcher = defaultDispatcher
-    }
-
-    if (!currentPort) {
-      currentPort = port
-    }
-
-    if (!announceAddr) {
-      announceAddr = peerAnnounceAddr
-    }
+    // TODO params validation
 
     const service = await libp2p.create({
       peerId,
       addresses: {
-        listen: [`/ip4/0.0.0.0/tcp/${currentPort}/ws`],
-        announce: announceAddr ? [announceAddr] : undefined
+        listen: [`/ip4/0.0.0.0/tcp/${port}/ws`],
+        announce: peerAnnounceAddr ? [peerAnnounceAddr] : undefined
       },
       modules: {
         transport: [Websockets],
@@ -275,7 +270,7 @@ async function startService({ peerId, currentPort, dispatcher, announceAddr } = 
           try {
             const context = {
               service,
-              dispatcher,
+              awsClient,
               peer: dial.remotePeer,
               protocol,
               wantlist: message.wantlist,
@@ -297,7 +292,6 @@ async function startService({ peerId, currentPort, dispatcher, announceAddr } = 
         // another multiplexed stream.
         connection.on('end:receive', () => connection.close())
 
-        /* c8 ignore next 4 */
         connection.on('error', err => {
           logger.error({ err, dial, stream, protocol }, `Connection error: ${serializeError(err)}`)
           service.emit('error:connection', err)
@@ -330,23 +324,14 @@ async function startService({ peerId, currentPort, dispatcher, announceAddr } = 
       logger.error({ err }, `libp2p connectionManager.error: ${serializeError(err)}`)
     })
 
-    service.connectionManager.on('connection', connection => {
-      logger.debug({ connection }, ' ******** connectionManager.on connection')
-    })
-
-    service.connectionManager.on('connectionEnd', connection => {
-      logger.debug({ connection }, ' ******** connectionManager.on connectionEnd')
-    })
-
     await service.start()
 
     logger.info(
       { address: service.transportManager.getAddrs() },
-      `BitSwap peer started with PeerId ${service.peerId} and listening on port ${currentPort} ...`
+      `BitSwap peer started with PeerId ${service.peerId} and listening on port ${port} ...`
     )
 
-    return { service, port: currentPort, peerId }
-    /* c8 ignore next 3 */
+    return { service, port, peerId }
   } catch (err) {
     logger.error({ err }, 'Error on service')
   }

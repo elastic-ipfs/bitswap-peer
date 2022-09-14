@@ -7,7 +7,7 @@
       "N": "52"
     },
     "carpath": {
-      "S": "{AWS_REGION}/test-cars/test-cid2.car"
+      "S": "{AWS_REGION}/{BUCKET}/test-cid2.car"
     }
   }
 ]

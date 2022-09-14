@@ -1,21 +1,62 @@
 'use strict'
 
-process.env.CACHE_BLOCK_INFO = 'true'
-process.env.CACHE_BLOCK_DATA = 'true'
-process.env.LOG_LEVEL = 'fatal'
-
 const t = require('tap')
 
-t.test('healthCheck - readiness returns 200', async t => {
-  /** @type {import('../src/health-check.js')} */
-  const healthCheckModuleWithMocks = await t.mock('../src/health-check.js', {
-    '../src/peer-id.js': {
-      getPeerId: () => 'Works'
-    },
-    '../src/storage.js': {
-      searchCarInDynamoV1: () => 'Works'
+const { checkReadiness } = require('../src/health-check')
+const helper = require('./utils/helper')
+
+t.test('checkReadiness', async t => {
+  const readiness = {
+    dynamo: { table: 'dynamo-table' },
+    s3: { region: 's3-region', bucket: 's3-bucket' }
+  }
+
+  t.test('should return 200 when it\'s all good, man', async t => {
+    const awsClient = {
+      dynamoDescribeTable: async () => { },
+      s3HeadBucket: async () => { }
     }
+    const logger = helper.dummyLogger()
+
+    t.equal(await checkReadiness({ awsClient, readiness, logger }), 200)
   })
-  const statusCode = await healthCheckModuleWithMocks.healthCheck.checkReadiness()
-  t.equal(statusCode, 200)
+
+  t.test('should return 503 on Dynamo error', async t => {
+    const awsClient = {
+      dynamoDescribeTable: async () => { throw new Error('ERROR_ON_DYNAMO') },
+      s3HeadBucket: async () => { }
+    }
+    const logger = helper.spyLogger()
+
+    t.equal(await checkReadiness({ awsClient, readiness, logger }), 503)
+    t.equal(logger.messages.error.length, 1)
+    t.match(logger.messages.error[0][0].err, 'ERROR_ON_DYNAMO')
+    t.equal(logger.messages.error[0][1], 'Readiness Probe Failed')
+  })
+
+  t.test('should return 503 on S3 error', async t => {
+    const awsClient = {
+      dynamoDescribeTable: async () => { },
+      s3HeadBucket: async () => { throw new Error('ERROR_ON_S3') }
+    }
+    const logger = helper.spyLogger()
+
+    t.equal(await checkReadiness({ awsClient, readiness, logger }), 503)
+    t.equal(logger.messages.error.length, 1)
+    t.match(logger.messages.error[0][0].err, 'ERROR_ON_S3')
+    t.equal(logger.messages.error[0][1], 'Readiness Probe Failed')
+  })
+
+  t.test('should return 503 on S3 and Dynamo error', async t => {
+    const awsClient = {
+      dynamoDescribeTable: async () => { throw new Error('ERROR_ON_DYNAMO') },
+      s3HeadBucket: async () => { throw new Error('ERROR_ON_S3') }
+    }
+    const logger = helper.spyLogger()
+
+    t.equal(await checkReadiness({ awsClient, readiness, logger }), 503)
+    t.equal(logger.messages.error.length, 1)
+    t.match(logger.messages.error[0][0].err, 'ERROR_ON_DYNAMO')
+    t.equal(logger.messages.error[0][1], 'Readiness Probe Failed')
+  })
 })

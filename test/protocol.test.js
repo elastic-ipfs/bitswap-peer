@@ -14,9 +14,7 @@ const {
 } = require('../src/protocol')
 const { cid3 } = require('./fixtures/cids')
 
-t.test('protocol - safety checks', t => {
-  t.plan(7)
-
+t.test('protocol - safety checks', async t => {
   const message = new Message(new WantList([], true), [], [], -1)
   t.notOk(message.hasData())
 
@@ -32,9 +30,7 @@ t.test('protocol - safety checks', t => {
   t.notOk(message.addBlockPresence(new BlockPresence({ byteLength: 100000 }, BlockPresence.Type.Have)))
 })
 
-t.test('protocol - Protocol Buffers messages are properly sanitized and encoded', t => {
-  t.plan(5)
-
+t.test('protocol - Protocol Buffers messages are properly sanitized and encoded', async t => {
   t.equal(new Block(cid3, Buffer.alloc(10)).encode(BITSWAP_V_120).toString('base64'), 'CgQBcBIgEgoAAAAAAAAAAAAA')
 
   t.equal(

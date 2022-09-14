@@ -5,7 +5,12 @@ test-regex: "(?:\\.test\\.js)$"
 test-env:
   - NODE_ENV=test
   - ENV_FILE_PATH=test/fixtures/env
-  - LOG_LEVEL=error
+  - LOG_LEVEL=fatal
   - CACHE_BLOCK_INFO=false
   - CACHE_BLOCK_DATA=false
+  - DYNAMO_REGION=region-test
+  - PEER_ID_S3_REGION=region-test
+  - DYNAMO_RETRY_DELAY=50
+  - S3_RETRY_DELAY=50
+
 timeout: 60

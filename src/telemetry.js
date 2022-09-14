@@ -81,7 +81,6 @@ class Telemetry {
     // Setup
     this.component = component
     this.logger = logger
-    /* c8 ignore next */
     this.version = version && buildDate ? `${version}-build.${buildDate}` : 'development'
 
     // Create metrics
@@ -124,7 +123,6 @@ class Telemetry {
       output += `# HELP ${metric.exportName} ${metric.description}\n`
       output += `# TYPE ${metric.exportName} ${metric.type}\n`
 
-      /* c8 ignore next */
       const timestamp = process.env.NOW ?? current.timestamp
 
       if (metric.type === 'histogram') {

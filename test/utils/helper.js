@@ -15,9 +15,6 @@ const { Connection } = require('../../src/networking')
 const { noiseCrypto } = require('../../src/noise-crypto')
 const { Message, RawMessage } = require('../../src/protocol')
 const { startService } = require('../../src/service')
-const { mockAWS } = require('./mock')
-
-let currentPort = 53000 + parseInt(process.env.TAP_CHILD_ID) * 100
 
 async function createClient(peerId, port, protocol) {
   const node = await libp2p.create({
@@ -45,18 +42,13 @@ async function createClient(peerId, port, protocol) {
 
 async function getFreePort() {
   const getPort = await loadEsmModule('get-port')
-  return getPort({ port: currentPort++ })
+  return getPort()
 }
 
-async function prepare(t, protocol, dispatcher) {
+async function setup({ protocol, awsClient }) {
   const peerId = await PeerId.create()
   const port = await getFreePort()
-
-  if (!dispatcher) {
-    dispatcher = await mockAWS(t)
-  }
-
-  const { service } = await startService({ peerId, currentPort: port, dispatcher })
+  const { service } = await startService({ peerId, port, awsClient })
   const { stream, receiver, node } = await createClient(peerId, port, protocol)
 
   const connection = new Connection(stream)
@@ -64,13 +56,14 @@ async function prepare(t, protocol, dispatcher) {
   return { service, client: node, connection, receiver }
 }
 
-async function teardown(t, client, service, connection) {
+async function teardown(client, service, connection) {
   await connection.close()
   await client.stop()
   await service.stop()
 }
 
-async function receiveMessages(receiver, protocol, timeout = 10000, limit = 1, raw = false) {
+// TODO remove hard timeouts
+async function receiveMessages(receiver, protocol, timeout = 5000, limit = 1, raw = false) {
   let timeoutHandle
   const responses = []
 
@@ -156,7 +149,24 @@ function safeGetDAGLinks(block) {
   }
 }
 
+function dummyLogger() {
+  return { fatal: noop, error: noop, warn: noop, info: noop, debug: noop }
+}
+
+function spyLogger() {
+  const spy = { messages: {} }
+  for (const l of ['fatal', 'error', 'error', 'warn', 'info', 'debug']) {
+    spy.messages[l] = []
+    spy[l] = (...args) => { spy.messages[l].push(args) }
+  }
+  return spy
+}
+
+function noop() { }
+
 module.exports = {
+  dummyLogger,
+  spyLogger,
   createClient,
   getFreePort,
   getPresence,
@@ -166,7 +176,7 @@ module.exports = {
   hasSingleBlockWithHash,
   hasSingleDAGBlock,
   hasSingleRawBlock,
-  prepare,
+  setup,
   receiveMessages,
   safeGetDAGLinks,
   teardown

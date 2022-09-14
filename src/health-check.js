@@ -1,21 +1,18 @@
 'use strict'
 
-const { logger, serializeError } = require('./logging')
-const { getPeerId } = require('./peer-id')
-const { searchCarInDynamoV1 } = require('./storage')
+const { serializeError } = require('./logging')
 
-class HealthCheck {
-  async checkReadiness() {
-    try {
-      await getPeerId()
-      await searchCarInDynamoV1({ blockKey: 'nonExistentKey', logger })
-      return 200
-    } catch (err) {
-      const errMessage = `Readiness Probe Failed. Error: ${serializeError(err)}`
-      logger.error({ err }, errMessage)
-      return 503
-    }
+async function checkReadiness({ awsClient, readiness, logger }) {
+  try {
+    await Promise.all([
+      awsClient.dynamoDescribeTable(readiness.dynamo.table),
+      awsClient.s3HeadBucket(readiness.s3)
+    ])
+    return 200
+  } catch (err) {
+    logger.error({ err: serializeError(err) }, 'Readiness Probe Failed')
+    return 503
   }
 }
 
-module.exports = { healthCheck: new HealthCheck() }
+module.exports = { checkReadiness }

@@ -251,9 +251,11 @@ class Client {
       await sleep(retryDelay)
     } while (++attempts < retries)
 
-    if (record) {
-      return record.Items ? record.Items.map(i => unmarshall(i)) : []
+    if (record?.Items) {
+      return record.Items.map(i => unmarshall(i))
     }
+
+    if (!err) { return [] }
 
     this.logger.error({ err: serializeError(err), table, key: { [keyName]: keyValue } }, `Cannot Dynamo.Query after ${attempts} attempts`)
     throw new Error('Dynamo.Query')
@@ -305,6 +307,8 @@ class Client {
       return unmarshall(record.Item)
     }
 
+    if (!err) { return }
+
     this.logger.error({ err: serializeError(err), table, key: { [keyName]: keyValue } }, `Cannot Dynamo.GetItem after ${attempts} attempts`)
     throw new Error('Dynamo.GetItem')
   }
@@ -349,12 +353,13 @@ class Client {
     for await (const chunk of body) {
       buffer.append(chunk)
     }
+    const content = buffer.slice().toString('utf-8')
 
     if (statusCode >= 400) {
-      throw new Error(`Dynamo request error - Status: ${statusCode} Body: ${buffer.slice().toString('utf-8')} `)
+      throw new Error(`Dynamo request error - Status: ${statusCode} Body: ${content} `)
     }
 
-    return JSON.parse(buffer.slice())
+    return JSON.parse(content)
   }
 }
 

@@ -8,6 +8,7 @@
   "scripts": {
     "test": "c8 --reporter=text --reporter=html tap --rcfile=test/utils/config.yml",
     "test:ci": "npm run lint && c8 --reporter=text --reporter=json --check-coverage --branches 90 --functions 90 --lines 90 --statements 90 tap --rcfile=test/utils/config.yml",
+    "test:regression": "LOG_LEVEL=error node test/e2e/regression.js",
     "format": "prettier -w src test",
     "lint": "eslint src test"
   },
@@ -38,16 +39,19 @@
   "devDependencies": {
     "@ipld/car": "^4.1.4",
     "@ipld/dag-pb": "^2.1.17",
+    "autocannon": "^7.9.0",
     "c8": "^7.12.0",
     "eslint": "^8.22.0",
     "eslint-config-standard": "^17.0.0",
     "eslint-plugin-import": "^2.26.0",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^6.0.0",
+    "fastify": "^4.6.0",
     "get-port": "^6.1.2",
     "ipfs-car": "^0.8.1",
     "libp2p-gossipsub": "^0.13.0",
     "libp2p-tcp": "^0.17.2",
+    "p-queue": "^7.3.0",
     "pino-pretty": "^9.0.1",
     "prettier": "^2.7.1",
     "tap": "^16.3.0"

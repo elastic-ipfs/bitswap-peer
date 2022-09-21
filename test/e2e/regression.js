@@ -10,12 +10,8 @@ const config = require('../../src/config')
 
 const TARGET_ENV = process.env.TARGET_ENV ?? 'local'
 const UPDATE_SNAPS = !!process.env.UPDATE_SNAPS
-const CONNECTIONS = process.env.CONNECTIONS ? parseInt(process.env.CONNECTIONS) : 10
-const DURATION = process.env.DURATION ? parseInt(process.env.DURATION) : 5 // seconds
-const AMOUNT = process.env.AMOUNT ? parseInt(process.env.AMOUNT) : undefined
 const ONLY = process.env.ONLY
 const VERBOSE = !!process.env.VERBOSE
-const TIMEOUT = process.env.TIMEOUT ? parseInt(process.env.TIMEOUT) : 30
 
 const targets = {
   local: '/ip4/127.0.0.1/tcp/3000/ws/p2p/bafzbeia6mfzohhrwcvr3eaebk3gjqdwsidtfxhpnuwwxlpbwcx5z7sepei',
@@ -28,7 +24,8 @@ async function test() {
   const service = await helper.startProxy({
     config,
     target: targets[TARGET_ENV],
-    startPeer: true
+    startPeer: true,
+    concurrency: 4
   })
 
   const c = await helper.loadRegressionCases({
@@ -39,29 +36,30 @@ async function test() {
     verbose: VERBOSE
   })
 
-  const amount = UPDATE_SNAPS ? c.cases.length : AMOUNT
-  const connections = amount || CONNECTIONS
-  const duration = DURATION
-
   // run concurrent requests
   // match them with snap
-  // TODO run in parallel
-  autocannon({
-    url: service.url,
-    duration,
-    amount,
-    connections,
-    requests: c.cases,
-    timeout: TIMEOUT
-  }, (error, result) => {
-    console.log(' *** DONE ***', c.counter)
-    if (error) { console.error({ error }) }
+  let done = 0
+  for (const case_ of c.cases) {
+    console.log(' *** running', case_.file, case_.test, '...')
+    autocannon({
+      url: service.url,
+      requests: [case_],
+      duration: case_.test.duration ?? 1,
+      amount: case_.test.amount,
+      connections: case_.test.connections,
+      timeout: case_.test.timeout
+    }, (error, result) => {
+      console.log(' *** done', case_.file, case_.count)
+      if (error) { console.error({ error }) }
 
-    // console.log({ result })
-    console.log(autocannon.printResult(result))
+      // console.log({ result })
+      console.log(autocannon.printResult(result))
 
-    service.close()
-  })
+      if (++done === c.cases.length) {
+        service.close()
+      }
+    })
+  }
 }
 
 test()

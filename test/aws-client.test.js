@@ -317,6 +317,22 @@ t.test('Client', async t => {
         t.equal(logger.messages.error.length, 0)
       })
 
+      t.test('should handle empty result', async t => {
+        const logger = helper.spyLogger()
+        const options = awsClientOptions(config, logger)
+        options.agent = createMockAgent()
+
+        const client = new Client(options)
+        client.agent
+          .get(client.dynamoUrl)
+          .intercept({ method: 'POST', path: '/' })
+          .reply(200, { Items: [] })
+
+        t.same((await client.dynamoQueryBySortKey({ table: 'table', keyName: 'key', keyValue: 'id' })), [])
+        t.equal(logger.messages.debug.length, 0)
+        t.equal(logger.messages.error.length, 0)
+      })
+
       t.test('should handle error querying dynamo', async t => {
         const logger = helper.spyLogger()
         const options = awsClientOptions(config, logger)
@@ -374,6 +390,22 @@ t.test('Client', async t => {
         t.equal(logger.messages.debug[0][1], 'Cannot Dynamo.GetItem attempt 1 / 3')
         t.equal(logger.messages.debug[1][1], 'Cannot Dynamo.GetItem attempt 2 / 3')
         t.equal(logger.messages.debug.length, 2)
+        t.equal(logger.messages.error.length, 0)
+      })
+
+      t.test('should handle empty result', async t => {
+        const logger = helper.spyLogger()
+        const options = awsClientOptions(config, logger)
+        options.agent = createMockAgent()
+
+        const client = new Client(options)
+        client.agent
+          .get(client.dynamoUrl)
+          .intercept({ method: 'POST', path: '/' })
+          .reply(200, { Item: null })
+
+        t.same((await client.dynamoGetItem({ table: 'table', keyName: 'key', keyValue: 'id' })), undefined)
+        t.equal(logger.messages.debug.length, 0)
         t.equal(logger.messages.error.length, 0)
       })
 

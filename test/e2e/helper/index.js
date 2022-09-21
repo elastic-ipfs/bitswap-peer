@@ -49,11 +49,14 @@ async function loadRegressionCases({ dir, request, only, updateSnaps = false, ve
       const c = require(filePath)
       const response = JSON.stringify(c.response)
 
-      requests.cases.push({
+      const case_ = {
         ...request,
+        test: c.test,
+        file,
+        count: 0,
         body: JSON.stringify(c.request),
         onResponse: (status, body, context) => {
-          requests.counter[filePath] ? requests.counter[filePath]++ : requests.counter[filePath] = 1
+          case_.count++
 
           verbosity('response', body)
 
@@ -87,7 +90,8 @@ async function loadRegressionCases({ dir, request, only, updateSnaps = false, ve
             console.error(err)
           }
         }
-      })
+      }
+      requests.cases.push(case_)
     } catch (err) {
       console.error('error loading', filePath)
     }

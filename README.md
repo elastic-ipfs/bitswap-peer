@@ -13,7 +13,7 @@ _Variables in bold are required._
 
 | AWS_CLIENT_REFRESH_CREDENTIALS_INTERVAL | `50 * 60e3` | Credential rotation, in minutes. |
 | AWS_CLIENT_KEEP_ALIVE_TIMEOUT | `60000` | The timeout after which a the HTTP socket without active requests will time out, for AWS client. |
-| AWS_CLIENT_CONCURRENCY | `128` | The maximum concurrency  TODO|
+| AWS_CLIENT_CONCURRENCY | `128` | The maximum concurrent connections to AWS |
 | AWS_CLIENT_PIPELINING | `16` | The maximum request to pipeline in a single HTTP connections to AWS. |
 | AWS_ROLE_SESSION_NAME | `bitswap-peer` | Role session name in HTTP connections to AWS. |
 

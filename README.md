@@ -39,4 +39,4 @@ Also check [AWS specifics configuration](https://github.com/elastic-ipfs/elastic
 
 ## Issues
 
-Please report issues in the [elastic-ipfs/elastic-ipfs](https://github.com/elastic-ipfs/elastic-ipfs/issues) repo.
+Please report issues in the [elastic-ipfs/elastic-ipfs repo](https://github.com/elastic-ipfs/elastic-ipfs/issues).

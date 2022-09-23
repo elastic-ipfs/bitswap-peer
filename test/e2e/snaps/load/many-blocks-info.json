@@ -1,8 +1,7 @@
 {
   "test": {
-    "amount": 3,
-    "connections": 3,
-    "timeout": 120
+    "time": 600,
+    "connections": 1000
   },
   "request": {
     "blocks": [

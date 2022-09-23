@@ -8,6 +8,7 @@ const config = require('../../src/config')
 
 // TODO doc
 
+const TEST_TYPE = process.env.TEST_TYPE ?? 'regression'
 const TARGET_ENV = process.env.TARGET_ENV ?? 'local'
 const UPDATE_SNAPS = !!process.env.UPDATE_SNAPS
 const ONLY = process.env.ONLY
@@ -29,7 +30,7 @@ async function test() {
   })
 
   const c = await helper.loadRegressionCases({
-    dir: path.join(__dirname, './snaps/regression'),
+    dir: path.join(__dirname, '/snaps/', TEST_TYPE),
     request: service.request,
     updateSnaps: UPDATE_SNAPS,
     only: ONLY,

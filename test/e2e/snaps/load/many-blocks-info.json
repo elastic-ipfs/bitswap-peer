@@ -1,6 +1,6 @@
 {
   "test": {
-    "time": 600,
+    "duration": 600,
     "connections": 1000
   },
   "request": {

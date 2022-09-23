@@ -264,15 +264,16 @@ class Client {
   /**
    * @see https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_GetItem.htm
    */
-  async dynamoGetItem({ table, keyName, keyValue, projection = 'item', retries, retryDelay }) {
+  async dynamoGetItem({ table, keyName, keyValue, projection, retries, retryDelay }) {
     if (!retries) { retries = this.dynamoOptions.maxRetries }
     if (!retryDelay) { retryDelay = this.dynamoOptions.retryDelay }
 
-    const payload = JSON.stringify({
+    const request = {
       TableName: table,
-      Key: { [keyName]: { S: keyValue } },
-      ProjectionExpression: projection
-    })
+      Key: { [keyName]: { S: keyValue } }
+    }
+    if (projection) { request.ProjectionExpression = projection }
+    const payload = JSON.stringify(request)
 
     const headers = await signerWorker.run({
       url: this.dynamoUrl,

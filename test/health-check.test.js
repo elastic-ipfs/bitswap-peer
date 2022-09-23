@@ -13,8 +13,8 @@ t.test('checkReadiness', async t => {
 
   t.test('should return 200 when it\'s all good, man', async t => {
     const awsClient = {
-      dynamoDescribeTable: async () => { },
-      s3HeadBucket: async () => { }
+      dynamoQueryBySortKey: async () => { },
+      s3Fetch: async () => { }
     }
     const logger = helper.dummyLogger()
 
@@ -23,8 +23,8 @@ t.test('checkReadiness', async t => {
 
   t.test('should return 503 on Dynamo error', async t => {
     const awsClient = {
-      dynamoDescribeTable: async () => { throw new Error('ERROR_ON_DYNAMO') },
-      s3HeadBucket: async () => { }
+      dynamoQueryBySortKey: async () => { throw new Error('ERROR_ON_DYNAMO') },
+      s3Fetch: async () => { }
     }
     const logger = helper.spyLogger()
 
@@ -36,8 +36,8 @@ t.test('checkReadiness', async t => {
 
   t.test('should return 503 on S3 error', async t => {
     const awsClient = {
-      dynamoDescribeTable: async () => { },
-      s3HeadBucket: async () => { throw new Error('ERROR_ON_S3') }
+      dynamoQueryBySortKey: async () => { },
+      s3Fetch: async () => { throw new Error('ERROR_ON_S3') }
     }
     const logger = helper.spyLogger()
 
@@ -49,8 +49,8 @@ t.test('checkReadiness', async t => {
 
   t.test('should return 503 on S3 and Dynamo error', async t => {
     const awsClient = {
-      dynamoDescribeTable: async () => { throw new Error('ERROR_ON_DYNAMO') },
-      s3HeadBucket: async () => { throw new Error('ERROR_ON_S3') }
+      dynamoQueryBySortKey: async () => { throw new Error('ERROR_ON_DYNAMO') },
+      s3Fetch: async () => { throw new Error('ERROR_ON_S3') }
     }
     const logger = helper.spyLogger()
 

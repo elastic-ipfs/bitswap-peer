@@ -25,11 +25,15 @@ async function boot() {
       port: config.httpPort,
       awsClient,
       readiness: {
-        dynamo: { table: config.linkTableV1 },
+        dynamo: {
+          table: config.linkTableV1,
+          keyName: config.linkTableBlockKey,
+          keyValue: 'readiness'
+        },
         s3: {
-          // TODO use a specific region/bucket from config
           region: config.peerIdS3Region,
-          bucket: config.peerIdS3Bucket
+          bucket: config.peerIdS3Bucket,
+          key: config.peerIdJsonFile
         }
       }
     })

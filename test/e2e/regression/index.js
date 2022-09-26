@@ -1,11 +1,11 @@
 'use strict'
 
-const helper = require('./helper')
+const cases = require('./cases')
 const path = require('path')
 const autocannon = require('autocannon')
-const peerProxy = require('../peer-proxy/index.js')
-
 const config = require('../../../src/config')
+const peerProxy = require('../shared/peer-proxy')
+const targets = require('../shared/targets')
 
 // TODO doc
 
@@ -13,13 +13,6 @@ const TARGET_ENV = process.env.TARGET_ENV ?? 'local'
 const UPDATE_SNAPS = !!process.env.UPDATE_SNAPS
 const ONLY = process.env.ONLY
 const VERBOSE = !!process.env.VERBOSE
-
-const targets = {
-  local: '/ip4/127.0.0.1/tcp/3000/ws/p2p/bafzbeia6mfzohhrwcvr3eaebk3gjqdwsidtfxhpnuwwxlpbwcx5z7sepei',
-  prod: '/dns4/elastic.dag.house/tcp/443/wss/p2p/bafzbeibhqavlasjc7dvbiopygwncnrtvjd2xmryk5laib7zyjor6kf3avm',
-  staging: '/dns4/elastic-staging.dag.house/tcp/443/wss/p2p/bafzbeigjqot6fm3i3yv37wiyybsfblrlsmib7bzlbnkpjxde6fw6b4fvei',
-  dev: '/dns4/elastic-dev.dag.house/tcp/443/wss/p2p/bafzbeia6mfzohhrwcvr3eaebk3gjqdwsidtfxhpnuwwxlpbwcx5z7sepei'
-}
 
 async function test() {
   const service = await peerProxy.startProxy({
@@ -29,7 +22,7 @@ async function test() {
     concurrency: 4
   })
 
-  const c = await helper.loadRegressionCases({
+  const c = await cases.loadRegressionCases({
     dir: path.join(__dirname, './snaps/'),
     request: service.request,
     updateSnaps: UPDATE_SNAPS,

@@ -6,7 +6,7 @@ function noop() { }
 // TODO use process.stodout
 function print(...args) { console.log(...args) }
 
-async function loadRegressionCases({ dir, request, only, updateSnaps = false, verbose = false }) {
+async function loadTestCases({ dir, request, only, updateSnaps = false, verbose = false }) {
   const requests = { cases: [], counter: {} }
   const out = {}
   const errors = {}
@@ -76,5 +76,5 @@ async function loadRegressionCases({ dir, request, only, updateSnaps = false, ve
 }
 
 module.exports = {
-  loadRegressionCases
+  loadTestCases
 }

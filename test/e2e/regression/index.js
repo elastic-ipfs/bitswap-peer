@@ -22,7 +22,7 @@ async function test() {
     concurrency: 4
   })
 
-  const c = await cases.loadRegressionCases({
+  const c = await cases.loadTestCases({
     dir: path.join(__dirname, './snaps/'),
     request: service.request,
     updateSnaps: UPDATE_SNAPS,

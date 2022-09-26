@@ -3,8 +3,9 @@
 const helper = require('./helper')
 const path = require('path')
 const autocannon = require('autocannon')
+const peerProxy = require('../peer-proxy/index.js')
 
-const config = require('../../src/config')
+const config = require('../../../src/config')
 
 // TODO doc
 
@@ -21,7 +22,7 @@ const targets = {
 }
 
 async function test() {
-  const service = await helper.startProxy({
+  const service = await peerProxy.startProxy({
     config,
     target: targets[TARGET_ENV],
     startPeer: TARGET_ENV === 'local',
@@ -29,7 +30,7 @@ async function test() {
   })
 
   const c = await helper.loadRegressionCases({
-    dir: path.join(__dirname, './snaps/regression'),
+    dir: path.join(__dirname, './snaps/'),
     request: service.request,
     updateSnaps: UPDATE_SNAPS,
     only: ONLY,

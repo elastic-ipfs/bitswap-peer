@@ -321,5 +321,5 @@ function serialize(block, type) {
 
 module.exports = {
   startProxy,
-  loadRegressionCases: loadTestCases
+  loadTestCases
 }

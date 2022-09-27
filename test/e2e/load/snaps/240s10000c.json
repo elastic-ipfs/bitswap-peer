@@ -1,7 +1,7 @@
 {
   "test": {
     "duration": 240,
-    "connections": 1000,
+    "connections": 10000,
     "timeout": 120
   },
   "request": {

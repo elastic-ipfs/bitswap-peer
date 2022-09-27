@@ -32,6 +32,7 @@ async function test() {
   for (const case_ of c.cases) {
     console.log(' *** running', case_.file, case_.test, '...')
     autocannon({
+      workers: 16,
       url: service.url,
       requests: [case_],
       duration: case_.test.duration,

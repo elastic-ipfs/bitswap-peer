@@ -1,7 +1,8 @@
 {
   "test": {
-    "duration": 240,
-    "connections": 1000
+    "duration": 5,
+    "connections": 3,
+    "timeout": 120
   },
   "request": {
     "blocks": [

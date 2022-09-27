@@ -35,7 +35,8 @@ async function test() {
       url: service.url,
       requests: [case_],
       duration: case_.test.duration,
-      connections: case_.test.connections
+      connections: case_.test.connections,
+      timeout: case_.test.timeout
     }, (error, result) => {
       console.log(' *** done', case_.file, case_.count)
       if (error) { console.error({ error }) }

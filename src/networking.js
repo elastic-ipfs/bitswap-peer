@@ -78,6 +78,7 @@ class Connection extends EventEmitter {
       }
       this.resolves = []
       this.stream.close()
+      this.emit('close')
     }
   }
 
@@ -106,6 +107,7 @@ class Connection extends EventEmitter {
 
           this.resolves = []
           this.stream.close() // close the stream (read side)
+          this.emit('close')
           return Promise.resolve({ done: true, value: undefined })
         }
 

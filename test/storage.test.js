@@ -1,229 +1,375 @@
 'use strict'
 
+process.env.LOG_LEVEL = 'fatal'
+process.env.AWS_REGION = 'region'
+
 const t = require('tap')
 const config = require('../src/config')
 
-const { fetchBlockData, searchCarInDynamoV0, searchCarInDynamoV1 } = require('../src/storage')
-
-const { mockAWS, createMockAgent } = require('./utils/mock')
+const { searchCarInDynamoV0, searchCarInDynamoV1, fetchBlocksData, fetchBlocksInfo } = require('../src/storage')
+const { mockDynamoQuery, mockDynamoItem, mockAwsClient, createMockAgent, mockBlockInfoSource, mockBlockDataSource } = require('./utils/mock')
+const { dummyLogger } = require('./utils/helper')
 
 t.test('searchCarInDynamoV0', async t => {
-  t.test('HTTP error handling', async t => {
-    const { awsClient, logger } = await mockAWS(config)
+  t.test('get result', async t => {
+    const { awsClient, logger } = await mockAwsClient(config)
     awsClient.agent = createMockAgent()
-    awsClient.agent
-      .get(awsClient.dynamoUrl)
-      .intercept({
-        method: 'POST',
-        path: '/'
-      })
-      .reply(400, { message: 'FOO' })
-      .times(2)
 
-    await t.rejects(() => searchCarInDynamoV0({ awsClient, table: 'table', keyName: 'key', blockKey: 'not-a-key', retries: 2, retryDelay: 10 }), {
-      message: 'Dynamo.GetItem'
+    const blockKey = 'the-key'
+
+    mockDynamoItem({
+      pool: awsClient.agent.get(awsClient.dynamoUrl),
+      table: config.blocksTable,
+      keyName: config.blocksTablePrimaryKey,
+      key: blockKey,
+      response: { cars: { L: [{ M: { car: { S: 'car-path' }, offset: { N: 1 }, length: { N: 2 } } }] } }
     })
 
-    t.equal(logger.messages.debug[0][1], 'Cannot Dynamo.GetItem attempt 1 / 2')
-    t.match(logger.messages.debug[0][0].err, /Dynamo request error - Status: 400 Body: {"message":"FOO"}/)
-    t.equal(logger.messages.debug[0][0].table, 'table')
-    t.same(logger.messages.debug[0][0].key, { key: 'not-a-key' })
-
-    t.equal(logger.messages.error[0][1], 'Cannot Dynamo.GetItem after 2 attempts')
+    t.same(await searchCarInDynamoV0({ awsClient, blockKey, logger }),
+      { offset: 1, length: 2, car: 'car-path' })
+    t.equal(logger.messages.debug.length, 0)
+    t.equal(logger.messages.error.length, 0)
   })
 
-  t.test('error handling', async t => {
-    const { awsClient, logger } = await mockAWS(config)
+  t.test('fails after retries', async t => {
+    const { awsClient, logger } = await mockAwsClient(config)
     awsClient.agent = createMockAgent()
-    awsClient.agent
-      .get(awsClient.dynamoUrl)
-      .intercept({
-        method: 'POST',
-        path: '/'
-      })
-      .replyWithError(new Error('FAILED'))
-      .times(3)
 
-    await t.rejects(() => searchCarInDynamoV0({ awsClient, table: 'table', keyName: 'key', blockKey: 'key-value', retries: 3, retryDelay: 10 }), {
-      message: 'Dynamo.GetItem'
+    const blockKey = 'not-a-key'
+
+    mockDynamoItem({
+      pool: awsClient.agent.get(awsClient.dynamoUrl),
+      table: config.blocksTable,
+      keyName: config.blocksTablePrimaryKey,
+      key: blockKey,
+      response: () => { throw new Error('GENERIC_ERROR') }
     })
-    t.equal(logger.messages.debug[0][1], 'Cannot Dynamo.GetItem attempt 1 / 3')
-    t.match(logger.messages.debug[0][0].err, /Error: FAILED/)
-    t.equal(logger.messages.debug[0][0].table, 'table')
-    t.same(logger.messages.debug[0][0].key, { key: 'key-value' })
 
-    t.equal(logger.messages.error[0][1], 'Cannot Dynamo.GetItem after 3 attempts')
+    await t.rejects(() => searchCarInDynamoV0({
+      awsClient,
+      blockKey,
+      logger,
+      retries: 2,
+      retryDelay: 10
+    }), { message: 'Dynamo.GetItem' })
+    t.equal(logger.messages.debug[0][1], 'Cannot Dynamo.GetItem attempt 1 / 2')
+    t.equal(logger.messages.debug[1][1], 'Cannot Dynamo.GetItem attempt 2 / 2')
+    t.equal(logger.messages.error[0][1], 'Cannot Dynamo.GetItem after 2 attempts')
   })
 })
 
 t.test('searchCarInDynamoV1', async t => {
-  t.test('HTTP error handling', async t => {
-    const { awsClient, logger } = await mockAWS(config)
+  t.test('get result', async t => {
+    const { awsClient, logger } = await mockAwsClient(config)
     awsClient.agent = createMockAgent()
-    awsClient.agent
-      .get(awsClient.dynamoUrl)
-      .intercept({
-        method: 'POST',
-        path: '/'
-      })
-      .reply(400, { message: 'FOO' })
-      .times(2)
 
-    await t.rejects(
-      () =>
-        searchCarInDynamoV1({
-          awsClient,
-          blockKey: 'not-a-key',
-          retries: 2,
-          retryDelay: 10
-        }),
-      {
-        message: 'Dynamo.Query'
-      }
-    )
+    const blockKey = 'the-key'
 
+    mockDynamoQuery({
+      pool: awsClient.agent.get(awsClient.dynamoUrl),
+      table: config.linkTableV1,
+      keyName: config.linkTableBlockKey,
+      key: blockKey,
+      response: [{ offset: { N: '1' }, length: { N: '2' }, carpath: { S: 'car-path' } }]
+    })
+
+    t.same(await searchCarInDynamoV1({ awsClient, blockKey, logger }),
+      { offset: 1, length: 2, car: 'car-path' })
+    t.equal(logger.messages.debug.length, 0)
+    t.equal(logger.messages.error.length, 0)
+  })
+
+  t.test('fails after retries', async t => {
+    const { awsClient, logger } = await mockAwsClient(config)
+    awsClient.agent = createMockAgent()
+
+    const blockKey = 'not-a-key'
+
+    mockDynamoQuery({
+      pool: awsClient.agent.get(awsClient.dynamoUrl),
+      table: config.linkTableV1,
+      keyName: config.linkTableBlockKey,
+      key: blockKey,
+      response: () => { throw new Error('GENERIC_ERROR') }
+    })
+
+    await t.rejects(() => searchCarInDynamoV1({ awsClient, blockKey, logger, retries: 2, retryDelay: 10 }), { message: 'Dynamo.Query' })
     t.equal(logger.messages.debug[0][1], 'Cannot Dynamo.Query attempt 1 / 2')
     t.equal(logger.messages.debug[1][1], 'Cannot Dynamo.Query attempt 2 / 2')
     t.equal(logger.messages.error[0][1], 'Cannot Dynamo.Query after 2 attempts')
-    t.match(logger.messages.error[0][0].err, /Dynamo request error - Status: 400 Body: {"message":"FOO"}/)
-    t.equal(logger.messages.error[0][0].table, 'v1-blocks-cars-position')
-    t.same(logger.messages.error[0][0].key, { blockmultihash: 'not-a-key' })
-  })
-
-  t.test('error handling', async t => {
-    const { awsClient, logger } = await mockAWS(config)
-    awsClient.agent = createMockAgent()
-    awsClient.agent
-      .get(awsClient.dynamoUrl)
-      .intercept({
-        method: 'POST',
-        path: '/'
-      })
-      .replyWithError(new Error('FAILED'))
-      .times(3)
-
-    await t.rejects(
-      () =>
-        searchCarInDynamoV1({
-          awsClient,
-          blockKey: 'key-value',
-          retries: 3,
-          retryDelay: 10
-        }),
-      {
-        message: 'Dynamo.Query'
-      }
-    )
-
-    t.equal(logger.messages.debug[0][1], 'Cannot Dynamo.Query attempt 1 / 3')
-    t.equal(logger.messages.debug[1][1], 'Cannot Dynamo.Query attempt 2 / 3')
-    t.equal(logger.messages.error[0][1], 'Cannot Dynamo.Query after 3 attempts')
-    t.match(logger.messages.error[0][0].err, /Error: FAILED/)
-    t.equal(logger.messages.error[0][0].table, 'v1-blocks-cars-position')
-    t.same(logger.messages.error[0][0].key, { blockmultihash: 'key-value' })
   })
 
   t.test('fallback to v0', async t => {
-    const { awsClient, logger } = await mockAWS(config)
+    const { awsClient, logger } = await mockAwsClient(config)
     awsClient.agent = createMockAgent()
 
-    const blockKey = 'the-block-key'
-    awsClient.agent
-      .get(awsClient.dynamoUrl)
-      .intercept({
-        method: 'POST',
-        path: '/',
-        body: JSON.stringify({
-          TableName: config.linkTableV1,
-          Limit: 1,
-          KeyConditionExpression: `${config.linkTableBlockKey} = :v`,
-          ExpressionAttributeValues: { ':v': { S: blockKey } }
-        })
-      })
-      .reply(200, { Items: [] })
+    const blockKey = 'the-v0-block-key'
 
-    awsClient.agent
-      .get(awsClient.dynamoUrl)
-      .intercept({
-        method: 'POST',
-        path: '/',
-        body: JSON.stringify({
-          TableName: config.blocksTable,
-          Key: { [config.blocksTablePrimaryKey]: { S: blockKey } }
-        })
-      })
-      .reply(200, { Item: require('./fixtures/blocks/db-v0/cid1.json') })
+    mockDynamoQuery({
+      pool: awsClient.agent.get(awsClient.dynamoUrl),
+      table: config.linkTableV1,
+      keyName: config.linkTableBlockKey,
+      key: blockKey,
+      response: []
+    })
+    mockDynamoItem({
+      pool: awsClient.agent.get(awsClient.dynamoUrl),
+      table: config.blocksTable,
+      keyName: config.blocksTablePrimaryKey,
+      key: blockKey,
+      response: {
+        multihash: { S: 'zQmZgTpJUbrss357x1D14Uo43JATwd7LhkZNbreqXVGFMmD' },
+        cars: {
+          L: [
+            {
+              M: {
+                offset: { N: '96' },
+                length: { N: '5' },
+                car: { S: 'region/bucket/test-cid1.car' }
+              }
+            }
+          ]
+        }
+      }
+    })
 
-    t.same(await searchCarInDynamoV1({ awsClient, logger, blockKey, retries: 1, retryDelay: 1 }), {
+    t.same(await searchCarInDynamoV1({ awsClient, blockKey, logger }), {
       offset: 96,
       length: 5,
-      car: '{AWS_REGION}/{BUCKET}/test-cid1.car'
+      car: 'region/bucket/test-cid1.car'
     })
-    t.equal(logger.info.length, 0)
+    t.equal(logger.messages.info.length, 0)
     t.equal(logger.messages.error[0][1], 'block not found in V1 table but found in V0 table')
   })
 })
 
-t.test('fetchBlockData', async t => {
-  const region = 'the-region'
-  const bucket = 'the-bucket'
-
-  t.test('should get an empty buffer calling with length zero', async t => {
-    const { awsClient, logger } = await mockAWS(config)
+t.test('fetchBlocksData', async t => {
+  t.test('should retrieve data blocks successfully', async t => {
+    const { awsClient } = await mockAwsClient(config)
     awsClient.agent = createMockAgent()
 
-    const empty = await fetchBlockData({ awsClient, region, bucket, key: 'key', offset: 12345, length: 0 })
-    t.ok(Buffer.isBuffer(empty))
-    t.equal(empty.length, 0)
-    t.same(logger.messages.warn[0], [{ key: 'key' }, 'Called s3Fetch with length 0'])
+    const blocks = [{ key: '123' }, { key: '456' }, { key: '789' }]
+
+    mockBlockInfoSource({ awsClient, key: blocks[0].key, info: { offset: 0, length: 8, car: 'region/bucket/abc' } })
+    mockBlockInfoSource({ awsClient, key: blocks[1].key, info: { offset: 12, length: 2, car: 'region/bucket/abc' } })
+    mockBlockInfoSource({ awsClient, key: blocks[2].key, info: { offset: 14, length: 2, car: 'region/bucket/abc' } })
+
+    mockBlockDataSource({ awsClient, region: 'region', bucket: 'bucket', key: 'abc', offset: 0, length: 8, data: '12345678' })
+    mockBlockDataSource({ awsClient, region: 'region', bucket: 'bucket', key: 'abc', offset: 12, length: 2, data: 'bb' })
+    mockBlockDataSource({ awsClient, region: 'region', bucket: 'bucket', key: 'abc', offset: 14, length: 2, data: 'cc' })
+
+    await fetchBlocksData({ awsClient, blocks, logger: dummyLogger() })
+
+    t.same(blocks, [
+      {
+        key: '123',
+        info: { offset: 0, length: 8, car: 'region/bucket/abc', found: true },
+        data: { content: Buffer.from('12345678'), found: true }
+      },
+      {
+        key: '456',
+        info: { offset: 12, length: 2, car: 'region/bucket/abc', found: true },
+        data: { content: Buffer.from('bb'), found: true }
+      },
+      {
+        key: '789',
+        info: { offset: 14, length: 2, car: 'region/bucket/abc', found: true },
+        data: { content: Buffer.from('cc'), found: true }
+      }
+    ])
   })
 
-  t.test('error handling, s3 request fails after all retries', async t => {
-    const { awsClient, logger } = await mockAWS(config)
+  t.test('should get error on block without key', async t => {
+    const { awsClient, logger } = await mockAwsClient(config)
     awsClient.agent = createMockAgent()
 
-    awsClient.agent
-      .get(awsClient.s3Url(region, bucket))
-      .intercept({ method: 'GET', path: '/error' })
-      .reply(400, { message: 'FOO' })
+    const blocks = [{ key: '123' }, {}, { key: '789' }]
 
-    await t.rejects(
-      () => fetchBlockData({ awsClient, region, bucket, key: 'error', offset: 1, length: 1, retries: 3, retryDelay: 0 }),
-      'Cannot S3.fetch https://the-bucket.s3.the-region.amazonaws.com/error'
-    )
-    t.same(
-      logger.messages.error[0], [
-        { key: 'error' },
-        'Cannot S3.fetch https://the-bucket.s3.the-region.amazonaws.com/error after 3 attempts'
-      ])
+    mockBlockInfoSource({ awsClient, key: blocks[0].key, info: { offset: 0, length: 8, car: 'region/bucket/abc' } })
+    mockBlockInfoSource({ awsClient, key: blocks[2].key, info: { offset: 14, length: 2, car: 'region/bucket/abc' } })
+
+    mockBlockDataSource({ awsClient, region: 'region', bucket: 'bucket', key: 'abc', offset: 0, length: 8, data: '12345678' })
+    mockBlockDataSource({ awsClient, region: 'region', bucket: 'bucket', key: 'abc', offset: 14, length: 2, data: 'cc' })
+
+    await fetchBlocksData({ awsClient, blocks, logger })
+
+    t.same(blocks, [
+      {
+        key: '123',
+        info: { offset: 0, length: 8, car: 'region/bucket/abc', found: true },
+        data: { content: Buffer.from('12345678'), found: true }
+      },
+      {},
+      {
+        key: '789',
+        info: { offset: 14, length: 2, car: 'region/bucket/abc', found: true },
+        data: { content: Buffer.from('cc'), found: true }
+      }
+    ])
+
+    t.equal(logger.messages.error[0][1], 'invalid block, missing key')
+    t.equal(logger.messages.error[1][1], 'invalid block, missing key')
+    t.equal(logger.messages.error.length, 2)
   })
 
-  t.test('error handling, s3 request fails fetching', async t => {
-    const { awsClient } = await mockAWS(config)
+  t.test('should get error on block length greater than max allowed', async t => {
+    const { awsClient, logger } = await mockAwsClient(config)
     awsClient.agent = createMockAgent()
 
-    awsClient.agent
-      .get('https://the-bucket.s3.the-region.amazonaws.com')
-      .intercept({ method: 'GET', path: '/error' })
-      .replyWithError(new Error('FAILED'))
+    const blocks = [{ key: '123' }, { key: '456' }, { key: '789' }]
 
-    await t.rejects(() => fetchBlockData({ awsClient, region, bucket, key: 'error', offset: 1, length: 1, retries: 3, retryDelay: 0 }), 'FAILED')
+    mockBlockInfoSource({ awsClient, key: blocks[0].key, info: { offset: 0, length: 10e9, car: 'region/bucket/abc' } })
+    mockBlockInfoSource({ awsClient, key: blocks[1].key, info: { offset: 14, length: 2, car: 'region/bucket/abc' } })
+    mockBlockInfoSource({ awsClient, key: blocks[2].key, info: { offset: 14, length: 2, car: 'region/bucket/abc' } })
+
+    mockBlockDataSource({ awsClient, region: 'region', bucket: 'bucket', key: 'abc', offset: 14, length: 2, data: 'aa' })
+    mockBlockDataSource({ awsClient, region: 'region', bucket: 'bucket', key: 'abc', offset: 14, length: 2, data: 'aa' })
+
+    await fetchBlocksData({ awsClient, blocks, logger })
+
+    t.same(blocks, [
+      {
+        key: '123',
+        info: { offset: 0, length: 10e9, car: 'region/bucket/abc', found: true },
+        data: { notFound: true }
+      },
+      {
+        key: '456',
+        info: { offset: 14, length: 2, car: 'region/bucket/abc', found: true },
+        data: { content: Buffer.from('aa'), found: true }
+      },
+      {
+        key: '789',
+        info: { offset: 14, length: 2, car: 'region/bucket/abc', found: true },
+        data: { content: Buffer.from('aa'), found: true }
+      }
+    ])
+
+    t.equal(logger.messages.error[0][0].block.key, '123')
+    t.equal(logger.messages.error[0][1], 'invalid block, length is greater than max allowed')
+    t.equal(logger.messages.error.length, 1)
   })
 
-  t.test('error handling, s3 request fails because of not found', async t => {
-    const { awsClient, logger } = await mockAWS(config)
+  t.test('should get not found on block non-existings blocks', async t => {
+    const { awsClient, logger } = await mockAwsClient(config)
     awsClient.agent = createMockAgent()
 
-    awsClient.agent
-      .get('https://the-bucket.s3.the-region.amazonaws.com')
-      .intercept({ method: 'GET', path: '/not-a-resource' })
-      .reply(404, { message: 'FOO' })
+    const blocks = [{ key: '123' }, { key: '456' }, { key: '789' }]
 
-    await t.rejects(
-      () => fetchBlockData({ awsClient, region, bucket, key: 'not-a-resource', offset: 1, length: 1, retries: 3, retryDelay: 0 }),
-      'NOT_FOUND'
-    )
+    mockBlockInfoSource({ awsClient, key: blocks[0].key, info: {} })
+    mockBlockInfoSource({ awsClient, key: blocks[1].key, info: { offset: 14, length: 2, car: 'region/bucket/abc' } })
+    mockBlockInfoSource({ awsClient, key: blocks[2].key, info: { offset: 14, length: 2, car: 'region/bucket/abc' } })
 
-    t.same(logger.messages.error[0], [{ url: 'https://the-bucket.s3.the-region.amazonaws.com/not-a-resource' }, 'S3 Not Found'])
+    mockBlockDataSource({ awsClient, region: 'region', bucket: 'bucket', key: 'abc', offset: 14, length: 2, data: 'aa' })
+    mockBlockDataSource({ awsClient, region: 'region', bucket: 'bucket', key: 'abc', offset: 14, length: 2, data: 'aa' })
+
+    await fetchBlocksData({ awsClient, blocks, logger })
+
+    t.same(blocks, [
+      {
+        key: '123',
+        info: { notFound: true },
+        data: { notFound: true }
+      },
+      {
+        key: '456',
+        info: { offset: 14, length: 2, car: 'region/bucket/abc', found: true },
+        data: { content: Buffer.from('aa'), found: true }
+      },
+      {
+        key: '789',
+        info: { offset: 14, length: 2, car: 'region/bucket/abc', found: true },
+        data: { content: Buffer.from('aa'), found: true }
+      }
+    ])
+
+    t.equal(logger.messages.error.length, 0)
+  })
+})
+
+t.test('fetchBlocksInfo', async t => {
+  t.test('should retrieve info blocks successfully', async t => {
+    const { awsClient } = await mockAwsClient(config)
+    awsClient.agent = createMockAgent()
+
+    const blocks = [{ key: '123' }, { key: '456' }, { key: '789' }]
+
+    mockBlockInfoSource({ awsClient, key: blocks[0].key, info: { offset: 0, length: 8, car: 'region/bucket/abc' } })
+    mockBlockInfoSource({ awsClient, key: blocks[1].key, info: { offset: 12, length: 2, car: 'region/bucket/abc' } })
+    mockBlockInfoSource({ awsClient, key: blocks[2].key, info: { offset: 14, length: 2, car: 'region/bucket/abc' } })
+
+    await fetchBlocksInfo({ awsClient, blocks, logger: dummyLogger() })
+
+    t.same(blocks, [
+      {
+        key: '123',
+        info: { offset: 0, length: 8, car: 'region/bucket/abc', found: true }
+      },
+      {
+        key: '456',
+        info: { offset: 12, length: 2, car: 'region/bucket/abc', found: true }
+      },
+      {
+        key: '789',
+        info: { offset: 14, length: 2, car: 'region/bucket/abc', found: true }
+      }
+    ])
+  })
+
+  t.test('should get error on block without key', async t => {
+    const { awsClient, logger } = await mockAwsClient(config)
+    awsClient.agent = createMockAgent()
+
+    const blocks = [{ key: '123' }, {}, { key: '789' }]
+
+    mockBlockInfoSource({ awsClient, key: blocks[0].key, info: { offset: 0, length: 8, car: 'region/bucket/abc' } })
+    mockBlockInfoSource({ awsClient, key: blocks[2].key, info: { offset: 14, length: 2, car: 'region/bucket/abc' } })
+
+    await fetchBlocksInfo({ awsClient, blocks, logger })
+
+    t.same(blocks, [
+      {
+        key: '123',
+        info: { offset: 0, length: 8, car: 'region/bucket/abc', found: true }
+      },
+      {},
+      {
+        key: '789',
+        info: { offset: 14, length: 2, car: 'region/bucket/abc', found: true }
+      }
+    ])
+
+    t.equal(logger.messages.error[0][1], 'invalid block, missing key')
+    t.equal(logger.messages.error.length, 1)
+  })
+
+  t.test('should get not found on block non-existings blocks', async t => {
+    const { awsClient, logger } = await mockAwsClient(config)
+    awsClient.agent = createMockAgent()
+
+    const blocks = [{ key: '123' }, { key: '456' }, { key: '789' }]
+
+    mockBlockInfoSource({ awsClient, key: blocks[0].key, info: {} })
+    mockBlockInfoSource({ awsClient, key: blocks[1].key, info: { offset: 214, length: 2, car: 'region/bucket/abc' } })
+    mockBlockInfoSource({ awsClient, key: blocks[2].key, info: { offset: 14, length: 2, car: 'region/bucket/abc' } })
+
+    await fetchBlocksInfo({ awsClient, blocks, logger })
+
+    t.same(blocks, [
+      {
+        key: '123',
+        info: { notFound: true }
+      },
+      {
+        key: '456',
+        info: { offset: 214, length: 2, car: 'region/bucket/abc', found: true }
+      },
+      {
+        key: '789',
+        info: { offset: 14, length: 2, car: 'region/bucket/abc', found: true }
+      }
+    ])
+
+    t.equal(logger.messages.error.length, 0)
   })
 })

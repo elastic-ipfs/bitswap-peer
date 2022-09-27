@@ -5,6 +5,12 @@ const { join, resolve } = require('path')
 require('dotenv').config({ path: process.env.ENV_FILE_PATH || resolve(process.cwd(), '.env') })
 
 const {
+  MAX_BLOCK_DATA_SIZE: maxBlockDataSize,
+  MAX_MESSAGE_SIZE: maxMessageSize,
+
+  PROCESSING_QUEUE_CONCURRENCY: processingQueueConcurrency,
+  BLOCKS_BATCH_SIZE: blocksBatchSize,
+
   CACHE_BLOCK_INFO: cacheBlockInfo,
   CACHE_BLOCK_INFO_SIZE: cacheBlockInfoSize,
 
@@ -15,6 +21,7 @@ const {
   AWS_CLIENT_CONCURRENCY: awsClientConcurrency,
   AWS_CLIENT_PIPELINING: awsClientPipelining,
   AWS_CLIENT_KEEP_ALIVE_TIMEOUT: awsClientKeepAliveTimeout,
+  AWS_CLIENT_CONNECT_TIMEOUT: awsClientConnectTimeout,
   AWS_ROLE_SESSION_NAME: awsRoleSessionName,
 
   DYNAMO_REGION: dynamoRegion,
@@ -45,6 +52,11 @@ const port = parseInt(rawPort)
 const httpPort = parseInt(rawHttpPort)
 
 module.exports = {
+  maxBlockDataSize: maxBlockDataSize ? parseInt(maxBlockDataSize) : 2 * 1024 * 1024, // 2 MB
+  maxMessageSize: maxMessageSize ? parseInt(maxMessageSize) : 4 * 1024 * 1024, // 4 MB
+  processingQueueConcurrency: processingQueueConcurrency ? parseInt(processingQueueConcurrency) : 64,
+  blocksBatchSize: blocksBatchSize ? parseInt(blocksBatchSize) : 8,
+
   blocksTable: blocksTable ?? 'blocks',
   cacheBlockInfo: cacheBlockInfo === 'true',
   cacheBlockInfoSize: cacheBlockInfoSize ? parseInt(cacheBlockInfoSize) : 1e3,
@@ -68,8 +80,9 @@ module.exports = {
 
   awsClientRefreshCredentialsInterval: awsClientRefreshCredentialsInterval ?? 50 * 60e3, // 50 min
   awsClientKeepAliveTimeout: awsClientKeepAliveTimeout ? parseInt(awsClientKeepAliveTimeout) : 60e3, // 1min
+  awsClientConnectTimeout: awsClientConnectTimeout ? parseInt(awsClientConnectTimeout) : 10e3, // 10 sec
   awsClientConcurrency: awsClientConcurrency ? parseInt(awsClientConcurrency) : 128,
-  awsClientPipelining: awsClientPipelining ? parseInt(awsClientPipelining) : 16,
+  awsClientPipelining: awsClientPipelining ? parseInt(awsClientPipelining) : 8,
   awsRoleSessionName: awsRoleSessionName ?? 'bitswap-peer',
 
   peerIdJsonFile,

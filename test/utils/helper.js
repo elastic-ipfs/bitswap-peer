@@ -70,14 +70,16 @@ async function receiveMessages(receiver, protocol, timeout = 5000, limit = 1, ra
   return new Promise((resolve, reject) => {
     let resolved = false
 
-    timeoutHandle = setTimeout(() => {
-      if (resolved) {
-        return
-      }
+    if (timeout > 0) {
+      timeoutHandle = setTimeout(() => {
+        if (resolved) {
+          return
+        }
 
-      resolved = true
-      resolve(responses)
-    }, timeout)
+        resolved = true
+        resolve(responses)
+      }, timeout)
+    }
 
     // Return all the response we receive in a certain timeout
     receiver.on('message', message => {
@@ -98,7 +100,7 @@ async function receiveMessages(receiver, protocol, timeout = 5000, limit = 1, ra
       }
     })
   }).finally(() => {
-    clearTimeout(timeoutHandle)
+    timeoutHandle && clearTimeout(timeoutHandle)
     receiver.removeAllListeners('message')
   })
 }

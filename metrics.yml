@@ -5,14 +5,19 @@ metrics:
   bitswap-active-connections: BitSwap Active Connections
   bitswap-total-entries: BitSwap Total Entries served
   bitswap-pending-entries: BitSwap Pending Entries to serve
+  bitswap-block-error: Block error (on parsing)
+  bitswap-block-data-error: Data Block error
+  bitswap-block-info-error: Info Block error
+  bitswap-block-data-canceled: Data Block canceled
+  bitswap-block-info-canceled: Info Block canceled
   bitswap-block-data-hits: Data Block served
   bitswap-block-info-hits: Info block served
   bitswap-block-data-misses: Data Block not found
   bitswap-block-info-misses: Info block not found
   bitswap-sent-data: Amount of data sent for data blocks, in bytes
   bitswap-sent-info: Amount of data sent for info blocks, in bytes
-  s3-request: AWS S3 request duration
-  dynamo-request: AWS DynamoDB request duration
+  s3-request: AWS S3 requests
+  dynamo-request: AWS DynamoDB requests
   cache-block-data-hits: LRU cache hits for Data Block
   cache-block-data-misses: LRU cache misses for Data Block
   cache-block-info-hits: LRU cache hits for Info block

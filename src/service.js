@@ -4,232 +4,17 @@ const { Noise } = require('@web3-storage/libp2p-noise')
 const libp2p = require('libp2p')
 const Multiplex = require('libp2p-mplex')
 const Websockets = require('libp2p-websockets')
-const LRUCache = require('mnemonist/lru-cache')
 
-const { cacheBlockInfo, cacheBlockInfoSize, cacheBlockData, cacheBlockDataSize } = require('./config')
-const { logger, serializeError } = require('./logging')
+const { enableKeepAlive } = require('./config')
+const { logger: defaultLogger, serializeError } = require('./logging')
+const { Message, protocols } = require('./protocol')
 const { Connection } = require('./networking')
 const { noiseCrypto } = require('./noise-crypto')
 const { startKeepAlive, stopKeepAlive } = require('./p2p-keep-alive.js')
-const { enableKeepAlive } = require('./config')
-const {
-  BITSWAP_V_120,
-  Block,
-  BlockPresence,
-  emptyWantList,
-  Entry,
-  maxBlockSize,
-  Message,
-  protocols
-} = require('./protocol')
-const { cidToKey, fetchBlockData, searchCarInDynamoV1 } = require('./storage')
+const { handle, createContext } = require('./handler')
 const { telemetry } = require('./telemetry')
 
-const blockInfoCache = new LRUCache(cacheBlockInfoSize)
-const blockDataCache = new LRUCache(cacheBlockDataSize)
-
-function createEmptyMessage(blocks = [], presences = []) {
-  return new Message(emptyWantList, blocks, presences, 0)
-}
-
-// size of block object in bytes
-// block is { car: string, offset: number, length: number }
-function sizeofBlock(block) {
-  return block.car.length * 2 + 16
-}
-
-async function getBlockInfo(awsClient, cid) {
-  try {
-    const key = cidToKey(cid)
-    const cached = blockInfoCache.get(key)
-
-    if (cacheBlockInfo) {
-      if (cached) {
-        telemetry.increaseCount('cache-block-info-hits')
-        return cached
-      }
-      telemetry.increaseCount('cache-block-info-misses')
-    }
-
-    const item = await telemetry.trackDuration(
-      'dynamo-request',
-      searchCarInDynamoV1({ awsClient, blockKey: key })
-    )
-
-    if (item) {
-      blockInfoCache.set(key, item)
-    }
-
-    return item
-  } catch (error) {
-    logger.error({ cid: cidToKey(cid), err: serializeError(error) }, 'Unable to get block info')
-  }
-}
-
-async function fetchBlock(awsClient, cid) {
-  try {
-    const info = await getBlockInfo(awsClient, cid)
-    if (!info) {
-      return null
-    }
-
-    const { offset, length, car } = info
-
-    if (length > maxBlockSize) {
-      return null
-    }
-
-    const cacheKey = cidToKey(cid)
-    if (cacheBlockData) {
-      const bytes = blockDataCache.get(cacheKey)
-      if (bytes) {
-        telemetry.increaseCount('cache-block-data-hits')
-        return bytes
-      }
-      telemetry.increaseCount('cache-block-data-misses')
-    }
-
-    const [, region, bucket, key] = car.match(/([^/]+)\/([^/]+)\/(.+)/)
-    const bytes = await telemetry.trackDuration(
-      's3-request',
-      fetchBlockData({ awsClient, region, bucket, key, offset, length })
-    )
-
-    if (cacheBlockData) {
-      blockDataCache.set(cacheKey, bytes)
-    }
-
-    return bytes
-  } catch (error) {
-    logger.error({ cid: cidToKey(cid), err: serializeError(error) }, 'Unable to get block data')
-  }
-}
-
-async function sendMessage(context, encodedMessage) {
-  if (!context.connection) {
-    telemetry.increaseCount('bitswap-total-connections')
-    telemetry.increaseCount('bitswap-active-connections')
-
-    const dialConnection = await context.service.dial(context.peer)
-    const { stream } = await dialConnection.newStream(context.protocol)
-    context.connection = new Connection(stream)
-    context.connection.on('error', err => {
-      logger.warn({ err }, `Outgoing connection error: ${serializeError(err)}`)
-    })
-  }
-
-  context.connection.send(encodedMessage)
-}
-
-async function finalizeWantlist(context) {
-  telemetry.decreaseCount('bitswap-pending-entries', context.total)
-
-  // Once we have processed all blocks, see if there is anything else to send
-  if (context.message.blocks.length || context.message.blockPresences.length) {
-    await sendMessage(context, context.message.encode(context.protocol))
-  }
-
-  if (context.connection) {
-    telemetry.decreaseCount('bitswap-active-connections')
-    await context.connection.close()
-  }
-}
-
-async function processEntry(entry, context) {
-  try {
-    let newBlock
-    let newPresence
-
-    if (entry.wantType === Entry.WantType.Block) {
-      // Fetch the block and eventually append to the list of blocks
-      const raw = await fetchBlock(context.awsClient, entry.cid)
-
-      if (raw) {
-        telemetry.increaseCount('bitswap-block-data-hits')
-        telemetry.increaseCount('bitswap-sent-data', raw.length)
-        newBlock = new Block(entry.cid, raw)
-      } else if (entry.sendDontHave && context.protocol === BITSWAP_V_120) {
-        telemetry.increaseCount('bitswap-block-data-misses')
-        newPresence = new BlockPresence(entry.cid, BlockPresence.Type.DontHave)
-        logger.warn({ entry, cid: entry.cid.toString() }, 'Block not found')
-      }
-    } else if (entry.wantType === Entry.WantType.Have && context.protocol === BITSWAP_V_120) {
-      // Check if we have the block
-      const existing = await getBlockInfo(context.awsClient, entry.cid)
-
-      if (existing) {
-        telemetry.increaseCount('bitswap-block-info-hits')
-        telemetry.increaseCount('bitswap-sent-info', sizeofBlock(existing))
-        newPresence = new BlockPresence(entry.cid, BlockPresence.Type.Have)
-      } else if (entry.sendDontHave) {
-        telemetry.increaseCount('bitswap-block-info-misses')
-        newPresence = new BlockPresence(entry.cid, BlockPresence.Type.DontHave)
-        logger.warn({ entry, cid: entry.cid.toString() }, 'Block not found')
-      }
-    }
-
-    /*
-    In the if-else below, addBlock and addPresence returns false if adding
-    the element would make the serialized message exceed the maximum allowed size.
-
-    In that case, we send the message without the new element and prepare a new message.
-
-    The reason why don't encode the message to send in sendMessage is because we need to
-    create a new message before sending is actually tried.
-    This is to avoid a race condition (and duplicate data sent) in environments when remote peer download
-    speed is comparable to Dynamo+S3 read time. (e.g. inter AWS peers).
-  */
-    if (newBlock) {
-      if (!context.message.addBlock(newBlock, context.protocol)) {
-        const toSend = context.message.encode(context.protocol)
-        context.message = createEmptyMessage([newBlock])
-        await sendMessage(context, toSend)
-      }
-    } else if (newPresence) {
-      if (!context.message.addBlockPresence(newPresence, context.protocol)) {
-        const toSend = context.message.encode(context.protocol)
-        context.message = createEmptyMessage([], [newPresence])
-        await sendMessage(context, toSend)
-      }
-    }
-
-    // TODO move outside this function
-    context.pending--
-    if (context.pending === 0) {
-      await finalizeWantlist(context)
-    }
-  } catch (err) {
-    logger.error({ err, entry }, `Cannot process an entry: ${serializeError(err)}`)
-  }
-}
-
-function processWantlist(context) {
-  if (!context.wantlist.entries.length) {
-    return
-  }
-
-  // Every tick we schedule up to 100 entries, this is not to block the Event Loop too long
-  const batch = context.wantlist.entries.splice(0, 100)
-
-  for (let i = 0, length = batch.length; i < length; i++) {
-    if (batch[i].cancel) {
-      context.pending--
-      continue
-    }
-
-    processEntry(batch[i], context)
-  }
-
-  // The list only contains cancels
-  if (context.pending === 0) {
-    finalizeWantlist(context)
-    return
-  }
-
-  process.nextTick(processWantlist, context)
-}
-
-async function startService({ peerId, port, peerAnnounceAddr, awsClient } = {}) {
+async function startService({ peerId, port, peerAnnounceAddr, awsClient, logger = defaultLogger } = {}) {
   try {
     // TODO params validation
 
@@ -261,29 +46,16 @@ async function startService({ peerId, port, peerAnnounceAddr, awsClient } = {}) 
           try {
             message = Message.decode(data, protocol)
           } catch (err) {
-            logger.warn({ err }, `Cannot decode received data: ${serializeError(err)}`)
+            logger.warn({ err: serializeError(err) }, 'Cannot decode received data')
             service.emit('error:receive', err)
             return
           }
 
-          const entries = message.wantlist.entries.length
           try {
-            const context = {
-              service,
-              awsClient,
-              peer: dial.remotePeer,
-              protocol,
-              wantlist: message.wantlist,
-              total: entries,
-              pending: entries,
-              message: createEmptyMessage()
-            }
-
-            telemetry.increaseCount('bitswap-total-entries', context.total)
-            telemetry.increaseCount('bitswap-pending-entries', entries.total)
-            process.nextTick(processWantlist, context)
+            const context = createContext({ service, peer: dial.remotePeer, protocol, wantlist: message.wantlist, awsClient })
+            handle({ context, logger })
           } catch (err) {
-            logger.warn({ err }, `Error while preparing wantList context: ${serializeError(err)}`)
+            logger.error({ err: serializeError(err) }, 'Error on request handle')
           }
         })
 
@@ -293,7 +65,7 @@ async function startService({ peerId, port, peerAnnounceAddr, awsClient } = {}) 
         connection.on('end:receive', () => connection.close())
 
         connection.on('error', err => {
-          logger.error({ err, dial, stream, protocol }, `Connection error: ${serializeError(err)}`)
+          logger.error({ err: serializeError(err), dial, stream, protocol }, 'Connection error')
           service.emit('error:connection', err)
         })
       } catch (err) {
@@ -333,7 +105,7 @@ async function startService({ peerId, port, peerAnnounceAddr, awsClient } = {}) 
 
     return { service, port, peerId }
   } catch (err) {
-    logger.error({ err }, 'Error on service')
+    logger.error({ err: serializeError(err) }, 'Generic error on service')
   }
 }
 

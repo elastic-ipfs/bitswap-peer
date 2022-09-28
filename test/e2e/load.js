@@ -40,6 +40,7 @@ async function test() {
   autocannon({
     url: service.url,
     ...service.request,
+    workers: requests.length,
     requests,
     duration: TEST_DURATION,
     amount: TEST_AMOUNT,

@@ -13,14 +13,17 @@ const RawBlockPresenceType = definitions.lookupEnum('Message.BlockPresenceType')
 const RawBlockPresence = definitions.lookupType('Message.BlockPresence')
 const RawMessage = definitions.lookupType('Message')
 
+const { logger, serializeError } = require('../src/logging')
+
 const maxPriority = Math.pow(2, 31) - 1
-const maxBlockSize = 2 * 1024 * 1024 // 2 MB
-const maxMessageSize = 4 * 1024 * 1024 // 4 MB
 
 const BITSWAP_V_100 = '/ipfs/bitswap/1.0.0'
 const BITSWAP_V_110 = '/ipfs/bitswap/1.1.0'
 const BITSWAP_V_120 = '/ipfs/bitswap/1.2.0'
 const protocols = [BITSWAP_V_120, BITSWAP_V_110, BITSWAP_V_100]
+
+const BLOCK_TYPE_INFO = 1
+const BLOCK_TYPE_DATA = 2
 
 /*
   Breakdown of the constants below:
@@ -38,22 +41,27 @@ const protocols = [BITSWAP_V_120, BITSWAP_V_110, BITSWAP_V_100]
     - 1 is the varint which declare the cid field
     - 1 is the varint which declare the type field
     - 1 is the varint of the type field value
-  - addedEstimationPercentage is arbitrary percentage added to minimize the probability of false negatives since
-    this is an estimated algorithm
   Note that for safety we are only considering BitSwap 1.2.0 since its overhead is the biggest.
 */
 const nonEmptyOverhead = 2 + 8
 const newBlockOverhead = 1 + 1 + 4 + 4
 const newPresenceOverhead = 1 + 1 + 1 + 1
-const addedEstimationPercentage = 0.1
+
+const EMPTY_MESSAGE_OVERHEAD_SIZE = 16 // 16 = Message.encode(BITSWAP_V_120).length + nonEmptyOverhead on empty message
 
 class Entry {
   constructor(cid, priority, cancel, wantType, sendDontHave) {
     this.cid = cid
+    // TODO implement priority?
     this.priority = priority
     this.cancel = Boolean(cancel)
     this.wantType = wantType
     this.sendDontHave = Boolean(sendDontHave)
+
+    this.key = null
+    this.type = BLOCK_TYPE_INFO
+    this.data = null
+    this.info = null
 
     // Validate priority
     if (isNaN(this.priority) || this.priority < 0) {
@@ -108,7 +116,7 @@ class Entry {
 }
 
 class WantList {
-  constructor(entries, full) {
+  constructor(entries, full = false) {
     this.entries = entries
     this.full = Boolean(full)
   }
@@ -194,25 +202,19 @@ class BlockPresence {
   }
 }
 
-/*
-  As specified in the constants above, each Message can be 4MB maximum (after serialization).
-  Each block can be at most 2 MB.
-  Each CID is roughly 40 byte.
-*/
+const emptyWantList = new WantList([], true)
+
 class Message {
-  constructor(wantlist, blocks, blockPresences, pendingBytes) {
+  constructor(wantlist = emptyWantList, blocks = [], blockPresences = [], pendingBytes = 0) {
     this.wantlist = wantlist
     this.blocks = blocks
     this.blockPresences = blockPresences
     this.pendingBytes = pendingBytes
+    this.blocksSize = this.isEmpty() ? EMPTY_MESSAGE_OVERHEAD_SIZE : this.encode(BITSWAP_V_120).length + nonEmptyOverhead
+  }
 
-    // Validate pendingBytes
-    if (isNaN(this.pendingBytes) || this.pendingBytes < 0) {
-      this.pendingBytes = 0
-    }
-
-    // Use module.exports here so that tests can eventually override
-    this.estimatedLength = this.encode(BITSWAP_V_120).length + module.exports.nonEmptyOverhead
+  isEmpty() {
+    return this.wantlist.entries.length + this.blocks.length + this.blockPresences.length < 1
   }
 
   static decode(encoded, protocol) {
@@ -235,24 +237,18 @@ class Message {
     )
   }
 
-  hasData() {
-    return Boolean(this.wantlist.entries.length || this.blocks.length || this.blockPresences.length)
-  }
-
   serialize(protocol) {
-    const { wantlist, blocks, blockPresences } = this
-
     if (protocol === BITSWAP_V_100) {
       return {
-        wantlist: wantlist.serialize(protocol),
-        blocks: blocks.map(b => b.data)
+        wantlist: this.wantlist.serialize(protocol),
+        blocks: this.blocks.map(b => b.data)
       }
     }
 
     return {
-      wantlist: wantlist.serialize(protocol),
-      payload: blocks.map(b => b.serialize(protocol)),
-      blockPresences: blockPresences.map(b => b.serialize(protocol)),
+      wantlist: this.wantlist.serialize(protocol),
+      payload: this.blocks.map(b => b.serialize(protocol)),
+      blockPresences: this.blockPresences.map(b => b.serialize(protocol)),
       pendingBytes: this.pendingBytes * Number.MAX_SAFE_INTEGER
     }
   }
@@ -261,47 +257,64 @@ class Message {
     return RawMessage.encode(this.serialize(protocol)).finish()
   }
 
-  addBlock(block, protocol) {
-    // Use module.exports here so that tests can eventually override
-    const newBlockSize = module.exports.newBlockOverhead + block.data.length
+  /**
+   * push block to message, to be sent later
+   * note there are no size limit, because the purpose is to send responses asap **without buffering**
+   */
+  push(block, size, protocol) {
+    if (block.cancel) { return false }
 
-    if (this.estimateNewSizeAfter(newBlockSize) > maxMessageSize) {
-      return false
+    const responseBlock = response[block.type](block, protocol)
+    if (!responseBlock) { return }
+
+    if (responseBlock.type === BLOCK_TYPE_DATA) {
+      this.blocks.push(responseBlock.block)
+      this.blocksSize += newBlockOverhead + size
+    } else {
+      this.blockPresences.push(responseBlock.block)
+      this.blocksSize += newPresenceOverhead + size
     }
-
-    this.blocks.push(block)
-    this.estimatedLength += newBlockSize
-
-    return true
   }
 
-  addBlockPresence(presence, protocol) {
-    // Use module.exports here so that tests can eventually override
-    const newPresenceSize = module.exports.newPresenceOverhead + presence.cid.byteLength
-
-    if (this.estimateNewSizeAfter(newPresenceSize) > maxMessageSize) {
-      return false
-    }
-
-    this.blockPresences.push(presence)
-    this.estimatedLength += newPresenceSize
-
-    return true
+  size() {
+    return this.blocksSize
   }
 
-  estimateNewSizeAfter(newElement) {
-    // Use module.exports here so that tests can eventually override
-    return (this.estimatedLength + newElement) * (1 + module.exports.addedEstimationPercentage)
+  async send(context) {
+    try {
+      if (this.blocks.length > 0 || this.blockPresences.length > 0) {
+        const encoded = this.encode(context.protocol)
+        await context.connection.send(encoded)
+      }
+    } catch (error) {
+      logger.error({ error: serializeError(error) }, 'error on Message.send')
+    }
   }
 }
 
-const emptyWantList = new WantList([], true)
+const response = {
+  [BLOCK_TYPE_DATA]: (block, protocol) => {
+    if (block.data?.found) {
+      return { type: BLOCK_TYPE_DATA, block: new Block(block.cid, block.data.content) }
+    }
+    if (block.data?.notFound && block.sendDontHave && protocol === BITSWAP_V_120) {
+      return { type: BLOCK_TYPE_INFO, block: new BlockPresence(block.cid, BlockPresence.Type.DontHave) }
+    }
+  },
+  [BLOCK_TYPE_INFO]: (block, protocol) => {
+    if (block.info?.found) {
+      return { type: BLOCK_TYPE_INFO, block: new BlockPresence(block.cid, BlockPresence.Type.Have) }
+    }
+    if (block.info?.notFound && block.sendDontHave && protocol === BITSWAP_V_120) {
+      return { type: BLOCK_TYPE_INFO, block: new BlockPresence(block.cid, BlockPresence.Type.DontHave) }
+    }
+  }
+}
 
 Entry.WantType = RawWantType.values
 BlockPresence.Type = RawBlockPresenceType.values
 
 module.exports = {
-  addedEstimationPercentage,
   BITSWAP_V_100,
   BITSWAP_V_110,
   BITSWAP_V_120,
@@ -309,14 +322,13 @@ module.exports = {
   BlockPresence,
   emptyWantList,
   Entry,
-  maxBlockSize,
-  maxMessageSize,
   maxPriority,
   Message,
   newBlockOverhead,
   newPresenceOverhead,
-  nonEmptyOverhead,
   protocols,
   RawMessage,
-  WantList
+  WantList,
+  BLOCK_TYPE_INFO,
+  BLOCK_TYPE_DATA
 }

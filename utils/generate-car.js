@@ -9,10 +9,8 @@ const { encode: encodeRaw, code } = require('multiformats/codecs/raw')
 const { sha256 } = require('multiformats/hashes/sha2')
 const { Readable } = require('stream')
 
-const { maxBlockSize } = require('../src/protocol')
-
 async function generate() {
-  const content = Buffer.allocUnsafe(maxBlockSize - 500).fill('\u2222')
+  const content = Buffer.allocUnsafe(4 * 1024 * 1024).fill('\u2222')
   const hash = await sha256.digest(encodeRaw(content))
   const cid = CID.create(1, code, hash)
   const { writer, out } = await CarWriter.create([cid])

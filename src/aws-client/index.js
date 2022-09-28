@@ -4,6 +4,7 @@ const Client = require('./Client')
 
 function awsClientOptions(config, logger) {
   const awsAgentOptions = {
+    connect: { timeout: config.awsClientConnectTimeout },
     keepAliveTimeout: config.awsClientKeepAliveTimeout,
     connections: config.awsClientConcurrency,
     pipelining: config.awsClientPipelining

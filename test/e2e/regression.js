@@ -24,7 +24,7 @@ async function test() {
   const service = await helper.startProxy({
     config,
     target: targets[TARGET_ENV],
-    startPeer: TARGET_ENV === 'local',
+    startPeer: true,
     concurrency: 4
   })
 

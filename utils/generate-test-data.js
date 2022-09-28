@@ -11,6 +11,7 @@ const { code: rawCode } = require('multiformats/codecs/raw')
 const { sha256 } = require('multiformats/hashes/sha2')
 const { Readable } = require('stream')
 const { cid1Content, cid2Link } = require('../test/fixtures/cids')
+const { maxBlockSize } = require('../src/protocol')
 
 /*
   Keep this configuration up-to-date with cids definition in test/utils.js.
@@ -29,7 +30,7 @@ const configuration = {
   cid7: 1500000,
   cid8: 3000000,
   sep2: 'sep',
-  cid9: 4 * 1024 * 1024
+  cid9: maxBlockSize - 500
 }
 
 async function createCAR(path, configuration) {

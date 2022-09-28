@@ -236,21 +236,6 @@ t.test('Client', async t => {
         t.equal(logger.messages.error.length, 1)
         t.equal(logger.messages.error[0][1], 'S3 Not Found')
       })
-
-      t.test('should get error with negative length', async t => {
-        const logger = helper.spyLogger()
-        const options = awsClientOptions(config, logger)
-        options.agent = createMockAgent()
-
-        const client = new Client(options)
-        const empty = await client.s3Fetch({ region, bucket, key, length: -1 })
-
-        t.ok(Buffer.isBuffer(empty))
-        t.equal(empty.length, 0)
-        t.equal(logger.messages.debug.length, 0)
-        t.equal(logger.messages.error.length, 0)
-        t.same(logger.messages.warn[0], [{ key }, 'Called s3Fetch with length 0'])
-      })
     })
 
     t.test('s3HeadBucket', async t => {
@@ -482,7 +467,6 @@ t.test('Client', async t => {
 
 t.test('awsClientOptions', async t => {
   const config = {
-    awsClientConnectTimeout: 987,
     awsClientKeepAliveTimeout: 123,
     awsClientConcurrency: 456,
     awsClientPipelining: 789,
@@ -499,7 +483,6 @@ t.test('awsClientOptions', async t => {
 
   t.same(awsClientOptions(config, logger), {
     awsAgentOptions: {
-      connect: { timeout: 987 },
       keepAliveTimeout: 123,
       connections: 456,
       pipelining: 789

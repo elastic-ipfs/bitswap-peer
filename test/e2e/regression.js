@@ -38,7 +38,6 @@ async function test() {
 
   // run concurrent requests
   // match them with snap
-  const start = Date.now()
   let done = 0
   for (const case_ of c.cases) {
     console.log(' *** running', case_.file, case_.test, '...')
@@ -57,15 +56,10 @@ async function test() {
       console.log(autocannon.printResult(result))
 
       if (++done === c.cases.length) {
-        end({ start, service })
+        service.close()
       }
     })
   }
-}
-
-function end({ start, service }) {
-  console.log('done in ', Date.now() - start, 'ms')
-  service.close()
 }
 
 test()

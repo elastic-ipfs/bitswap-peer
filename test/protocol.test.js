@@ -7,10 +7,28 @@ const {
   Block,
   BlockPresence,
   Entry,
+  maxMessageSize,
   maxPriority,
+  Message,
   WantList
 } = require('../src/protocol')
 const { cid3 } = require('./fixtures/cids')
+
+t.test('protocol - safety checks', async t => {
+  const message = new Message(new WantList([], true), [], [], -1)
+  t.notOk(message.hasData())
+
+  message.wantlist.entries.push(new Entry())
+  t.ok(message.hasData())
+
+  t.ok(message.addBlockPresence(new BlockPresence({ byteLength: 10 }, BlockPresence.Type.Have)))
+  t.ok(message.hasData())
+
+  t.ok(message.addBlock(new Block(cid3, Buffer.alloc(maxMessageSize * 0.89))))
+  t.ok(message.hasData())
+
+  t.notOk(message.addBlockPresence(new BlockPresence({ byteLength: 100000 }, BlockPresence.Type.Have)))
+})
 
 t.test('protocol - Protocol Buffers messages are properly sanitized and encoded', async t => {
   t.equal(new Block(cid3, Buffer.alloc(10)).encode(BITSWAP_V_120).toString('base64'), 'CgQBcBIgEgoAAAAAAAAAAAAA')

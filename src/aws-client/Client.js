@@ -43,9 +43,9 @@ class Client {
     this.logger = logger
 
     this.credentials = {
-      keyId: '',
-      accessKey: '',
-      sessionToken: ''
+      keyId: null,
+      accessKey: null,
+      sessionToken: null
     }
   }
 
@@ -89,7 +89,7 @@ class Client {
 
     url.searchParams.append('Version', '2011-06-15')
     url.searchParams.append('Action', 'AssumeRoleWithWebIdentity')
-    this.roleArn && url.searchParams.append('RoleArn', this.roleArn)
+    url.searchParams.append('RoleArn', this.roleArn)
     this.roleSessionName && url.searchParams.append('RoleSessionName', this.roleSessionName)
     this.identityToken && url.searchParams.append('WebIdentityToken', this.identityToken)
 
@@ -301,7 +301,7 @@ class Client {
       await sleep(retryDelay)
     } while (++attempts < retries)
 
-    if (record?.Item) {
+    if (record) {
       return unmarshall(record.Item)
     }
 

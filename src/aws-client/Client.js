@@ -143,24 +143,22 @@ class Client {
     const headers = await signerWorker.run(plainHeaders)
 
     let attempts = 0
-    let err
     do {
       try {
         return await this.s3Request({ url, headers })
-      } catch (error) {
-        if (error.message === 'NOT_FOUND') {
+      } catch (err) {
+        if (err.message === 'NOT_FOUND') {
           this.logger.error({ url }, 'S3 Not Found')
-          throw error
+          throw err
         }
-        this.logger.debug(`S3 Error, URL: ${url} Error: "${error.message}" attempt ${attempts + 1} / ${retries}`)
-        err = error
+        this.logger.debug(`S3 Error, URL: ${url} Error: "${err.message}" attempt ${attempts + 1} / ${retries}`)
       }
 
       await sleep(retryDelay)
     } while (++attempts < retries)
 
     this.logger.error({ key }, `Cannot S3.fetch ${url} after ${attempts} attempts`)
-    throw new Error(`Cannot S3.fetch ${url} - ${err.message}`)
+    throw new Error(`Cannot S3.fetch ${url}`)
   }
 
   /**

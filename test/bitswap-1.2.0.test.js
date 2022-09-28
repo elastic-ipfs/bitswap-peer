@@ -1,9 +1,11 @@
 'use strict'
 
 const t = require('tap')
+const { setTimeout: sleep } = require('timers/promises')
 
 const config = require('../src/config')
 const { BITSWAP_V_120: protocol, BlockPresence, Entry, Message, WantList } = require('../src/protocol')
+const protocolEstimation = require('../src/protocol')
 const { cid1, cid1Content, cid2, cid2Link, cid3, cid4, cid5, cid6, cid7, cid8, cid9 } = require('./fixtures/cids')
 const {
   getPresence,
@@ -16,6 +18,8 @@ const {
   teardown
 } = require('./utils/helper')
 const { mockAWS } = require('./utils/mock')
+
+t.jobs = 10
 
 t.test(`${protocol} - uses the right fields when serializing and deserializing`, async t => {
   const wantList = new WantList(
@@ -288,7 +292,7 @@ t.test(`${protocol} - large blocks skipping`, async t => {
   const request = new Message(wantList, [], [], 0)
   await connection.send(request.encode(protocol))
 
-  const responses = await receiveMessages(receiver, protocol, 5000, 2)
+  const responses = await receiveMessages(receiver, protocol, 30000, 2)
   await teardown(client, service, connection)
 
   const blocks = [...responses[0].blocks, ...responses[1].blocks]
@@ -303,23 +307,16 @@ t.test(`${protocol} - large blocks skipping`, async t => {
   await hasSingleBlockWithHash(t, { blocks }, cid8.multihash, true)
 })
 
-t.test(`${protocol} - large messages splitted in multiple responses`, async t => {
-  config.maxMessageSize = 8
-
+t.test(`${protocol} - large messages skipping`, async t => {
   const { awsClient } = await mockAWS(config)
   const { client, service, connection, receiver } = await setup({ protocol, awsClient })
+  const numPresences = 1e3
 
   const wantList = new WantList(
     [
-      new Entry(cid1, 1, false, Entry.WantType.Have, true),
-      new Entry(cid2, 1, false, Entry.WantType.Block, true),
-      new Entry(cid3, 1, false, Entry.WantType.Have, true),
-      new Entry(cid4, 1, false, Entry.WantType.Block, true),
-      new Entry(cid5, 1, false, Entry.WantType.Have, true),
-      new Entry(cid6, 1, false, Entry.WantType.Block, true),
-      new Entry(cid7, 1, false, Entry.WantType.Have, true),
-      new Entry(cid8, 1, false, Entry.WantType.Block, true),
-      new Entry(cid9, 1, false, Entry.WantType.Have, true)
+      new Entry(cid9, 1, false, Entry.WantType.Block, true),
+      new Entry(cid9, 1, false, Entry.WantType.Block, true),
+      ...Array.from(Array(numPresences), () => new Entry(cid1, 1, false, Entry.WantType.Have, false))
     ],
     false
   )
@@ -327,17 +324,24 @@ t.test(`${protocol} - large messages splitted in multiple responses`, async t =>
   const request = new Message(wantList, [], [], 0)
   await connection.send(request.encode(protocol))
 
-  const responses = await receiveMessages(receiver, protocol, -1, 9)
+  const responses = await receiveMessages(receiver, protocol, 30000, 2)
   await teardown(client, service, connection)
 
-  t.equal(responses.length, 9)
+  t.equal(responses.length, 2)
 
-  t.equal(responses.reduce((t, r) => t + r.blocks.length, 0), 2)
-  t.equal(responses.reduce((t, r) => t + r.blockPresences.length, 0), 7)
+  t.equal(responses[0].blocks.length + responses[1].blocks.length, 2)
+  t.ok(responses[0].blockPresences.length <= numPresences)
+  t.ok(responses[1].blockPresences.length <= numPresences)
+  t.equal(responses[0].blockPresences.length + responses[1].blockPresences.length, numPresences)
 })
 
-t.test(`${protocol} - large presences splitted in multiple responses - single block is smaller than MAX_MESSAGE_SIZE`, async t => {
-  config.maxMessageSize = 150
+t.test(`${protocol} - large presences skipping`, async t => {
+  // TODO fix - test must be indipendent
+  // Delay this test so that overhead mocking is not impacting other tests
+  await sleep(10000)
+
+  const originalPresenceOverhead = protocolEstimation.newPresenceOverhead
+  protocolEstimation.newPresenceOverhead = protocolEstimation.maxMessageSize * 0.4
 
   const { awsClient } = await mockAWS(config)
   const { client, service, connection, receiver } = await setup({ protocol, awsClient })
@@ -354,14 +358,17 @@ t.test(`${protocol} - large presences splitted in multiple responses - single bl
   const request = new Message(wantList, [], [], 0)
   await connection.send(request.encode(protocol))
 
-  const responses = await receiveMessages(receiver, protocol, 1000, -1)
+  const responses = await receiveMessages(receiver, protocol, 5000, 2)
   await teardown(client, service, connection)
+  protocolEstimation.newPresenceOverhead = originalPresenceOverhead
 
-  t.equal(responses.length, wantList.entries.length)
+  t.equal(responses.length, 2)
+  t.equal(responses[0].blockPresences.length, 2)
+  t.equal(responses[1].blockPresences.length, 1)
 
   t.equal(getPresence(t, responses[0], cid1).type, BlockPresence.Type.Have)
-  t.equal(getPresence(t, responses[1], cid2).type, BlockPresence.Type.Have)
-  t.equal(getPresence(t, responses[2], cid5).type, BlockPresence.Type.Have)
+  t.equal(getPresence(t, responses[0], cid2).type, BlockPresence.Type.Have)
+  t.equal(getPresence(t, responses[1], cid5).type, BlockPresence.Type.Have)
 })
 
 t.test(`${protocol} - closes streams properly`, async t => {
@@ -373,7 +380,7 @@ t.test(`${protocol} - closes streams properly`, async t => {
   const request = new Message(wantList, [], [], 0)
 
   connection.send(request.encode(protocol))
-  await receiveMessages(receiver, protocol, 1000, 1)
+  await receiveMessages(receiver, protocol, 5000, 1)
   connection.close()
 
   // Wait for streams to be closed (happens asynchronously)

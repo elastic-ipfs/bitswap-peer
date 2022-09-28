@@ -1,9 +1,4 @@
 {
-  "test": {
-    "amount": 3,
-    "connections": 3,
-    "timeout": 120
-  },
   "request": {
     "blocks": [
       {

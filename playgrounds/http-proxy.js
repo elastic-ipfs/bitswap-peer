@@ -15,7 +15,6 @@ const targets = {
 async function main() {
   await helper.startProxy({
     config,
-    port: process.env.PROXY_PORT,
     target: targets[process.env.TARGET],
     startPeer: process.env.TARGET === 'local'
   })

@@ -18,8 +18,7 @@ async function searchCarInDynamoV1({
   retries,
   retryDelay
 }) {
-  const blocks = await telemetry.trackDuration('dynamo-request',
-    awsClient.dynamoQueryBySortKey({ table, keyName, keyValue: blockKey, retries, retryDelay }))
+  const blocks = await awsClient.dynamoQueryBySortKey({ table, keyName, keyValue: blockKey, retries, retryDelay })
 
   if (blocks.length > 0) {
     // current implementation support only 1 car per block, so the first one is picked
@@ -52,8 +51,7 @@ async function searchCarInDynamoV0({
   retries,
   retryDelay
 }) {
-  const block = await telemetry.trackDuration('dynamo-request',
-    awsClient.dynamoGetItem({ table, keyName, keyValue: blockKey, retries, retryDelay }))
+  const block = await awsClient.dynamoGetItem({ table, keyName, keyValue: blockKey, retries, retryDelay })
   if (!block?.cars[0]) {
     return
   }
@@ -120,8 +118,7 @@ async function fetchBlockData({ block, logger, awsClient }) {
 
   try {
     const [, region, bucket, key] = block.info.car.match(/([^/]+)\/([^/]+)\/(.+)/)
-    const content = await telemetry.trackDuration('s3-request',
-      awsClient.s3Fetch({ region, bucket, key, offset: block.info.offset, length: block.info.length }))
+    const content = await awsClient.s3Fetch({ region, bucket, key, offset: block.info.offset, length: block.info.length })
     block.data = { content, found: true }
     telemetry.increaseCount('bitswap-block-data-hits')
     config.cacheBlockData && blockDataCache.set(cacheKey, content)

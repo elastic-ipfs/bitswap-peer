@@ -22,7 +22,7 @@ process.nextTick(async () => {
 function createContext({ service, peer, protocol, wantlist, connection, awsClient }) {
   const context = {
     state: 'ok',
-    awsClient,
+    awsClient, // TODO storage
     service,
     peer,
     protocol,

@@ -14,7 +14,7 @@ const { BITSWAP_V_120, Entry, WantList } = require('../src/protocol')
 const { handle, createContext } = require('../src/handler')
 
 const { cid1, cid2, cid3, cid4, cid5, cid6, cid7, cid8, cid9 } = require('./fixtures/cids')
-const helper = require('./utils/helper')
+const { spyLogger } = require('./utils/helper')
 const { mockBlockInfoSource, mockBlockDataSource, mockAWS, createMockAgent, mockAwsClient } = require('./utils/mock')
 
 let PQueue
@@ -53,7 +53,7 @@ t.test('handle', async t => {
     mockBlockInfoSource({ awsClient: contextSpy.awsClient, key, info: { offset: 0, length: 128, car: 'region/bucket/abc' } })
     mockBlockDataSource({ awsClient: contextSpy.awsClient, region: 'region', bucket: 'bucket', key: 'abc', offset: 0, length: 128, data: 'abc...' })
 
-    const loggerSpy = helper.spyLogger()
+    const loggerSpy = spyLogger()
     const connectionSpy = contextSpy.connection
 
     await handle({ context: contextSpy, logger: loggerSpy })
@@ -62,8 +62,7 @@ t.test('handle', async t => {
     t.equal(connectionSpy.close.callCount, 1)
     t.equal(loggerSpy.messages.error.length, 0)
     t.equal(loggerSpy.messages.warn.length, 0)
-
-    t.matchSnapshot(helper.decodeMessage(connectionSpy.send.args[0][0]))
+    t.matchSnapshot(connectionSpy.send.args[0][0].toString('hex'))
   })
 
   t.test('should handle a request containing an invalid cid', async t => {
@@ -80,7 +79,7 @@ t.test('handle', async t => {
     mockBlockInfoSource({ awsClient: contextSpy.awsClient, key, info: { offset: 0, length: 128, car: 'region/bucket/abc' } })
     mockBlockDataSource({ awsClient: contextSpy.awsClient, region: 'region', bucket: 'bucket', key: 'abc', offset: 0, length: 128, data: 'abc...' })
 
-    const loggerSpy = helper.spyLogger()
+    const loggerSpy = spyLogger()
     const connectionSpy = contextSpy.connection
 
     await handle({ context: contextSpy, logger: loggerSpy })
@@ -91,7 +90,7 @@ t.test('handle', async t => {
     t.equal(loggerSpy.messages.error[0][0].block.cid, 'not-a-cid')
     t.equal(loggerSpy.messages.error[0][1], 'invalid block cid')
     t.equal(loggerSpy.messages.warn.length, 0)
-    t.matchSnapshot(helper.decodeMessage(connectionSpy.send.args[0][0]))
+    t.matchSnapshot(connectionSpy.send.args[0][0].toString('hex'))
   })
 
   t.test('should handle a request containing only invalid blocks', async t => {
@@ -103,7 +102,7 @@ t.test('handle', async t => {
         new Entry(invalidCid, 1, false, Entry.WantType.Block, true)
       ]
     })
-    const loggerSpy = helper.spyLogger()
+    const loggerSpy = spyLogger()
     const connectionSpy = contextSpy.connection
 
     await handle({ context: contextSpy, logger: loggerSpy })
@@ -133,7 +132,7 @@ t.test('handle', async t => {
     mockBlockInfoSource({ awsClient: contextSpy.awsClient, key, info: { offset: 0, length: 128, car: 'region/bucket/abc' } })
     mockBlockDataSource({ awsClient: contextSpy.awsClient, region: 'region', bucket: 'bucket', key: 'abc', offset: 0, length: 128, data: 'abc...' })
 
-    const loggerSpy = helper.spyLogger()
+    const loggerSpy = spyLogger()
     const connectionSpy = contextSpy.connection
     const queue = new PQueue({ concurrency: 3 })
 
@@ -176,7 +175,7 @@ t.test('handle', async t => {
       })
     ]
 
-    const loggerSpy = helper.spyLogger()
+    const loggerSpy = spyLogger()
     const connectionsSpy = contextsSpy.map(c => c.connection)
     const queue = new PQueue({ concurrency: 3 })
 
@@ -186,18 +185,18 @@ t.test('handle', async t => {
 
     t.equal(connectionsSpy[0].send.callCount, 2)
     t.equal(connectionsSpy[0].close.callCount, 1)
-    t.matchSnapshot(helper.decodeMessage(connectionsSpy[0].send.args[0][0]))
-    t.matchSnapshot(helper.decodeMessage(connectionsSpy[0].send.args[1][0]))
+    t.matchSnapshot(connectionsSpy[0].send.args[0][0].toString('hex'))
+    t.matchSnapshot(connectionsSpy[0].send.args[1][0].toString('hex'))
 
     t.equal(connectionsSpy[1].send.callCount, 2)
     t.equal(connectionsSpy[1].close.callCount, 1)
-    t.matchSnapshot(helper.decodeMessage(connectionsSpy[1].send.args[0][0]))
-    t.matchSnapshot(helper.decodeMessage(connectionsSpy[1].send.args[1][0]))
+    t.matchSnapshot(connectionsSpy[1].send.args[0][0].toString('hex'))
+    t.matchSnapshot(connectionsSpy[1].send.args[1][0].toString('hex'))
 
     t.equal(connectionsSpy[2].send.callCount, 2)
     t.equal(connectionsSpy[2].close.callCount, 1)
-    t.matchSnapshot(helper.decodeMessage(connectionsSpy[2].send.args[0][0]))
-    t.matchSnapshot(helper.decodeMessage(connectionsSpy[2].send.args[1][0]))
+    t.matchSnapshot(connectionsSpy[2].send.args[0][0].toString('hex'))
+    t.matchSnapshot(connectionsSpy[2].send.args[1][0].toString('hex'))
 
     t.equal(loggerSpy.messages.error.length, 2)
     t.equal(loggerSpy.messages.error[0][1], 'invalid block cid')
@@ -207,7 +206,7 @@ t.test('handle', async t => {
 
   t.test('should handle and empty request', async t => {
     const contextSpy = await spyContext({ blocks: [] })
-    const loggerSpy = helper.spyLogger()
+    const loggerSpy = spyLogger()
     const connectionSpy = contextSpy.connection
     connectionSpy.close = sinon.stub().throws()
 
@@ -220,7 +219,7 @@ t.test('handle', async t => {
 
   t.test('should get error on connection closing error', async t => {
     const contextSpy = await spyContext({ blocks: [new Entry('not-a-cid', 1, false, Entry.WantType.Have, true)] })
-    const loggerSpy = helper.spyLogger()
+    const loggerSpy = spyLogger()
     const connectionSpy = contextSpy.connection
     connectionSpy.close = sinon.stub().throws()
 

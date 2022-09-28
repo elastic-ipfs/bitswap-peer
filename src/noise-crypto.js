@@ -28,6 +28,7 @@ const hmacKey = hmacBuffer.subarray(hkdfBlockLen * 0, hkdfBlockLen)
 const hmacOuterKeyPad = hmacBuffer.subarray(hkdfBlockLen, hkdfBlockLen * 2)
 const hmacInnerKeyPad = hmacBuffer.subarray(hkdfBlockLen * 2, hkdfBlockLen * 3)
 
+/* c8 ignore start */
 function hmac(out, data, key) {
   if (key.byteLength > hkdfBlockLen) {
     crypto_hash_sha256(hmacKey.subarray(0, hkdfHashLen), key)
@@ -126,6 +127,7 @@ function chaCha20Poly1305Decrypt(ciphertext, nonce, ad, k) {
 
   return out
 }
+/* c8 ignore stop */
 
 module.exports = {
   noiseCrypto: {

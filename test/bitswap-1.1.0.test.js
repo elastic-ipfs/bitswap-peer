@@ -2,23 +2,23 @@
 
 const t = require('tap')
 
-const config = require('../src/config')
 const { BITSWAP_V_110: protocol, Entry, Message, WantList } = require('../src/protocol')
 const { cid1, cid1Content, cid2, cid2Link, cid3, cid4, cid5, cid6, cid7, cid8 } = require('./fixtures/cids')
 const {
   hasSingleBlockWithHash,
   hasSingleDAGBlock,
   hasSingleRawBlock,
-  setup,
+  prepare,
   receiveMessages,
   safeGetDAGLinks,
   teardown
-} = require('./utils/helper')
-const { mockAWS } = require('./utils/mock')
+} = require('./utils/helpers')
 
 t.jobs = 10
 
 t.test(`${protocol} - uses the right fields when serializing and deserializing`, async t => {
+  t.plan(12)
+
   const wantList = new WantList(
     [
       new Entry(cid1, 1, false, Entry.WantType.Have, true),
@@ -39,12 +39,10 @@ t.test(`${protocol} - uses the right fields when serializing and deserializing`,
   t.equal(entry.block[2], 0x12)
   t.equal(entry.block[3], 0x20)
 
-  const { awsClient } = await mockAWS(config)
-  const { client, service, connection, receiver } = await setup({ protocol, awsClient })
-
+  const { client, service, connection, receiver } = await prepare(t, protocol)
   await connection.send(request.encode(protocol))
   const [response] = await receiveMessages(receiver, protocol, 5000, 1, true)
-  await teardown(client, service, connection)
+  await teardown(t, client, service, connection)
 
   const cid1Blocks = response.payload.filter(p => p.prefix.equals(Buffer.from([0x01, 0x55, 0x12, 0x20])))
   const cid2Blocks = response.payload.filter(p => p.prefix.equals(Buffer.from([0x01, 0x70, 0x12, 0x20])))
@@ -60,8 +58,9 @@ t.test(`${protocol} - uses the right fields when serializing and deserializing`,
 })
 
 t.test(`${protocol} - type=Block - sendDontHave=true - 2 hits / 2 misses - 2 blocks received`, async t => {
-  const { awsClient } = await mockAWS(config)
-  const { client, service, connection, receiver } = await setup({ protocol, awsClient })
+  t.plan(4)
+
+  const { client, service, connection, receiver } = await prepare(t, protocol)
 
   const wantList = new WantList(
     [
@@ -77,7 +76,7 @@ t.test(`${protocol} - type=Block - sendDontHave=true - 2 hits / 2 misses - 2 blo
   await connection.send(request.encode(protocol))
 
   const [response] = await receiveMessages(receiver, protocol)
-  await teardown(client, service, connection)
+  await teardown(t, client, service, connection)
 
   t.equal(response.blocks.length, 2)
   t.equal(response.blockPresences.length, 0)
@@ -87,8 +86,9 @@ t.test(`${protocol} - type=Block - sendDontHave=true - 2 hits / 2 misses - 2 blo
 })
 
 t.test(`${protocol} - type=Block - sendDontHave=false - 2 hits / 2 misses - 2 blocks received`, async t => {
-  const { awsClient } = await mockAWS(config)
-  const { client, service, connection, receiver } = await setup({ protocol, awsClient })
+  t.plan(4)
+
+  const { client, service, connection, receiver } = await prepare(t, protocol)
 
   const wantList = new WantList(
     [
@@ -104,7 +104,7 @@ t.test(`${protocol} - type=Block - sendDontHave=false - 2 hits / 2 misses - 2 bl
   await connection.send(request.encode(protocol))
 
   const [response] = await receiveMessages(receiver, protocol)
-  await teardown(client, service, connection)
+  await teardown(t, client, service, connection)
 
   t.equal(response.blocks.length, 2)
   t.equal(response.blockPresences.length, 0)
@@ -114,8 +114,9 @@ t.test(`${protocol} - type=Block - sendDontHave=false - 2 hits / 2 misses - 2 bl
 })
 
 t.test(`${protocol} - type=Have - sendDontHave=true - 2 hits / 2 misses - 2 blocks received`, async t => {
-  const { awsClient } = await mockAWS(config)
-  const { client, service, connection, receiver } = await setup({ protocol, awsClient })
+  t.plan(4)
+
+  const { client, service, connection, receiver } = await prepare(t, protocol)
 
   const wantList = new WantList(
     [
@@ -131,7 +132,7 @@ t.test(`${protocol} - type=Have - sendDontHave=true - 2 hits / 2 misses - 2 bloc
   await connection.send(request.encode(protocol))
 
   const [response] = await receiveMessages(receiver, protocol)
-  await teardown(client, service, connection)
+  await teardown(t, client, service, connection)
 
   t.equal(response.blocks.length, 2)
   t.equal(response.blockPresences.length, 0)
@@ -141,8 +142,9 @@ t.test(`${protocol} - type=Have - sendDontHave=true - 2 hits / 2 misses - 2 bloc
 })
 
 t.test(`${protocol} - type=Have - sendDontHave=false - 2 hits / 2 misses - 2 blocks received`, async t => {
-  const { awsClient } = await mockAWS(config)
-  const { client, service, connection, receiver } = await setup({ protocol, awsClient })
+  t.plan(4)
+
+  const { client, service, connection, receiver } = await prepare(t, protocol)
 
   const wantList = new WantList(
     [
@@ -158,7 +160,7 @@ t.test(`${protocol} - type=Have - sendDontHave=false - 2 hits / 2 misses - 2 blo
   await connection.send(request.encode(protocol))
 
   const [response] = await receiveMessages(receiver, protocol)
-  await teardown(client, service, connection)
+  await teardown(t, client, service, connection)
 
   t.equal(response.blocks.length, 2)
   t.equal(response.blockPresences.length, 0)
@@ -168,8 +170,9 @@ t.test(`${protocol} - type=Have - sendDontHave=false - 2 hits / 2 misses - 2 blo
 })
 
 t.test(`${protocol} - type=Mixed - sendDontHave=true - 2 blocks received`, async t => {
-  const { awsClient } = await mockAWS(config)
-  const { client, service, connection, receiver } = await setup({ protocol, awsClient })
+  t.plan(4)
+
+  const { client, service, connection, receiver } = await prepare(t, protocol)
 
   const wantList = new WantList(
     [
@@ -185,7 +188,7 @@ t.test(`${protocol} - type=Mixed - sendDontHave=true - 2 blocks received`, async
   await connection.send(request.encode(protocol))
 
   const [response] = await receiveMessages(receiver, protocol)
-  await teardown(client, service, connection)
+  await teardown(t, client, service, connection)
 
   t.equal(response.blocks.length, 2)
   t.equal(response.blockPresences.length, 0)
@@ -195,8 +198,9 @@ t.test(`${protocol} - type=Mixed - sendDontHave=true - 2 blocks received`, async
 })
 
 t.test(`${protocol} - type=Mixed - sendDontHave=false - 2 blocks received`, async t => {
-  const { awsClient } = await mockAWS(config)
-  const { client, service, connection, receiver } = await setup({ protocol, awsClient })
+  t.plan(4)
+
+  const { client, service, connection, receiver } = await prepare(t, protocol)
 
   const wantList = new WantList(
     [
@@ -212,7 +216,7 @@ t.test(`${protocol} - type=Mixed - sendDontHave=false - 2 blocks received`, asyn
   await connection.send(request.encode(protocol))
 
   const [response] = await receiveMessages(receiver, protocol)
-  await teardown(client, service, connection)
+  await teardown(t, client, service, connection)
 
   t.equal(response.blocks.length, 2)
   t.equal(response.blockPresences.length, 0)
@@ -222,8 +226,9 @@ t.test(`${protocol} - type=Mixed - sendDontHave=false - 2 blocks received`, asyn
 })
 
 t.test(`${protocol} - type=Mixed - cancel=true - no response received`, async t => {
-  const { awsClient } = await mockAWS(config)
-  const { client, service, connection, receiver } = await setup({ protocol, awsClient })
+  t.plan(1)
+
+  const { client, service, connection, receiver } = await prepare(t, protocol)
 
   const wantList = new WantList(
     [
@@ -239,14 +244,15 @@ t.test(`${protocol} - type=Mixed - cancel=true - no response received`, async t 
   await connection.send(request.encode(protocol))
 
   const responses = await receiveMessages(receiver, protocol, 5000)
-  await teardown(client, service, connection)
+  await teardown(t, client, service, connection)
 
   t.equal(responses.length, 0)
 })
 
 t.test(`${protocol} - large blocks skipping`, async t => {
-  const { awsClient } = await mockAWS(config)
-  const { client, service, connection, receiver } = await setup({ protocol, awsClient })
+  t.plan(7)
+
+  const { client, service, connection, receiver } = await prepare(t, protocol)
 
   const wantList = new WantList(
     [
@@ -262,7 +268,7 @@ t.test(`${protocol} - large blocks skipping`, async t => {
   await connection.send(request.encode(protocol))
 
   const responses = await receiveMessages(receiver, protocol, 30000, 2)
-  await teardown(client, service, connection)
+  await teardown(t, client, service, connection)
 
   const blocks = [...responses[0].blocks, ...responses[1].blocks]
 

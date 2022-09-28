@@ -11,8 +11,10 @@ metrics:
   bitswap-block-info-misses: Info block not found
   bitswap-sent-data: Amount of data sent for data blocks, in bytes
   bitswap-sent-info: Amount of data sent for info blocks, in bytes
-  s3-request: AWS S3 request duration
-  dynamo-request: AWS DynamoDB request duration
+  s3-fetchs: AWS S3 GetObject requests
+  s3-request: AWS S3 GetObject duration
+  dynamo-reads: AWS DynamoDB GetItem requests
+  dynamo-request: AWS DynamoDB GetItem duration
   cache-block-data-hits: LRU cache hits for Data Block
   cache-block-data-misses: LRU cache misses for Data Block
   cache-block-info-hits: LRU cache hits for Info block

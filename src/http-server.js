@@ -2,11 +2,11 @@
 
 const { createServer } = require('http')
 const { logger } = require('./logging')
-const { checkReadiness } = require('./health-check')
+const { healthCheck } = require('./health-check')
 const { telemetry } = require('./telemetry')
 
 class HttpServer {
-  startServer({ port, awsClient, readiness }) {
+  startServer(port) {
     if (this.server) {
       return this.server
     }
@@ -18,9 +18,15 @@ class HttpServer {
           res.end()
           break
         case '/readiness': {
-          checkReadiness({ awsClient, readiness, logger })
+          healthCheck
+            .checkReadiness()
             .then(httpStatus => {
               res.writeHead(httpStatus)
+              res.end()
+            })
+            .catch(error => {
+              logger.error({ error }, 'Cannot check readiness.')
+              res.writeHead(500)
               res.end()
             })
           break
@@ -42,6 +48,7 @@ class HttpServer {
 
     return new Promise((resolve, reject) => {
       this.server.listen(port, '0.0.0.0', error => {
+        /* c8 ignore next 3 */
         if (error) {
           return reject(error)
         }

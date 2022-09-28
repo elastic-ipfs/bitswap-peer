@@ -3,18 +3,25 @@
 const { readFile, writeFile } = require('fs/promises')
 const PeerId = require('peer-id')
 
-async function downloadPeerIdFile({ awsClient, peerIdS3Region, peerIdS3Bucket, peerIdJsonFile, peerIdJsonPath }) {
-  const contents = await awsClient.s3Fetch({
-    region: peerIdS3Region,
-    bucket: peerIdS3Bucket,
-    key: peerIdJsonFile
-  })
+const { peerIdJsonFile, peerIdJsonPath } = require('./config')
+const { logger } = require('./logging')
+const { defaultDispatcher, fetchBlockFromS3 } = require('./storage')
+
+async function downloadPeerIdFile(dispatcher) {
+  logger.debug(`Downloading PeerId from s3://${process.env.PEER_ID_S3_BUCKET}/${peerIdJsonFile}`)
+
+  const contents = await fetchBlockFromS3(
+    dispatcher,
+    process.env.AWS_REGION,
+    process.env.PEER_ID_S3_BUCKET,
+    peerIdJsonFile
+  )
   return writeFile(peerIdJsonPath, contents)
 }
 
-async function getPeerId({ awsClient, peerIdS3Region, peerIdS3Bucket, peerIdJsonFile, peerIdJsonPath }) {
-  if (peerIdS3Bucket) {
-    await downloadPeerIdFile({ awsClient, peerIdS3Region, peerIdS3Bucket, peerIdJsonFile, peerIdJsonPath })
+async function getPeerId(dispatcher = defaultDispatcher) {
+  if (process.env.PEER_ID_S3_BUCKET) {
+    await downloadPeerIdFile(dispatcher)
   }
 
   try {

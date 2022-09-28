@@ -3,7 +3,6 @@
 const { base58btc: base58 } = require('multiformats/bases/base58')
 
 function cidToKey(cid) {
-  // TODO move to a worker?
   try {
     return base58.encode(cid.multihash.bytes)
   } catch (error) {

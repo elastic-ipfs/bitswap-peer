@@ -50,7 +50,7 @@ async function main() {
       '])')
     .replace('{avg}', avg.join('\n')),
 
-  'utf8')
+    'utf8')
 }
 
 main()

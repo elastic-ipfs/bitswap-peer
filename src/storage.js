@@ -63,7 +63,7 @@ async function searchCarInDynamoV0({
   retries,
   retryDelay
 }) {
-  const block = await awsClient.dynamoGetItem({ table, keyName, keyValue: blockKey, retries, retryDelay })
+  const block = await awsClient.dynamoGetItem({ table, keyName, keyValue: blockKey, projection: 'blocks', retries, retryDelay })
   if (!block?.cars[0]) {
     return
   }

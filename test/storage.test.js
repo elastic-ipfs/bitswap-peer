@@ -149,7 +149,8 @@ t.test('searchCarInDynamoV1', async t => {
         path: '/',
         body: JSON.stringify({
           TableName: config.blocksTable,
-          Key: { [config.blocksTablePrimaryKey]: { S: blockKey } }
+          Key: { [config.blocksTablePrimaryKey]: { S: blockKey } },
+          ProjectionExpression: 'blocks'
         })
       })
       .reply(200, { Item: require('./fixtures/blocks/db-v0/cid1.json') })

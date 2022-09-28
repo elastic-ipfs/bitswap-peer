@@ -2,6 +2,8 @@
 
 const fs = require('fs/promises')
 const path = require('path')
+const assert = require('assert')
+
 const fastify = require('fastify')
 const { Noise } = require('@web3-storage/libp2p-noise')
 const libp2p = require('libp2p')
@@ -10,7 +12,6 @@ const Websockets = require('libp2p-websockets')
 const { CID } = require('multiformats/cid')
 const { sha256 } = require('multiformats/hashes/sha2')
 const { base58btc: base58 } = require('multiformats/bases/base58')
-const doc = require('@dnlup/doc')
 
 const { loadEsmModule } = require('../../../src/esm-loader')
 const { Connection } = require('../../../src/networking')
@@ -20,16 +21,82 @@ const { startService } = require('../../../src/service')
 const { createAwsClient } = require('../../../src/aws-client')
 const { getPeerId } = require('../../../src/peer-id')
 
-const targets = {
-  local: '/ip4/127.0.0.1/tcp/3000/ws/p2p/bafzbeia6mfzohhrwcvr3eaebk3gjqdwsidtfxhpnuwwxlpbwcx5z7sepei',
-  prod: '/dns4/elastic.dag.house/tcp/443/wss/p2p/bafzbeibhqavlasjc7dvbiopygwncnrtvjd2xmryk5laib7zyjor6kf3avm',
-  staging: '/dns4/elastic-staging.dag.house/tcp/443/wss/p2p/bafzbeigjqot6fm3i3yv37wiyybsfblrlsmib7bzlbnkpjxde6fw6b4fvei',
-  dev: '/dns4/elastic-dev.dag.house/tcp/443/wss/p2p/bafzbeia6mfzohhrwcvr3eaebk3gjqdwsidtfxhpnuwwxlpbwcx5z7sepei'
-}
-
 async function getFreePort() {
   const getPort = await loadEsmModule('get-port')
   return getPort()
+}
+
+function noop() { }
+// TODO use process.stodout
+function print(...args) { console.log(...args) }
+
+async function loadRegressionCases({ dir, request, only, updateSnaps = false, verbose = false }) {
+  const requests = { cases: [], counter: {} }
+  const out = {}
+  const errors = {}
+  const files = await fs.readdir(dir)
+  const verbosity = verbose ? print : noop
+
+  for (const file of files) {
+    if (only) {
+      if (file !== only) {
+        console.info(' *** skip', file)
+        continue
+      }
+    }
+    const filePath = path.join(dir, file)
+    try {
+      const c = require(filePath)
+      const response = JSON.stringify(c.response)
+
+      const case_ = {
+        ...request,
+        test: c.test,
+        file,
+        count: 0,
+        body: JSON.stringify(c.request),
+        onResponse: (status, body, context) => {
+          case_.count++
+
+          verbosity('response', body)
+
+          if (!out[filePath]) {
+            out[filePath] = true
+            if (updateSnaps) {
+              verbosity('update snap', filePath)
+              c.response = JSON.parse(body)
+              fs.writeFile(filePath, JSON.stringify(c, null, 2), 'utf8')
+            }
+          }
+
+          if (updateSnaps) { return }
+
+          try {
+            verbosity('assert', body, filePath)
+
+            // exact match
+            if (body === response) { return }
+          } catch (err) { }
+
+          if (errors[filePath]) {
+            return
+          }
+
+          try {
+            assert.deepStrictEqual(JSON.parse(body), c.response)
+          } catch (err) {
+            errors[filePath] = true
+            console.error('\n\n !!! MATCH FAILED', filePath)
+            console.error(err)
+          }
+        }
+      }
+      requests.cases.push(case_)
+    } catch (err) {
+      console.error('error loading', filePath)
+    }
+  }
+  return requests
 }
 
 async function localPeer(config) {
@@ -252,33 +319,7 @@ function serialize(block, type) {
     : { info: block.type === 0 ? 'FOUND' : 'NOT-FOUND' }
 }
 
-function trackResources() {
-  const trace = []
-
-  const sampler = doc({
-    sampleInterval: 100
-  })
-
-  sampler.on('sample', () => {
-    // const t = process.hrtime()
-    trace.push({
-      cpu: sampler.cpu.usage,
-      rss: sampler.memory.rss
-      // time: (t[0] * 1e9 + t[1]) / 1e6
-    })
-  })
-
-  return {
-    trace: () => { return trace },
-    write: async (file) => {
-      await fs.mkdir(path.dirname(file), { recursive: true })
-      await fs.writeFile(file, JSON.stringify({ track: trace }), 'utf8')
-    }
-  }
-}
-
 module.exports = {
-  targets,
   startProxy,
-  trackResources
+  loadRegressionCases
 }

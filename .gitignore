@@ -7,7 +7,5 @@ coverage
 node_modules
 .vscode
 
-test/e2e/track
-
 test-aws-identity-token
 cids

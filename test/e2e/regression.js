@@ -1,10 +1,9 @@
 'use strict'
 
+const helper = require('./helper')
 const path = require('path')
 const autocannon = require('autocannon')
 
-const helper = require('./helper')
-const regression = require('./helper/regression')
 const config = require('../../src/config')
 
 // TODO doc
@@ -13,19 +12,23 @@ const TARGET_ENV = process.env.TARGET_ENV ?? 'local'
 const UPDATE_SNAPS = !!process.env.UPDATE_SNAPS
 const ONLY = process.env.ONLY
 const VERBOSE = !!process.env.VERBOSE
-const TRACK_FILE = path.join(__dirname, './track', 'regression.json')
+
+const targets = {
+  local: '/ip4/127.0.0.1/tcp/3000/ws/p2p/bafzbeia6mfzohhrwcvr3eaebk3gjqdwsidtfxhpnuwwxlpbwcx5z7sepei',
+  prod: '/dns4/elastic.dag.house/tcp/443/wss/p2p/bafzbeibhqavlasjc7dvbiopygwncnrtvjd2xmryk5laib7zyjor6kf3avm',
+  staging: '/dns4/elastic-staging.dag.house/tcp/443/wss/p2p/bafzbeigjqot6fm3i3yv37wiyybsfblrlsmib7bzlbnkpjxde6fw6b4fvei',
+  dev: '/dns4/elastic-dev.dag.house/tcp/443/wss/p2p/bafzbeia6mfzohhrwcvr3eaebk3gjqdwsidtfxhpnuwwxlpbwcx5z7sepei'
+}
 
 async function test() {
-  const tracker = helper.trackResources()
-
   const service = await helper.startProxy({
     config,
-    target: helper.targets[TARGET_ENV],
+    target: targets[TARGET_ENV],
     startPeer: TARGET_ENV === 'local',
     concurrency: 4
   })
 
-  const c = await regression.loadCases({
+  const c = await helper.loadRegressionCases({
     dir: path.join(__dirname, './snaps/regression'),
     request: service.request,
     updateSnaps: UPDATE_SNAPS,
@@ -54,15 +57,14 @@ async function test() {
       console.log(autocannon.printResult(result))
 
       if (++done === c.cases.length) {
-        end({ start, service, tracker })
+        end({ start, service })
       }
     })
   }
 }
 
-async function end({ start, service, tracker }) {
+function end({ start, service }) {
   console.log('done in ', Date.now() - start, 'ms')
-  await tracker.write(TRACK_FILE)
   service.close()
 }
 

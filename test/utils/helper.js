@@ -9,8 +9,6 @@ const Websockets = require('libp2p-websockets')
 const { equals } = require('multiformats/hashes/digest')
 const { sha256 } = require('multiformats/hashes/sha2')
 const PeerId = require('peer-id')
-const { CID } = require('multiformats/cid')
-const { base58btc: base58 } = require('multiformats/bases/base58')
 
 const { loadEsmModule } = require('../../src/esm-loader')
 const { Connection } = require('../../src/networking')
@@ -153,19 +151,6 @@ function safeGetDAGLinks(block) {
   }
 }
 
-function decodeCidToKey(cid) {
-  return base58.encode(CID.decode(cid).multihash.bytes)
-}
-
-function decodeMessage(message) {
-  const { blockPresences, blocks } = RawMessage.decode(message)
-
-  return {
-    blockPresences: blockPresences.map(b => ({ cid: decodeCidToKey(b.cid), type: b.type })),
-    blocks: blocks.map(b => ({ cid: decodeCidToKey(b.cid), type: b.type }))
-  }
-}
-
 function dummyLogger() {
   return { fatal: noop, error: noop, warn: noop, info: noop, debug: noop }
 }
@@ -196,6 +181,5 @@ module.exports = {
   setup,
   receiveMessages,
   safeGetDAGLinks,
-  decodeMessage,
   teardown
 }

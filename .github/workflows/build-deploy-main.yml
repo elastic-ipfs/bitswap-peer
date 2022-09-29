@@ -1,9 +1,8 @@
 ---
-name: Build And Deploy
+name: (Staging/Production) Build And Deploy
 on:
   push:
     branches: [main]
-  workflow_dispatch:
 env:
   REGISTRY: ghcr.io
 jobs:

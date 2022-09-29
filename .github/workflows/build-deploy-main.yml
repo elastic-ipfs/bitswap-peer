@@ -1,5 +1,5 @@
 ---
-name: Staging/Production | Build And Deploy
+name: Staging/Prod | Build And Deploy
 on:
   push:
     branches: [main]

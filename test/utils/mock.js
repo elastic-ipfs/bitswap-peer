@@ -72,7 +72,7 @@ function mockS3Object({ pool, key, range, response, times = 1 }) {
     .times(times)
 }
 
-function mockBlockInfoSource({ awsClient, key, info }) {
+function mockBlockInfoSource({ awsClient, key, info, times = 1 }) {
   const pool = awsClient.agent.get(awsClient.dynamoUrl)
 
   mockDynamoQuery({
@@ -84,14 +84,15 @@ function mockBlockInfoSource({ awsClient, key, info }) {
       offset: { N: info.offset },
       length: { N: info.length },
       carpath: { S: info.car }
-    }]
+    }],
+    times
   })
 }
 
-function mockBlockDataSource({ awsClient, region, bucket, offset, length, key, data }) {
+function mockBlockDataSource({ awsClient, region, bucket, offset, length, key, data, times = 1 }) {
   const pool = awsClient.agent.get(awsClient.s3Url(region, bucket))
 
-  mockS3Object({ pool, bucket, key, offset, length, response: data })
+  mockS3Object({ pool, bucket, key, offset, length, response: data, times })
 }
 
 function createMockAgent() {

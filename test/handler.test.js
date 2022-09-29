@@ -50,7 +50,7 @@ t.test('handle', async t => {
         new Entry(cid, 1, false, Entry.WantType.Block, true)
       ]
     })
-    mockBlockInfoSource({ awsClient: contextSpy.awsClient, key, info: { offset: 0, length: 128, car: 'region/bucket/abc' } })
+    mockBlockInfoSource({ awsClient: contextSpy.awsClient, key, info: { offset: 0, length: 128, car: 'region/bucket/abc' }, times: 2 })
     mockBlockDataSource({ awsClient: contextSpy.awsClient, region: 'region', bucket: 'bucket', key: 'abc', offset: 0, length: 128, data: 'abc...' })
 
     const loggerSpy = helper.spyLogger()
@@ -63,7 +63,11 @@ t.test('handle', async t => {
     t.equal(loggerSpy.messages.error.length, 0)
     t.equal(loggerSpy.messages.warn.length, 0)
 
-    t.matchSnapshot(helper.decodeMessage(connectionSpy.send.args[0][0]))
+    const sent = helper.decodeMessage(connectionSpy.send.args[0][0])
+    t.same(sent, {
+      blocksInfo: [{ key, type: 0 }],
+      blocksData: [{ cid: 'bafkreidisxbnj5j6rlsdumzjtma7r7npewzl3y3rwwchofkkcypfetzqui', data: '6162632e2e2e' }]
+    })
   })
 
   t.test('should handle a request containing an invalid cid', async t => {
@@ -91,7 +95,10 @@ t.test('handle', async t => {
     t.equal(loggerSpy.messages.error[0][0].block.cid, 'not-a-cid')
     t.equal(loggerSpy.messages.error[0][1], 'invalid block cid')
     t.equal(loggerSpy.messages.warn.length, 0)
-    t.matchSnapshot(helper.decodeMessage(connectionSpy.send.args[0][0]))
+
+    t.same(helper.decodeMessage(connectionSpy.send.args[0][0]),
+      { blocksInfo: [], blocksData: [{ cid: 'bafkreidisxbnj5j6rlsdumzjtma7r7npewzl3y3rwwchofkkcypfetzqui', data: '6162632e2e2e' }] }
+    )
   })
 
   t.test('should handle a request containing only invalid blocks', async t => {
@@ -186,18 +193,45 @@ t.test('handle', async t => {
 
     t.equal(connectionsSpy[0].send.callCount, 2)
     t.equal(connectionsSpy[0].close.callCount, 1)
-    t.matchSnapshot(helper.decodeMessage(connectionsSpy[0].send.args[0][0]))
-    t.matchSnapshot(helper.decodeMessage(connectionsSpy[0].send.args[1][0]))
+
+    let sent = helper.decodeMessage(connectionsSpy[0].send.args[0][0])
+    t.equal(sent.blocksInfo.length, 2)
+    t.ok(sent.blocksInfo.find(b => b.key === 'zQmZgTpJUbrss357x1D14Uo43JATwd7LhkZNbreqXVGFMmD' && b.type === 0))
+    t.ok(sent.blocksInfo.find(b => b.key === 'zQmarmPMyVmGUPYrupFdAa5TnmPj88sgaAtCv6R2feZYUwS' && b.type === 1))
+    t.same(sent.blocksData, [])
+    sent = helper.decodeMessage(connectionsSpy[0].send.args[1][0])
+    t.equal(sent.blocksInfo.length, 2)
+    t.ok(sent.blocksInfo.find(b => b.key === 'zQmdmQXB2mzChmMeKY47C43LxUdg1NDJ5MWcKMKxDu7RgQm' && b.type === 1))
+    t.ok(sent.blocksInfo.find(b => b.key === 'zQmSnuWmxptJZdLJpKRarxBMS2Ju2oANVrgbr2xWbie9b2D' && b.type === 1))
+    t.same(sent.blocksData, [])
 
     t.equal(connectionsSpy[1].send.callCount, 2)
     t.equal(connectionsSpy[1].close.callCount, 1)
-    t.matchSnapshot(helper.decodeMessage(connectionsSpy[1].send.args[0][0]))
-    t.matchSnapshot(helper.decodeMessage(connectionsSpy[1].send.args[1][0]))
+    sent = helper.decodeMessage(connectionsSpy[1].send.args[0][0])
+    t.equal(sent.blocksInfo.length, 2)
+    t.ok(sent.blocksInfo.find(b => b.key === 'zQmdmQXB2mzChmMeKY47C43LxUdg1NDJ5MWcKMKxDu7RgQm' && b.type === 1))
+    t.ok(sent.blocksInfo.find(b => b.key === 'zQmfGVahyJZtbWcLa8L3XLnxN5yfS53Cb7CdiEFA61AJ7yV' && b.type === 1))
+    t.same(sent.blocksData, [])
+    sent = helper.decodeMessage(connectionsSpy[1].send.args[1][0])
+    t.same(sent, {
+      blocksInfo: [{ key: 'zQmQ32EbNWRjYT4sLukMBL7nvcnrGv8f4Enkr4PqdQo6xRV', type: 1 }],
+      blocksData: []
+    })
 
     t.equal(connectionsSpy[2].send.callCount, 2)
     t.equal(connectionsSpy[2].close.callCount, 1)
-    t.matchSnapshot(helper.decodeMessage(connectionsSpy[2].send.args[0][0]))
-    t.matchSnapshot(helper.decodeMessage(connectionsSpy[2].send.args[1][0]))
+    sent = helper.decodeMessage(connectionsSpy[2].send.args[0][0])
+    t.same(sent, {
+      blocksInfo: [{ key: 'zQmUF7AvbU5HqeSypxoqTa3rRzpViZj3YjQWPhV8ykgmpBB', type: 1 }, { key: 'zQmbfSqvUycmA1zG5WAfMfCknSJwbGxDMCnaXF5BieZ7Xnz', type: 1 }], blocksData: []
+    })
+    sent = helper.decodeMessage(connectionsSpy[2].send.args[1][0])
+    t.same(sent, {
+      blocksInfo: [{ key: 'zQmXGyrrB12PGx7wacyY9XWjA287PBUnEhrQmBurc53TxW3', type: 1 }],
+      blocksData: [{
+        cid: 'bafkreidisxbnj5j6rlsdumzjtma7r7npewzl3y3rwwchofkkcypfetzqui',
+        data: '6162632e2e2e'
+      }]
+    })
 
     t.equal(loggerSpy.messages.error.length, 2)
     t.equal(loggerSpy.messages.error[0][1], 'invalid block cid')

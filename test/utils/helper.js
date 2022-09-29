@@ -158,11 +158,17 @@ function decodeCidToKey(cid) {
 }
 
 function decodeMessage(message) {
-  const { blockPresences, blocks } = RawMessage.decode(message)
+  const { blockPresences: blocksInfo, payload: blocksData } = RawMessage.decode(message)
 
   return {
-    blockPresences: blockPresences.map(b => ({ cid: decodeCidToKey(b.cid), type: b.type })),
-    blocks: blocks.map(b => ({ cid: decodeCidToKey(b.cid), type: b.type }))
+    blocksInfo: blocksInfo.map(b => ({
+      key: decodeCidToKey(b.cid),
+      type: b.type
+    })),
+    blocksData: blocksData.map(b => ({
+      cid: CID.create(b.prefix[0], b.prefix[1], sha256.digest(b.data)).toString(),
+      data: b.data.toString('hex')
+    }))
   }
 }
 

@@ -200,7 +200,13 @@ async function batchResponse(blocks, context, logger) {
     if (context.done === 0) {
       await peerConnect(context, logger)
     }
+  } catch (error) {
+    logger.error({ error: serializeError(error), peer: context.peer }, 'error on handler#batchResponse peerConnect')
+    // TODO flush context?
+    // TODO retry?
+  }
 
+  try {
     let message = new Message()
     for (let i = 0; i < blocks.length; i++) {
       const block = blocks[i]

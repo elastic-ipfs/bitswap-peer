@@ -1,5 +1,5 @@
 ---
-name: Build And Deploy Dev
+name: Dev | Build And Deploy 
 on:
   workflow_dispatch:
 env:

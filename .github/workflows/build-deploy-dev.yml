@@ -1,6 +1,9 @@
 ---
 name: Build And Deploy Dev
 on:
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 env:
   REGISTRY: ghcr.io
@@ -8,11 +11,11 @@ jobs:
   build:
     permissions:
       packages: write
-    uses: elastic-ipfs/bitswap-peer/.github/workflows/shared-build.yaml@fix-dev-ci
+    uses: elastic-ipfs/bitswap-peer/.github/workflows/shared-build.yaml@main
     with:
       docker_image_version_suffix_label: dev
   deploy:
-    uses: elastic-ipfs/bitswap-peer/.github/workflows/shared-deploy.yaml@fix-dev-ci
+    uses: elastic-ipfs/bitswap-peer/.github/workflows/shared-deploy.yaml@main
     needs: build
     with:
       deploy_to_environment: dev

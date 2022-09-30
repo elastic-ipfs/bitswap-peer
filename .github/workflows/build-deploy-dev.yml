@@ -1,6 +1,8 @@
 ---
-name: Dev | Build And Deploy
+name: Build And Deploy Dev
 on:
+  push:
+    branches: [dev] 
   workflow_dispatch:
 env:
   REGISTRY: ghcr.io

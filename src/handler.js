@@ -39,24 +39,30 @@ function createContext({ service, peer, protocol, wantlist, connection, awsClien
   return context
 }
 
+/**
+ * @todo retry
+ */
 async function peerConnect(context, logger) {
   if (context.connection) { return }
-  const dialConnection = await context.service.dial(context.peer)
-  const { stream } = await dialConnection.newStream(context.protocol)
 
-  telemetry.increaseCount('bitswap-total-connections')
-  telemetry.increaseCount('bitswap-active-connections')
+  if (!context.responseStream) {
+    const dialConnection = await context.service.dial(context.peer)
+    const { stream } = await dialConnection.newStream(context.protocol)
+    context.responseStream = stream
+    telemetry.increaseCount('bitswap-total-connections')
+    telemetry.increaseCount('bitswap-active-connections')
+  }
 
-  await connect(context, stream, logger)
+  await connect(context, logger)
 }
+
 /**
  * establish connection, deduping - could be called multiple times while connecting
+ * coupled with peerConnect
  */
-function connect(context, stream, logger) {
-  if (context.connecting) { return context.connecting }
-
+function connect(context, logger) {
   context.connecting = new Promise((resolve, reject) => {
-    context.connection = new Connection(stream)
+    context.connection = new Connection(context.responseStream)
     context.connection.on('error', err => {
       context.state = 'error'
       logger.warn({ err: serializeError(err) }, 'outgoing connection error')
@@ -66,9 +72,10 @@ function connect(context, stream, logger) {
 
     context.connection.on('close', () => { peerClose(context, logger) })
 
+    // TODO should resolve on connection ready
+    // Connection class should expose a "ready" event or something
     resolve()
   })
-
   return context.connecting
 }
 
@@ -127,7 +134,8 @@ function handle({ context, logger, batchSize = config.blocksBatchSize, processin
       })
     } while (blocksLength === batchSize)
 
-    // TODO metrics response time
+    // TODO metrics response time / entries by type (info or data)
+    // use: context.done
 
     processing.add(async () => {
       await context.end
@@ -201,9 +209,8 @@ async function batchResponse(blocks, context, logger) {
       await peerConnect(context, logger)
     }
   } catch (error) {
-    logger.error({ error: serializeError(error), peer: context.peer }, 'error on handler#batchResponse peerConnect')
-    // TODO flush context?
-    // TODO retry?
+    logger.error({ error: serializeError(error), peerId: context.peer.id }, 'error on handler#batchResponse peerConnect')
+    return
   }
 
   try {

@@ -111,6 +111,7 @@ async function mockAwsClient(config) {
   return { awsClient, logger }
 }
 
+// TODO remove this massive mock
 async function mockAWS(config) {
   const { awsClient, logger } = await mockAwsClient(config)
   const s3 = {
@@ -121,18 +122,18 @@ async function mockAWS(config) {
   const s3Interceptor = awsClient.agent.get(awsClient.s3Url(s3.region, s3.bucket))
 
   // used in searchCarInDynamoV1
-  mockDynamoQuery({ pool: dynamoInterceptor, key: cidToKey(cid1), table: config.linkTableV1, keyName: config.linkTableBlockKey, response: readBlock('blocks/db-v1/cid1.json', s3.region, s3.bucket, s3.bucket), times: 1e3 + 1 })
-  mockDynamoQuery({ pool: dynamoInterceptor, key: cidToKey(cid2), table: config.linkTableV1, keyName: config.linkTableBlockKey, response: readBlock('blocks/db-v1/cid2.json', s3.region, s3.bucket) })
+  mockDynamoQuery({ pool: dynamoInterceptor, key: cidToKey(cid1), table: config.linkTableV1, keyName: config.linkTableBlockKey, response: readBlock('blocks/db-v1/cid1.json', s3.region, s3.bucket), times: 999 })
+  mockDynamoQuery({ pool: dynamoInterceptor, key: cidToKey(cid2), table: config.linkTableV1, keyName: config.linkTableBlockKey, response: readBlock('blocks/db-v1/cid2.json', s3.region, s3.bucket), times: 999 })
   mockDynamoQuery({ pool: dynamoInterceptor, key: cidToKey(cid3), table: config.linkTableV1, keyName: config.linkTableBlockKey, response: false })
   mockDynamoQuery({ pool: dynamoInterceptor, key: cidToKey(cid4), table: config.linkTableV1, keyName: config.linkTableBlockKey, response: false })
   mockDynamoQuery({ pool: dynamoInterceptor, key: cidToKey(cid5), table: config.linkTableV1, keyName: config.linkTableBlockKey, response: readBlock('blocks/db-v1/cid5.json', s3.region, s3.bucket) })
   mockDynamoQuery({ pool: dynamoInterceptor, key: cidToKey(cid6), table: config.linkTableV1, keyName: config.linkTableBlockKey, response: readBlock('blocks/db-v1/cid6.json', s3.region, s3.bucket) })
   mockDynamoQuery({ pool: dynamoInterceptor, key: cidToKey(cid7), table: config.linkTableV1, keyName: config.linkTableBlockKey, response: readBlock('blocks/db-v1/cid7.json', s3.region, s3.bucket) })
   mockDynamoQuery({ pool: dynamoInterceptor, key: cidToKey(cid8), table: config.linkTableV1, keyName: config.linkTableBlockKey, response: readBlock('blocks/db-v1/cid8.json', s3.region, s3.bucket) })
-  mockDynamoQuery({ pool: dynamoInterceptor, key: cidToKey(cid9), table: config.linkTableV1, keyName: config.linkTableBlockKey, response: readBlock('blocks/db-v1/cid9.json', s3.region, s3.bucket), times: 1e3 + 1 })
+  mockDynamoQuery({ pool: dynamoInterceptor, key: cidToKey(cid9), table: config.linkTableV1, keyName: config.linkTableBlockKey, response: readBlock('blocks/db-v1/cid9.json', s3.region, s3.bucket), times: 999 })
 
   // searchCarInDynamoV0
-  mockDynamoItem({ pool: dynamoInterceptor, key: cidToKey(cid1), table: config.blocksTable, keyName: config.blocksTablePrimaryKey, response: readBlock('blocks/db-v0/cid1.json', s3.region, s3.bucket), times: 1e3 + 1 })
+  mockDynamoItem({ pool: dynamoInterceptor, key: cidToKey(cid1), table: config.blocksTable, keyName: config.blocksTablePrimaryKey, response: readBlock('blocks/db-v0/cid1.json', s3.region, s3.bucket), times: 999 })
   mockDynamoItem({ pool: dynamoInterceptor, key: cidToKey(cid2), table: config.blocksTable, keyName: config.blocksTablePrimaryKey, response: readBlock('blocks/db-v0/cid2.json', s3.region, s3.bucket) })
   mockDynamoItem({ pool: dynamoInterceptor, key: cidToKey(cid3), table: config.blocksTable, keyName: config.blocksTablePrimaryKey, response: false })
   mockDynamoItem({ pool: dynamoInterceptor, key: cidToKey(cid4), table: config.blocksTable, keyName: config.blocksTablePrimaryKey, response: false })
@@ -140,15 +141,15 @@ async function mockAWS(config) {
   mockDynamoItem({ pool: dynamoInterceptor, key: cidToKey(cid6), table: config.blocksTable, keyName: config.blocksTablePrimaryKey, response: readBlock('blocks/db-v0/cid6.json', s3.region, s3.bucket) })
   mockDynamoItem({ pool: dynamoInterceptor, key: cidToKey(cid7), table: config.blocksTable, keyName: config.blocksTablePrimaryKey, response: readBlock('blocks/db-v0/cid7.json', s3.region, s3.bucket) })
   mockDynamoItem({ pool: dynamoInterceptor, key: cidToKey(cid8), table: config.blocksTable, keyName: config.blocksTablePrimaryKey, response: readBlock('blocks/db-v0/cid8.json', s3.region, s3.bucket) })
-  mockDynamoItem({ pool: dynamoInterceptor, key: cidToKey(cid9), table: config.blocksTable, keyName: config.blocksTablePrimaryKey, response: readBlock('blocks/db-v0/cid9.json', s3.region, s3.bucket), times: 1e3 + 1 })
+  mockDynamoItem({ pool: dynamoInterceptor, key: cidToKey(cid9), table: config.blocksTable, keyName: config.blocksTablePrimaryKey, response: readBlock('blocks/db-v0/cid9.json', s3.region, s3.bucket), times: 999 })
 
-  mockS3Object({ pool: s3Interceptor, key: 'test-cid1.car', range: 'bytes=96-100', response: readData('cars/test-cid1.car', 96, 100), times: 1e4 })
-  mockS3Object({ pool: s3Interceptor, key: 'test-cid2.car', range: 'bytes=96-147', response: readData('cars/test-cid2.car', 96, 147) })
-  mockS3Object({ pool: s3Interceptor, key: 'test-cid5.car', range: 'bytes=98-1500097', response: readData('cars/test-cid5.car', 98, 1500097), times: 1e4 })
+  mockS3Object({ pool: s3Interceptor, key: 'test-cid1.car', range: 'bytes=96-100', response: readData('cars/test-cid1.car', 96, 100), times: 999 })
+  mockS3Object({ pool: s3Interceptor, key: 'test-cid2.car', range: 'bytes=96-147', response: readData('cars/test-cid2.car', 96, 147), times: 999 })
+  mockS3Object({ pool: s3Interceptor, key: 'test-cid5.car', range: 'bytes=98-1500097', response: readData('cars/test-cid5.car', 98, 1500097), times: 999 })
   mockS3Object({ pool: s3Interceptor, key: 'test-cid6.car', range: 'bytes=98-1500097', response: readData('cars/test-cid6.car', 98, 1500097) })
   mockS3Object({ pool: s3Interceptor, key: 'test-cid7.car', range: 'bytes=98-1500097', response: readData('cars/test-cid7.car', 98, 1500097) })
   mockS3Object({ pool: s3Interceptor, key: 'test-cid8.car', range: 'bytes=98-1500097', response: readData('cars/test-cid8.car', 98, 1500097) })
-  mockS3Object({ pool: s3Interceptor, key: 'test-cid9.car', range: 'bytes=98-2096749', response: readData('cars/test-cid9.car', 98, 2096749), times: 1e3 + 1 })
+  mockS3Object({ pool: s3Interceptor, key: 'test-cid9.car', range: 'bytes=98-2096749', response: readData('cars/test-cid9.car', 98, 2096749), times: 999 })
 
   return { awsClient, logger, s3 }
 }

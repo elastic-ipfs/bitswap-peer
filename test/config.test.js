@@ -8,7 +8,7 @@ t.test('config - defaults', async t => {
   t.same(config, {
     maxBlockDataSize: 2097152,
     maxMessageSize: 4194304,
-    processingQueueConcurrency: 64,
+    processingQueueConcurrency: 256,
     blocksBatchSize: 8,
     blocksTable: 'blocks',
     cacheBlockInfo: false,

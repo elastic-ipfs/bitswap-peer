@@ -54,7 +54,7 @@ const httpPort = parseInt(rawHttpPort)
 module.exports = {
   maxBlockDataSize: maxBlockDataSize ? parseInt(maxBlockDataSize) : 2 * 1024 * 1024, // 2 MB
   maxMessageSize: maxMessageSize ? parseInt(maxMessageSize) : 4 * 1024 * 1024, // 4 MB
-  processingQueueConcurrency: processingQueueConcurrency ? parseInt(processingQueueConcurrency) : 64,
+  processingQueueConcurrency: processingQueueConcurrency ? parseInt(processingQueueConcurrency) : 256,
   blocksBatchSize: blocksBatchSize ? parseInt(blocksBatchSize) : 8,
 
   blocksTable: blocksTable ?? 'blocks',

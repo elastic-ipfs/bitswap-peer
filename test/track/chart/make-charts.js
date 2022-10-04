@@ -7,7 +7,7 @@ const path = require('path')
 
 const TYPE = process.argv[2] ?? 'regression'
 const HTML_FILE_SRC = path.resolve(__dirname, './src.html')
-const HTML_FILE = path.resolve(__dirname, `../../track/trace-${TYPE}.html`)
+const HTML_FILE = path.resolve(__dirname, `../../result/trace-${TYPE}.html`)
 const MB = 1024 * 1024
 
 async function main() {

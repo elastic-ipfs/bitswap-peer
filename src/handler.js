@@ -10,6 +10,7 @@ const { fetchBlocksData, fetchBlocksInfo } = require('./storage')
 const { telemetry } = require('./telemetry')
 const { cidToKey, sizeofBlockInfo } = require('./util')
 
+// !TODO remove processingQueue?
 let PQueue, processingQueue
 process.nextTick(async () => {
   PQueue = await loadEsmModule('p-queue')
@@ -46,6 +47,7 @@ async function peerConnect(context, logger) {
   if (context.connection) { return }
 
   if (!context.responseStream) {
+    // TODO Connection class must handle the whole connection process
     const dialConnection = await context.service.dial(context.peer)
     const { stream } = await dialConnection.newStream(context.protocol)
     context.responseStream = stream
@@ -84,8 +86,12 @@ async function peerClose(context, logger) {
   telemetry.decreaseCount('bitswap-active-connections')
 
   try {
-    context.connection && (await context.connection.close())
-    context.connection = null
+    if (context.connection) {
+      await context.connection.close()
+      context.connection = null
+    } else if (context.responseStream) {
+      context.responseStream.close()
+    }
   } catch (error) {
     logger.error({ error: serializeError(error) }, 'error on handler#peerClose')
   }
@@ -121,6 +127,7 @@ function handle({ context, logger, batchSize = config.blocksBatchSize, processin
           // append content to its block
           const fetched = await batchFetch(blocks, context, logger)
           if (fetched) {
+            // !TODO remove await
             await batchResponse(fetched, context, logger)
           }
         }
@@ -209,7 +216,7 @@ async function batchResponse(blocks, context, logger) {
       await peerConnect(context, logger)
     }
   } catch (error) {
-    logger.error({ error: serializeError(error), peerId: context.peer.id }, 'error on handler#batchResponse peerConnect')
+    logger.error({ error: serializeError(error), peer: context.peer._idB58String || context.peer }, 'error on handler#batchResponse peerConnect')
     return
   }
 

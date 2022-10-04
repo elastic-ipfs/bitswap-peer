@@ -47,7 +47,7 @@ class HttpServer {
         }
 
         const { version } = require('../package.json')
-        logger.info(`[${version}] HTTP server started and listening on port ${this.server.address().port} ...`)
+        logger.info(`[v${version}] HTTP server started and listening on port ${this.server.address().port} ...`)
         resolve(this.server)
       })
     })

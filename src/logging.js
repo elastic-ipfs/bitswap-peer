@@ -1,6 +1,7 @@
 'use strict'
 
 const pino = require('pino')
+const { version } = require('../package.json')
 
 let destination
 let level = 'info'
@@ -22,7 +23,7 @@ if (process.env.LOG_LEVEL) {
 const logger = pino(
   {
     level,
-    base: undefined,
+    base: { v: version },
     timestamp: pino.stdTimeFunctions.isoTime
   },
   destination

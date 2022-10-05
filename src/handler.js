@@ -51,7 +51,6 @@ async function peerConnect(context, logger) {
     const { stream } = await dialConnection.newStream(context.protocol)
     context.responseStream = stream
     telemetry.increaseCount('bitswap-total-connections')
-    telemetry.increaseCount('bitswap-active-connections')
   }
 
   await connect(context, logger)
@@ -83,7 +82,6 @@ function connect(context, logger) {
 async function peerClose(context, logger) {
   context.state = 'end'
   telemetry.decreaseCount('bitswap-total-connections')
-  telemetry.decreaseCount('bitswap-active-connections')
 
   try {
     if (context.connection) {

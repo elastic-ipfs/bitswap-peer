@@ -77,7 +77,6 @@ async function startService({ peerId, port, peerAnnounceAddr, awsClient, logger 
       try {
         if (enableKeepAlive) { startKeepAlive(connection.remotePeer, service) }
         telemetry.increaseCount('bitswap-total-connections')
-        telemetry.increaseCount('bitswap-active-connections')
       } catch (err) {
         logger.warn({ err, remotePeer: connection.remotePeer }, `Error while peer connecting: ${serializeError(err)}`)
       }
@@ -86,7 +85,6 @@ async function startService({ peerId, port, peerAnnounceAddr, awsClient, logger 
     service.connectionManager.on('peer:disconnect', connection => {
       try {
         if (enableKeepAlive) { stopKeepAlive(connection.remotePeer) }
-        telemetry.decreaseCount('bitswap-active-connections')
         telemetry.decreaseCount('bitswap-total-connections')
       } catch (err) {
         logger.warn({ err, remotePeer: connection.remotePeer }, `Error while peer disconnecting: ${serializeError(err)}`)

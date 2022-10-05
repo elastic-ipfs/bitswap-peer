@@ -499,7 +499,7 @@ t.test('awsClientOptions', async t => {
 
   t.same(awsClientOptions(config, logger), {
     awsAgentOptions: {
-      connect: { timeout: 987 },
+      connectTimeout: 987,
       keepAliveTimeout: 123,
       connections: 456,
       pipelining: 789

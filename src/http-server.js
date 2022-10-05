@@ -71,6 +71,18 @@ class HttpServer {
           inspect.chart().then(chart => res.end(chart))
           break
         }
+        case '/inspect/gc': {
+          if (!config.allowInspection) {
+            res.writeHead(404).end()
+            break
+          }
+          if (global.gc()) {
+            res.writeHead(200).end()
+          } else {
+            res.writeHead(200).end('no gc, use --expose-gc flag')
+          }
+          break
+        }
         default:
           res.writeHead(404)
           res.end()

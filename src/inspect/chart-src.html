@@ -16,11 +16,19 @@
       var data1 = new google.visualization.DataTable();
       data1.addColumn('number', 'Time');
       data1.addColumn('number', 'Connections');
-      // data1.addColumn('number', 'Requests pack');
-      // data1.addColumn('number', 'Requests entries');
+
+      var data2 = new google.visualization.DataTable();
+      data2.addColumn('number', 'Time');
+      data2.addColumn('number', 'Requests');
+
+      var data3 = new google.visualization.DataTable();
+      data3.addColumn('number', 'Time');
+      data3.addColumn('number', 'Blocks');
 
       //{data0}
       //{data1}
+      //{data2}
+      //{data3}
 
       var options0 = {
         title: 'Resources',
@@ -49,9 +57,9 @@
       };
 
       var options1 = {
-        title: 'Request',
+        title: 'Connections',
         hAxis: {
-          title: 'Time',
+          title: 'Time'
           // minValue: //{tMinValue},
           // maxValue: //{tMaxValue},
         },
@@ -60,19 +68,45 @@
             title: 'Connections',
             gridlines: { color: 'transparent' },
           },
-          1: {
-            title: 'Requests pack',
-            gridlines: { color: 'transparent' },
-          },
-          2: {
-            title: 'Requests entries',
+        },
+        series: {
+          0: { targetAxisIndex: 0 },
+        },
+      };
+
+      var options2 = {
+        title: 'Requests',
+        hAxis: {
+          title: 'Time'
+          // minValue: //{tMinValue},
+          // maxValue: //{tMaxValue},
+        },
+        vAxes: {
+          0: {
+            title: 'Requests',
             gridlines: { color: 'transparent' },
           },
         },
         series: {
           0: { targetAxisIndex: 0 },
-          1: { targetAxisIndex: 1 },
-          2: { targetAxisIndex: 2 },
+        },
+      };
+
+      var options3 = {
+        title: 'Blocks',
+        hAxis: {
+          title: 'Time'
+          // minValue: //{tMinValue},
+          // maxValue: //{tMaxValue},
+        },
+        vAxes: {
+          2: {
+            title: 'Blocks',
+            gridlines: { color: 'transparent' },
+          },
+        },
+        series: {
+          0: { targetAxisIndex: 0 },
         },
       };
 
@@ -81,6 +115,12 @@
 
       var chart1 = new google.visualization.LineChart(document.getElementById('chart_div1'));
       chart1.draw(data1, options1);
+
+      var chart2 = new google.visualization.LineChart(document.getElementById('chart_div2'));
+      chart2.draw(data2, options2);
+
+      var chart3 = new google.visualization.LineChart(document.getElementById('chart_div3'));
+      chart3.draw(data3, options3);
     }
 
   </script>
@@ -90,6 +130,8 @@
   <pre>//{avg}</pre>
   <div id="chart_div0" style="width: 100%; height: 600px;"></div>
   <div id="chart_div1" style="width: 100%; height: 600px;"></div>
+  <div id="chart_div2" style="width: 100%; height: 600px;"></div>
+  <div id="chart_div3" style="width: 100%; height: 600px;"></div>
 </body>
 
 </html>

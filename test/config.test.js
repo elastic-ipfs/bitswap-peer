@@ -24,7 +24,7 @@ t.test('config - defaults', async t => {
     carsTablePrimaryKey: 'path',
     linkTableBlockKey: 'blockmultihash',
     linkTableCarKey: 'carpath',
-    enableKeepAlive: 'true',
+    enableKeepAlive: false,
     pingPeriodSecs: 10,
     awsClientRefreshCredentialsInterval: 3000000,
     awsClientKeepAliveTimeout: 60000,

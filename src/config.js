@@ -39,6 +39,7 @@ const {
   PORT: rawPort,
   HTTP_PORT: rawHttpPort,
 
+  // TODO drop keep alive feature
   ENABLE_KEEP_ALIVE: enableKeepAlive,
   PING_PERIOD_SECONDS: pingPeriodSecs,
 
@@ -77,7 +78,7 @@ module.exports = {
   linkTableBlockKey: 'blockmultihash',
   linkTableCarKey: 'carpath',
 
-  enableKeepAlive: enableKeepAlive ?? 'true',
+  enableKeepAlive: enableKeepAlive ?? false,
   pingPeriodSecs: pingPeriodSecs ?? 10,
 
   awsClientRefreshCredentialsInterval: awsClientRefreshCredentialsInterval ?? 50 * 60e3, // 50 min
@@ -100,5 +101,5 @@ module.exports = {
   s3MaxRetries: s3MaxRetries ? parseInt(s3MaxRetries) : 3,
   s3RetryDelay: s3RetryDelay ? parseInt(s3RetryDelay) : 100, // ms
 
-  allowInspection: !!allowInspection
+  allowInspection: allowInspection === 'true'
 }

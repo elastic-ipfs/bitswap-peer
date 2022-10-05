@@ -66,17 +66,17 @@ const inspect = {
       })
     },
 
-    increase: (key) => {
+    increase: (key, value = 1) => {
       inspect.metrics.values[key]
-        ? inspect.metrics.values[key]++
-        : inspect.metrics.values[key] = 1
+        ? inspect.metrics.values[key] += value
+        : inspect.metrics.values[key] = value
       inspect.metrics._track(key)
     },
 
-    decrease: (key) => {
+    decrease: (key, value = 1) => {
       inspect.metrics.values[key]
-        ? inspect.metrics.values[key]--
-        : inspect.metrics.values[key] = -1
+        ? inspect.metrics.values[key] -= value
+        : inspect.metrics.values[key] = -1 * value
       inspect.metrics._track(key)
     },
 
@@ -121,6 +121,8 @@ const inspect = {
 
     // custom metrics
     const data1 = []
+    const data2 = []
+    const data3 = []
     if (inspect.metrics.trace.length > 0) {
       n = inspect.metrics.trace.length
 
@@ -130,22 +132,28 @@ const inspect = {
           data1.push(JSON.stringify([
             row.time / 1000, // time > x axis
             row.connections
-            // Math.random(), // TODO requested pack
-            // Math.random() // TODO requested entries
+          ]))
+        }
+        if (row.requests) {
+          data2.push(JSON.stringify([
+            row.time / 1000, // time > x axis
+            row.requests
+          ]))
+        }
+        if (row.blocks) {
+          data3.push(JSON.stringify([
+            row.time / 1000, // time > x axis
+            row.blocks
           ]))
         }
       }
     }
 
     return html
-      .replace('//{data0}',
-        'data0.addRows([' +
-        data0.join(',\n') +
-        '])')
-      .replace('//{data1}',
-        'data1.addRows([' +
-        data1.join(',\n') +
-        '])')
+      .replace('//{data0}', 'data0.addRows([' + data0.join(',\n') + '])')
+      .replace('//{data1}', 'data1.addRows([' + data1.join(',\n') + '])')
+      .replace('//{data2}', 'data2.addRows([' + data2.join(',\n') + '])')
+      .replace('//{data3}', 'data3.addRows([' + data3.join(',\n') + '])')
       .replaceAll('//{tMinValue}', tMinValue / 1000)
       .replaceAll('//{tMaxValue}', tMaxValue / 1000)
       .replace('//{avg}', avg.join('\n'))

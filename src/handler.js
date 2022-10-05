@@ -41,28 +41,54 @@ function createContext({ service, peer, protocol, wantlist, connection, awsClien
 }
 
 /**
- * @todo retry
+ * @todo retry?
  */
 async function peerConnect(context, logger) {
   if (context.connection) { return }
 
-  if (!context.responseStream) {
-    // TODO Connection class must handle the whole connection process
-    const dialConnection = await context.service.dial(context.peer)
-    const { stream } = await dialConnection.newStream(context.protocol)
-    context.responseStream = stream
+  // dedupe acquiring stream
+  if (!context.stream) {
+    await acquireStream(context)
   }
 
   await connect(context, logger)
 }
 
 /**
- * establish connection, deduping - could be called multiple times while connecting
+ * acquire peer stream, deduping by context - could be called multiple times while connecting
+ * coupled with peerConnect
+ */
+function acquireStream(context) {
+  if (context.stream) { return Promise.resolve() }
+  if (context.acquiringStream) { return context.acquiringStream }
+
+  context.acquiringStream = new Promise((resolve, reject) => {
+    // TODO Connection class should handle the whole connection process
+    // either is has a stream or has to acquire it
+    context.service.dial(context.peer)
+      .then(dialConnection => {
+        return dialConnection.newStream(context.protocol)
+      })
+      .then(({ stream }) => {
+        context.stream = stream
+        resolve()
+      })
+      .catch(error => reject(error))
+  })
+
+  return context.acquiringStream
+}
+
+/**
+ * establish connection, deduping by context - could be called multiple times while connecting
  * coupled with peerConnect
  */
 function connect(context, logger) {
+  if (context.connection) { return Promise.resolve() }
+  if (context.connecting) { return context.connecting }
+
   context.connecting = new Promise((resolve, reject) => {
-    context.connection = new Connection(context.responseStream)
+    context.connection = new Connection(context.stream)
     context.connection.on('error', err => {
       context.state = 'error'
       logger.warn({ err: serializeError(err) }, 'outgoing connection error')
@@ -79,6 +105,8 @@ function connect(context, logger) {
   return context.connecting
 }
 
+// TODO stream.close doesn't actually close the connection
+// before digging, upgrade libp2p
 async function peerClose(context, logger) {
   context.state = 'end'
 
@@ -86,10 +114,11 @@ async function peerClose(context, logger) {
     if (context.connection) {
       await context.connection.close()
       context.connection = null
-    } else if (context.responseStream) {
-      // could happen that responseStream is established but context.connection is not
+    } else if (context.stream) {
+      // could happen that stream is established but context.connection is not
       // TODO solve ^ > move the connection ops to Connection class
-      context.responseStream.close()
+      context.stream.close()
+      context.stream = null
     }
   } catch (error) {
     logger.error({ error: serializeError(error) }, 'error on handler#peerClose')
@@ -108,6 +137,8 @@ function handle({ context, logger, batchSize = config.blocksBatchSize, processin
     context.todo = context.blocks.length
     telemetry.increaseCount('bitswap-total-entries', context.todo)
     telemetry.increaseCount('bitswap-pending-entries', context.todo)
+    inspect.metrics.increase('blocks', context.todo)
+    inspect.metrics.increase('requests')
 
     let blocksLength
     let batches = Math.ceil(context.todo / batchSize)
@@ -205,6 +236,8 @@ const sentMetrics = {
 // TODO remove this shallow function in favor of idle connection drop
 function closeResponse(context, logger) {
   telemetry.decreaseCount('bitswap-pending-entries', context.todo)
+  inspect.metrics.decrease('requests')
+  inspect.metrics.decrease('blocks', context.todo)
   // note: not awaiting
   peerClose(context, logger)
 }

@@ -47,15 +47,16 @@ class HttpServer {
           }).end('ok')
           break
         }
-        case '/inspect/end': {
+        case '/inspect/stop': {
           if (!config.allowInspection) {
             res.writeHead(404).end()
             break
           }
+          inspect.stop()
           res.writeHead(200, {
             connection: 'close',
             'content-type': 'application/json'
-          }).end(inspect.end())
+          }).end('ok')
           break
         }
         case '/inspect/chart': {

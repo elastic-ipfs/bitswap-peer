@@ -48,69 +48,9 @@ const inspect = {
     inspect.sampler.start()
   },
 
-  end: () => {
+  stop: () => {
     inspect.sampler.stop()
     return inspect.trace
-  },
-
-  chart: async () => {
-    const html = await fs.readFile(path.join(__dirname, 'chart-src.html'), 'utf8')
-
-    const data0 = []
-
-    let tCpu = 0
-    let tMem = 0
-    let n = inspect.trace.length
-    const tMinValue = inspect.trace[0].time / 1000
-    const tMaxValue = inspect.trace[inspect.trace.length - 1].time / 1000
-
-    for (let i = 0; i < n; i++) {
-      const row = inspect.trace[i]
-
-      tCpu += row.cpu
-      tMem += row.rss
-
-      data0.push(JSON.stringify([
-        (row.time - tMinValue) / 1000, // time > x axis
-        row.cpu / 100, // cpu
-        (row.rss) / MB // memory
-      ]))
-    }
-
-    const avg = [
-      'avg cpu: ' + (tCpu / n).toFixed(3) + ' %',
-      'avg mem: ' + (tMem / n / MB).toFixed(3) + ' MB'
-    ]
-
-    // custom metrics
-    const data1 = []
-    if (inspect.metrics.trace.lenght > 0) {
-      n = inspect.metrics.trace.length
-
-      for (let i = 0; i < n; i++) {
-        const row = inspect.metrics.trace[i]
-
-        data0.push(JSON.stringify([
-          (row.time - tMinValue) / 1000, // time > x axis
-          Math.random(), // TODO connections
-          Math.random(), // TODO requested pack
-          Math.random() // TODO requested entries
-        ]))
-      }
-    }
-
-    return html
-      .replace('//{data0}',
-        'data0.addRows([' +
-        data0.join(',\n') +
-        '])')
-      .replace('//{data1}',
-        'data1.addRows([' +
-        data1.join(',\n') +
-        '])')
-      .replaceAll('//{tMinValue}', tMinValue)
-      .replaceAll('//{tMaxValue}', tMaxValue)
-      .replace('//{avg}', avg.join('\n'))
   },
 
   // very basic metrics trace
@@ -126,18 +66,17 @@ const inspect = {
       })
     },
 
-    add: (key) => {
-      inspect.metrics.values[key] = 0
-      inspect.metrics._track(key)
-    },
-
     increase: (key) => {
-      inspect.metrics.values[key]++
+      inspect.metrics.values[key]
+        ? inspect.metrics.values[key]++
+        : inspect.metrics.values[key] = 1
       inspect.metrics._track(key)
     },
 
     decrease: (key) => {
-      inspect.metrics.values[key]--
+      inspect.metrics.values[key]
+        ? inspect.metrics.values[key]--
+        : inspect.metrics.values[key] = -1
       inspect.metrics._track(key)
     },
 
@@ -145,21 +84,84 @@ const inspect = {
       inspect.metrics.values[key] = value
       inspect.metrics._track(key)
     }
+  },
+
+  chart: async () => {
+    if (inspect.trace.length < 1) {
+      return 'no trace'
+    }
+
+    const html = await fs.readFile(path.join(__dirname, 'chart-src.html'), 'utf8')
+
+    const data0 = []
+
+    let tCpu = 0
+    let tMem = 0
+    let n = inspect.trace.length
+    const tMinValue = inspect.trace[0].time
+    const tMaxValue = inspect.trace[inspect.trace.length - 1].time
+
+    for (let i = 0; i < n; i++) {
+      const row = inspect.trace[i]
+
+      tCpu += row.cpu
+      tMem += row.rss
+
+      data0.push(JSON.stringify([
+        row.time / 1000, // time > x axis
+        row.cpu / 100, // cpu
+        (row.rss) / MB // memory
+      ]))
+    }
+
+    const avg = [
+      'avg cpu: ' + (tCpu / n).toFixed(3) + ' %',
+      'avg mem: ' + (tMem / n / MB).toFixed(3) + ' MB'
+    ]
+
+    // custom metrics
+    const data1 = []
+    if (inspect.metrics.trace.length > 0) {
+      n = inspect.metrics.trace.length
+
+      for (let i = 0; i < n; i++) {
+        const row = inspect.metrics.trace[i]
+        if (row.connections) {
+          data1.push(JSON.stringify([
+            row.time / 1000, // time > x axis
+            row.connections
+            // Math.random(), // TODO requested pack
+            // Math.random() // TODO requested entries
+          ]))
+        }
+      }
+    }
+
+    return html
+      .replace('//{data0}',
+        'data0.addRows([' +
+        data0.join(',\n') +
+        '])')
+      .replace('//{data1}',
+        'data1.addRows([' +
+        data1.join(',\n') +
+        '])')
+      .replaceAll('//{tMinValue}', tMinValue / 1000)
+      .replaceAll('//{tMaxValue}', tMaxValue / 1000)
+      .replace('//{avg}', avg.join('\n'))
   }
 }
 
 if (!config.allowInspection) {
-  function noop() { }
-  inspect.init = noop
-  inspect.reset = noop
-  inspect.start = noop
-  inspect.end = noop
-  inspect.chart = noop
-  inspect.metrics._track = noop
-  inspect.metrics.add = noop
-  inspect.metrics.increase = noop
-  inspect.metrics.decrease = noop
-  inspect.metrics.set = noop
+  inspect.init =
+    inspect.reset =
+    inspect.start =
+    inspect.stop =
+    inspect.chart =
+    inspect.metrics._track =
+    inspect.metrics.increase =
+    inspect.metrics.decrease =
+    inspect.metrics.set = function noop() { }
 }
 
 module.exports = inspect

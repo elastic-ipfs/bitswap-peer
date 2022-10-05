@@ -28,7 +28,7 @@ t.test('config - defaults', async t => {
     pingPeriodSecs: 10,
     awsClientRefreshCredentialsInterval: 3000000,
     awsClientKeepAliveTimeout: 60000,
-    awsClientConnectTimeout: 10000,
+    awsClientConnectTimeout: 120000,
     awsClientConcurrency: 128,
     awsClientPipelining: 8,
     awsRoleSessionName: 'bitswap-peer',

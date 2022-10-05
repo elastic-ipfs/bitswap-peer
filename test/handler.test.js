@@ -292,7 +292,7 @@ t.test('handle', async t => {
     t.equal(loggerSpy.messages.error[1][1], 'error on handler#peerClose')
   })
 
-  t.test('should not send a response on establishing connection to the peer and handle the error', async t => {
+  t.test('should not send a response without connecting to the peer and handle the error', async t => {
     const cid = CID.parse('bafkreifiqpnpysanizxoatqnnwuynply5mp52ily2bdjg4r5uoupsxkc6q')
 
     const contextSpy = await spyContext({

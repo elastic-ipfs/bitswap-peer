@@ -82,7 +82,7 @@ module.exports = {
 
   awsClientRefreshCredentialsInterval: awsClientRefreshCredentialsInterval ?? 50 * 60e3, // 50 min
   awsClientKeepAliveTimeout: awsClientKeepAliveTimeout ? parseInt(awsClientKeepAliveTimeout) : 60e3, // 1min
-  awsClientConnectTimeout: awsClientConnectTimeout ? parseInt(awsClientConnectTimeout) : 10e3, // 10 sec
+  awsClientConnectTimeout: awsClientConnectTimeout ? parseInt(awsClientConnectTimeout) : 120e3, // 2min
   awsClientConcurrency: awsClientConcurrency ? parseInt(awsClientConcurrency) : 128,
   awsClientPipelining: awsClientPipelining ? parseInt(awsClientPipelining) : 8,
   awsRoleSessionName: awsRoleSessionName ?? 'bitswap-peer',

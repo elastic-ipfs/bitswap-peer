@@ -13,6 +13,7 @@ const { noiseCrypto } = require('./noise-crypto')
 const { startKeepAlive, stopKeepAlive } = require('./p2p-keep-alive.js')
 const { handle, createContext } = require('./handler')
 const { telemetry } = require('./telemetry')
+const inspect = require('./inspect')
 
 async function startService({ peerId, port, peerAnnounceAddr, awsClient, logger = defaultLogger } = {}) {
   try {
@@ -77,6 +78,7 @@ async function startService({ peerId, port, peerAnnounceAddr, awsClient, logger 
       try {
         if (enableKeepAlive) { startKeepAlive(connection.remotePeer, service) }
         telemetry.increaseCount('bitswap-total-connections')
+        inspect.metrics.increase('connections')
       } catch (err) {
         logger.warn({ err, remotePeer: connection.remotePeer }, `Error while peer connecting: ${serializeError(err)}`)
       }
@@ -86,6 +88,7 @@ async function startService({ peerId, port, peerAnnounceAddr, awsClient, logger 
       try {
         if (enableKeepAlive) { stopKeepAlive(connection.remotePeer) }
         telemetry.decreaseCount('bitswap-total-connections')
+        inspect.metrics.decrease('connections')
       } catch (err) {
         logger.warn({ err, remotePeer: connection.remotePeer }, `Error while peer disconnecting: ${serializeError(err)}`)
       }

@@ -8,6 +8,7 @@ const { Connection } = require('./networking')
 const { Message } = require('./protocol')
 const { fetchBlocksData, fetchBlocksInfo } = require('./storage')
 const { telemetry } = require('./telemetry')
+const inspect = require('./inspect')
 const { cidToKey, sizeofBlockInfo } = require('./util')
 
 let PQueue, processingQueue
@@ -50,7 +51,6 @@ async function peerConnect(context, logger) {
     const dialConnection = await context.service.dial(context.peer)
     const { stream } = await dialConnection.newStream(context.protocol)
     context.responseStream = stream
-    telemetry.increaseCount('bitswap-total-connections')
   }
 
   await connect(context, logger)
@@ -81,7 +81,6 @@ function connect(context, logger) {
 
 async function peerClose(context, logger) {
   context.state = 'end'
-  telemetry.decreaseCount('bitswap-total-connections')
 
   try {
     if (context.connection) {
@@ -111,7 +110,7 @@ function handle({ context, logger, batchSize = config.blocksBatchSize, processin
     telemetry.increaseCount('bitswap-pending-entries', context.todo)
 
     let blocksLength
-    context.batches = Math.ceil(context.todo / batchSize)
+    let batches = Math.ceil(context.todo / batchSize)
     do {
       const blocks = context.blocks.splice(0, batchSize)
 
@@ -126,18 +125,10 @@ function handle({ context, logger, batchSize = config.blocksBatchSize, processin
         if (context.state === 'ok') {
           // append content to its block
           const fetched = await batchFetch(blocks, context, logger)
-          if (fetched) {
-            // !TODO remove await
-            await batchResponse(fetched, context, logger)
-          }
-        }
-
-        // !TODO append connection close op to the last batch
-        context.batches--
-        if (context.batches < 1) {
-          telemetry.decreaseCount('bitswap-pending-entries', context.todo)
-          // note: not awaiting
-          peerClose(context, logger)
+          batches--
+          // close connection on last batch
+          // note: no await
+          return batchResponse({ blocks: fetched, context, logger, last: batches === 0 })
         }
       })
     } while (blocksLength === batchSize)
@@ -211,13 +202,22 @@ const sentMetrics = {
   }
 }
 
-async function batchResponse(blocks, context, logger) {
+// TODO remove this shallow function in favor of idle connection drop
+function closeResponse(context, logger) {
+  telemetry.decreaseCount('bitswap-pending-entries', context.todo)
+  // note: not awaiting
+  peerClose(context, logger)
+}
+
+async function batchResponse({ blocks, context, logger, last }) {
+  if (!blocks) { return }
   try {
     if (context.done === 0) {
       await peerConnect(context, logger)
     }
   } catch (error) {
-    logger.error({ error: serializeError(error), peer: context.peer._idB58String || context.peer }, 'error on handler#batchResponse peerConnect')
+    logger.error({ error: serializeError(error), peer: context.peer?._idB58String || context.peer }, 'error on handler#batchResponse peerConnect')
+    last && closeResponse(context, logger)
     return
   }
 
@@ -242,6 +242,8 @@ async function batchResponse(blocks, context, logger) {
   } catch (error) {
     logger.error({ error: serializeError(error) }, 'error on handler#batchResponse')
   }
+
+  last && closeResponse(context, logger)
 }
 
 module.exports = {

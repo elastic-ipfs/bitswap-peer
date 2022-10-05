@@ -21,7 +21,7 @@ const signerWorker = new Piscina({
  * @see https://docs.aws.amazon.com/index.html
  */
 class Client {
-  constructor({ agent, agentOptions, s3Options, dynamoOptions, refreshCredentialsInterval, roleArn = process.env.AWS_ROLE_ARN, identityToken, roleSessionName, logger }) {
+  constructor({ agent, awsAgentOptions, s3Options, dynamoOptions, refreshCredentialsInterval, roleArn = process.env.AWS_ROLE_ARN, identityToken, roleSessionName, logger }) {
     // TODO validate params
 
     if (!dynamoOptions?.region) {
@@ -29,7 +29,7 @@ class Client {
     }
 
     this.agent = agent
-    this.agentOptions = agentOptions
+    this.awsAgentOptions = awsAgentOptions
     this.s3Options = s3Options
     this.dynamoOptions = dynamoOptions
     this.dynamoUrl = `https://dynamodb.${dynamoOptions.region}.amazonaws.com`
@@ -54,8 +54,7 @@ class Client {
     if (this.agent) {
       return
     }
-
-    this.agent = new Agent(this.agentOptions)
+    this.agent = new Agent(this.awsAgentOptions)
 
     if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
       this.credentials.keyId = process.env.AWS_ACCESS_KEY_ID
@@ -159,7 +158,7 @@ class Client {
       await sleep(retryDelay)
     } while (++attempts < retries)
 
-    this.logger.error({ key }, `Cannot S3.fetch ${url} after ${attempts} attempts`)
+    this.logger.error({ key, err: serializeError(err) }, `Cannot S3.fetch ${url} after ${attempts} attempts`)
     throw new Error(`Cannot S3.fetch ${url} - ${err.message}`)
   }
 

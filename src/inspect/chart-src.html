@@ -16,8 +16,8 @@
       var data1 = new google.visualization.DataTable();
       data1.addColumn('number', 'Time');
       data1.addColumn('number', 'Connections');
-      data1.addColumn('number', 'Requests pack');
-      data1.addColumn('number', 'Requests entries');
+      // data1.addColumn('number', 'Requests pack');
+      // data1.addColumn('number', 'Requests entries');
 
       //{data0}
       //{data1}
@@ -26,16 +26,15 @@
         title: 'Resources',
         hAxis: {
           title: 'Time',
-          minValue: //{tMinValue},
-            maxValue: //{tMaxValue},
+          // minValue: //{tMinValue},
+          // maxValue: //{tMaxValue},
         },
         vAxes: {
           0: {
             title: 'CPU %',
             gridlines: { color: 'transparent' },
             minValue: 0,
-            maxValue: 100,
-            format: "#%"
+            maxValue: 100
           },
           1: {
             title: 'Memory (MB)',
@@ -53,8 +52,8 @@
         title: 'Request',
         hAxis: {
           title: 'Time',
-          minValue: //{tMinValue},
-            maxValue: //{tMaxValue},
+          // minValue: //{tMinValue},
+          // maxValue: //{tMaxValue},
         },
         vAxes: {
           0: {

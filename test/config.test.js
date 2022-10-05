@@ -42,6 +42,7 @@ t.test('config - defaults', async t => {
     dynamoMaxRetries: 3,
     dynamoRetryDelay: 50,
     s3MaxRetries: 3,
-    s3RetryDelay: 50
+    s3RetryDelay: 50,
+    allowInspection: false
   })
 })

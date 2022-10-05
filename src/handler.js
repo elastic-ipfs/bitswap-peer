@@ -10,7 +10,6 @@ const { fetchBlocksData, fetchBlocksInfo } = require('./storage')
 const { telemetry } = require('./telemetry')
 const { cidToKey, sizeofBlockInfo } = require('./util')
 
-// !TODO remove processingQueue?
 let PQueue, processingQueue
 process.nextTick(async () => {
   PQueue = await loadEsmModule('p-queue')
@@ -83,6 +82,7 @@ function connect(context, logger) {
 
 async function peerClose(context, logger) {
   context.state = 'end'
+  telemetry.decreaseCount('bitswap-total-connections')
   telemetry.decreaseCount('bitswap-active-connections')
 
   try {
@@ -90,6 +90,8 @@ async function peerClose(context, logger) {
       await context.connection.close()
       context.connection = null
     } else if (context.responseStream) {
+      // could happen that responseStream is established but context.connection is not
+      // TODO solve ^ > move the connection ops to Connection class
       context.responseStream.close()
     }
   } catch (error) {
@@ -132,6 +134,7 @@ function handle({ context, logger, batchSize = config.blocksBatchSize, processin
           }
         }
 
+        // !TODO append connection close op to the last batch
         context.batches--
         if (context.batches < 1) {
           telemetry.decreaseCount('bitswap-pending-entries', context.todo)

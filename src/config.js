@@ -45,7 +45,9 @@ const {
   DYNAMO_MAX_RETRIES: dynamoMaxRetries,
   DYNAMO_RETRY_DELAY: dynamoRetryDelay,
   S3_MAX_RETRIES: s3MaxRetries,
-  S3_RETRY_DELAY: s3RetryDelay
+  S3_RETRY_DELAY: s3RetryDelay,
+
+  ALLOW_INSPECTION: allowInspection
 } = process.env
 
 const port = parseInt(rawPort)
@@ -96,5 +98,7 @@ module.exports = {
   dynamoMaxRetries: dynamoMaxRetries ? parseInt(dynamoMaxRetries) : 3,
   dynamoRetryDelay: dynamoRetryDelay ? parseInt(dynamoRetryDelay) : 100, // ms
   s3MaxRetries: s3MaxRetries ? parseInt(s3MaxRetries) : 3,
-  s3RetryDelay: s3RetryDelay ? parseInt(s3RetryDelay) : 100 // ms
+  s3RetryDelay: s3RetryDelay ? parseInt(s3RetryDelay) : 100, // ms
+
+  allowInspection: !!allowInspection
 }

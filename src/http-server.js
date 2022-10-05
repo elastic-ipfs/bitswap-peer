@@ -1,9 +1,11 @@
 'use strict'
 
 const { createServer } = require('http')
+const config = require('./config')
 const { logger } = require('./logging')
 const { checkReadiness } = require('./health-check')
 const { telemetry } = require('./telemetry')
+const inspect = require('./inspect')
 
 class HttpServer {
   startServer({ port, awsClient, readiness }) {
@@ -31,6 +33,41 @@ class HttpServer {
             'content-type': 'text/plain'
           })
           res.end(telemetry.export())
+          break
+        }
+        case '/inspect/start': {
+          if (!config.allowInspection) {
+            res.writeHead(404).end()
+            break
+          }
+          inspect.start()
+          res.writeHead(200, {
+            connection: 'close',
+            'content-type': 'text/plain'
+          }).end('ok')
+          break
+        }
+        case '/inspect/end': {
+          if (!config.allowInspection) {
+            res.writeHead(404).end()
+            break
+          }
+          res.writeHead(200, {
+            connection: 'close',
+            'content-type': 'application/json'
+          }).end(inspect.end())
+          break
+        }
+        case '/inspect/chart': {
+          if (!config.allowInspection) {
+            res.writeHead(404).end()
+            break
+          }
+          res.writeHead(200, {
+            connection: 'close',
+            'content-type': 'text/html'
+          })
+          inspect.chart().then(chart => res.end(chart))
           break
         }
         default:

@@ -15,6 +15,7 @@
     "@aws-sdk/client-sqs": "^3.180.0",
     "@aws-sdk/node-http-handler": "^3.178.0",
     "@aws-sdk/util-dynamodb": "^3.180.0",
+    "@dnlup/doc": "^4.0.1",
     "@web3-storage/libp2p-noise": "^6.0.0",
     "bl": "^5.0.0",
     "dotenv": "^16.0.2",

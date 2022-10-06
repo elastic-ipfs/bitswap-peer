@@ -156,10 +156,9 @@ function handle({ context, logger, batchSize = config.blocksBatchSize, processin
         if (context.state === 'ok') {
           // append content to its block
           const fetched = await batchFetch(blocks, context, logger)
-          batches--
           // close connection on last batch
-          // note: no await
-          return batchResponse({ blocks: fetched, context, logger, last: batches === 0 })
+          batches--
+          await batchResponse({ blocks: fetched, context, logger, last: batches === 0 })
         }
       })
     } while (blocksLength === batchSize)
@@ -244,8 +243,9 @@ function closeResponse(context, logger) {
 
 async function batchResponse({ blocks, context, logger, last }) {
   if (!blocks) { return }
+
   try {
-    if (context.done === 0) {
+    if (!context.connection) {
       await peerConnect(context, logger)
     }
   } catch (error) {

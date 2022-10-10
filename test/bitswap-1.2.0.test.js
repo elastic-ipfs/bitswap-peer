@@ -366,15 +366,20 @@ t.test(`${protocol} - large presences splitted in multiple responses - single bl
 
 t.test(`${protocol} - closes streams properly`, async t => {
   const { awsClient } = await mockAWS(config)
-  const { client, service, connection, receiver } = await setup({ protocol, awsClient })
+  const { client, service, connection, receiver, connectionPool } = await setup({ protocol, awsClient })
 
   const entry = new Entry(cid1, 1, false, Entry.WantType.Block, true)
   const wantList = new WantList([entry], false)
   const request = new Message(wantList, [], [], 0)
 
+  // request
   connection.send(request.encode(protocol))
   await receiveMessages(receiver, protocol, 1000, 1)
   connection.close()
+
+  // response
+  const responses = connectionPool.connections()
+  responses[0].close()
 
   // Wait for streams to be closed (happens asynchronously)
   await new Promise(resolve => setTimeout(resolve, 1000))

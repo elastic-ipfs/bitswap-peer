@@ -20,10 +20,11 @@ process.nextTick(async () => {
 /**
  * connection is optional, will be established at first send on handler
  */
-function createContext({ service, peer, protocol, wantlist, connection, awsClient }) {
+function createContext({ service, peer, protocol, wantlist, connection, awsClient, connectionPool }) {
   const context = {
     state: 'ok',
     awsClient,
+    connectionPool,
     service,
     peer,
     protocol,
@@ -46,6 +47,12 @@ function createContext({ service, peer, protocol, wantlist, connection, awsClien
 async function peerConnect(context, logger) {
   if (context.connection) { return }
 
+  const connection = context.connectionPool.get(context.peer)
+  if (connection) {
+    context.connection = connection
+    return
+  }
+
   // dedupe acquiring stream
   if (!context.stream) {
     await acquireStream(context)
@@ -59,6 +66,7 @@ async function peerConnect(context, logger) {
  * coupled with peerConnect
  */
 function acquireStream(context) {
+  console.log(' >>> acquireStream')
   if (context.stream) { return Promise.resolve() }
   if (context.acquiringStream) { return context.acquiringStream }
 
@@ -71,6 +79,7 @@ function acquireStream(context) {
       })
       .then(({ stream }) => {
         context.stream = stream
+        console.log(' === acquireStream DONE')
         resolve()
       })
       .catch(error => reject(error))
@@ -84,35 +93,56 @@ function acquireStream(context) {
  * coupled with peerConnect
  */
 function connect(context, logger) {
+  console.log(' >>> connect')
   if (context.connection) { return Promise.resolve() }
   if (context.connecting) { return context.connecting }
 
   context.connecting = new Promise((resolve, reject) => {
     context.connection = new Connection(context.stream)
+    context.connectionPool.set(context.peer, context.connection)
+
+    console.log(' === connect DONE')
+
     context.connection.on('error', err => {
       context.state = 'error'
       logger.warn({ err: serializeError(err) }, 'outgoing connection error')
-      peerClose(context, logger)
+      // peerClose(context, logger)
       reject(err)
     })
 
+    // on closing connetion, due to inactivity or other external reason
+    // clean up context
     context.connection.on('close', () => { peerClose(context, logger) })
 
     // TODO should resolve on connection ready
     // Connection class should expose a "ready" event or something
+    // see service.on('peer:connect') and service.on('peer:disconnect') on service.js
     resolve()
   })
   return context.connecting
 }
 
-// TODO stream.close doesn't actually close the connection
-// before digging, upgrade libp2p
-async function peerClose(context, logger) {
-  context.state = 'end'
+// close response
+// note: it does NOT disconnect the peer
+function closeResponse(context) {
+  if (context.state === 'end') {
+    return
+  }
+  context.connectionPool.removePending(context.peer)
+  telemetry.decreaseCount('bitswap-pending-entries', context.todo)
+  inspect.metrics.decrease('requests')
+  inspect.metrics.decrease('blocks', context.todo)
 
+  context.state = 'end'
+  context.close()
+}
+
+async function peerClose(context, logger) {
   try {
+    closeResponse(context)
     if (context.connection) {
-      await context.connection.close()
+      // TODO remove? connection is already closed
+      // await context.connection.close()
       context.connection = null
     } else if (context.stream) {
       // could happen that stream is established but context.connection is not
@@ -123,8 +153,6 @@ async function peerClose(context, logger) {
   } catch (error) {
     logger.error({ error: serializeError(error) }, 'error on handler#peerClose')
   }
-
-  context.close()
 }
 
 function handle({ context, logger, batchSize = config.blocksBatchSize, processing = processingQueue }) {
@@ -135,6 +163,7 @@ function handle({ context, logger, batchSize = config.blocksBatchSize, processin
     }
 
     context.todo = context.blocks.length
+    context.connectionPool.addPending(context.peer)
     telemetry.increaseCount('bitswap-total-entries', context.todo)
     telemetry.increaseCount('bitswap-pending-entries', context.todo)
     inspect.metrics.increase('blocks', context.todo)
@@ -151,7 +180,7 @@ function handle({ context, logger, batchSize = config.blocksBatchSize, processin
 
       blocksLength = blocks.length
       processing.add(async () => {
-        // state can be error or end
+        // state can be 'error' or 'end'
         // in those cases skip fetching and response, iterate pending batches and close
         if (context.state === 'ok') {
           // append content to its block
@@ -217,30 +246,6 @@ async function batchFetch(blocks, context, logger) {
   }
 }
 
-const messageSize = {
-  [BLOCK_TYPE_DATA]: (block) => block.data?.content?.length ?? 0,
-  [BLOCK_TYPE_INFO]: (block) => sizeofBlockInfo(block.info)
-}
-
-// not accurate, not considering fixed overhead
-const sentMetrics = {
-  [BLOCK_TYPE_DATA]: (block, size) => {
-    block.data?.found && telemetry.increaseCount('bitswap-sent-data', size)
-  },
-  [BLOCK_TYPE_INFO]: (block, size) => {
-    block.info?.found && telemetry.increaseCount('bitswap-sent-info', size)
-  }
-}
-
-// TODO remove this shallow function in favor of idle connection drop
-function closeResponse(context, logger) {
-  telemetry.decreaseCount('bitswap-pending-entries', context.todo)
-  inspect.metrics.decrease('requests')
-  inspect.metrics.decrease('blocks', context.todo)
-  // note: not awaiting
-  peerClose(context, logger)
-}
-
 async function batchResponse({ blocks, context, logger, last }) {
   if (!blocks) { return }
 
@@ -249,8 +254,9 @@ async function batchResponse({ blocks, context, logger, last }) {
       await peerConnect(context, logger)
     }
   } catch (error) {
+    // TODO add metric connection-error
     logger.error({ error: serializeError(error), peer: context.peer?._idB58String || context.peer }, 'error on handler#batchResponse peerConnect')
-    last && closeResponse(context, logger)
+    last && closeResponse(context)
     return
   }
 
@@ -276,7 +282,22 @@ async function batchResponse({ blocks, context, logger, last }) {
     logger.error({ error: serializeError(error) }, 'error on handler#batchResponse')
   }
 
-  last && closeResponse(context, logger)
+  last && closeResponse(context)
+}
+
+const messageSize = {
+  [BLOCK_TYPE_DATA]: (block) => block.data?.content?.length ?? 0,
+  [BLOCK_TYPE_INFO]: (block) => sizeofBlockInfo(block.info)
+}
+
+// not accurate, not considering fixed overhead
+const sentMetrics = {
+  [BLOCK_TYPE_DATA]: (block, size) => {
+    block.data?.found && telemetry.increaseCount('bitswap-sent-data', size)
+  },
+  [BLOCK_TYPE_INFO]: (block, size) => {
+    block.info?.found && telemetry.increaseCount('bitswap-sent-info', size)
+  }
 }
 
 module.exports = {

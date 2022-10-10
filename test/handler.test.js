@@ -8,6 +8,7 @@ const sinon = require('sinon')
 const { CID } = require('multiformats/cid')
 
 const config = require('../src/config')
+const { PeerConnectionPool } = require('../src/networking')
 const { loadEsmModule } = require('../src/esm-loader')
 const { BITSWAP_V_120, Entry, WantList } = require('../src/protocol')
 
@@ -36,7 +37,7 @@ async function spyContext({ blocks, protocol = BITSWAP_V_120 }) {
   }
   const { awsClient } = await mockAwsClient(config)
   awsClient.agent = createMockAgent()
-  const context = createContext({ awsClient, service, peer: 'dummy', wantlist: new WantList(blocks), protocol, connection })
+  const context = createContext({ awsClient, service, peer: 'dummy', wantlist: new WantList(blocks), protocol, connection, connectionPool: new PeerConnectionPool() })
   return context
 }
 
@@ -60,7 +61,7 @@ t.test('handle', async t => {
     await handle({ context: contextSpy, logger: loggerSpy })
 
     t.equal(connectionSpy.send.callCount, 1)
-    t.equal(connectionSpy.close.callCount, 1)
+    t.equal(connectionSpy.close.callCount, 0, 'should not close the peer connection')
     t.equal(loggerSpy.messages.error.length, 0)
     t.equal(loggerSpy.messages.warn.length, 0)
 
@@ -91,7 +92,7 @@ t.test('handle', async t => {
     await handle({ context: contextSpy, logger: loggerSpy })
 
     t.equal(connectionSpy.send.callCount, 1)
-    t.equal(connectionSpy.close.callCount, 1)
+    t.equal(connectionSpy.close.callCount, 0, 'should not close the peer connection')
     t.equal(loggerSpy.messages.error.length, 1)
     t.equal(loggerSpy.messages.error[0][0].block.cid, 'not-a-cid')
     t.equal(loggerSpy.messages.error[0][1], 'invalid block cid')
@@ -117,7 +118,7 @@ t.test('handle', async t => {
     await handle({ context: contextSpy, logger: loggerSpy })
 
     t.equal(connectionSpy.send.callCount, 0)
-    t.equal(connectionSpy.close.callCount, 1)
+    t.equal(connectionSpy.close.callCount, 0, 'should not close the peer connection')
     t.equal(loggerSpy.messages.error.length, 2)
     t.equal(loggerSpy.messages.warn.length, 0)
   })
@@ -148,7 +149,7 @@ t.test('handle', async t => {
     await handle({ context: contextSpy, logger: loggerSpy, processing: queue, batchSize: 1 })
 
     t.equal(connectionSpy.send.callCount, 8)
-    t.equal(connectionSpy.close.callCount, 1)
+    t.equal(connectionSpy.close.callCount, 0, 'should not close the peer connection')
     t.equal(loggerSpy.messages.error.length, 0)
     t.equal(loggerSpy.messages.warn.length, 0)
   })
@@ -207,7 +208,7 @@ t.test('handle', async t => {
         handle({ context, logger: loggerSpy, processing: queue, batchSize: 2 })))
 
     t.equal(connectionsSpy[0].send.callCount, 2)
-    t.equal(connectionsSpy[0].close.callCount, 1)
+    t.equal(connectionsSpy[0].close.callCount, 0, 'should not close the peer connection')
 
     let sent = helper.decodeMessage(connectionsSpy[0].send.args[0][0])
     t.equal(sent.blocksInfo.length, 1)
@@ -224,7 +225,7 @@ t.test('handle', async t => {
     t.same(sent.blocksData, [])
 
     t.equal(connectionsSpy[1].send.callCount, 2)
-    t.equal(connectionsSpy[1].close.callCount, 1)
+    t.equal(connectionsSpy[1].close.callCount, 0, 'should not close the peer connection')
     sent = helper.decodeMessage(connectionsSpy[1].send.args[0][0])
     t.same(sent, {
       blocksInfo: [{ key: 'zQmQ32EbNWRjYT4sLukMBL7nvcnrGv8f4Enkr4PqdQo6xRV', type: 0 }],
@@ -242,7 +243,7 @@ t.test('handle', async t => {
     })
 
     t.equal(connectionsSpy[2].send.callCount, 2)
-    t.equal(connectionsSpy[2].close.callCount, 1)
+    t.equal(connectionsSpy[2].close.callCount, 0, 'should not close the peer connection')
     sent = helper.decodeMessage(connectionsSpy[2].send.args[0][0])
     t.same(sent, {
       blocksInfo: [{ key: 'zQmXGyrrB12PGx7wacyY9XWjA287PBUnEhrQmBurc53TxW3', type: 0 }],
@@ -287,9 +288,9 @@ t.test('handle', async t => {
     await handle({ context: contextSpy, logger: loggerSpy })
 
     t.equal(connectionSpy.send.callCount, 0)
-    t.equal(connectionSpy.close.callCount, 1)
-    t.equal(loggerSpy.messages.error.length, 2)
-    t.equal(loggerSpy.messages.error[1][1], 'error on handler#peerClose')
+    t.equal(connectionSpy.close.callCount, 0, 'should not close the peer connection')
+    t.equal(loggerSpy.messages.error.length, 1)
+    t.equal(loggerSpy.messages.error[0][1], 'invalid block cid')
   })
 
   t.test('should not send a response without connecting to the peer and handle the error', async t => {

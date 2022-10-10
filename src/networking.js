@@ -118,4 +118,90 @@ class Connection extends EventEmitter {
   }
 }
 
-module.exports = { Connection }
+/**
+ * this a temporary solution to manage connections
+ * the main purpose is to avoid to call the peer connection process on every request, if the connection is still established
+ * this kind of overlap the libp2p connectionManager, so we're going to adopt it after upgrading the libp2p to the last version
+ */
+class PeerConnectionPool {
+  constructor({ idle = 2e3, polling = 2e3 } = {}) {
+    this.options = {
+      idle,
+      polling
+    }
+
+    this._pool = new Map()
+    this._timers = new Map()
+    this._pending = new Map()
+
+    this.timerPolling()
+  }
+
+  static peerId(peer) {
+    // TODO throw err invalid peer?
+    return peer._idB58String
+  }
+
+  connections() {
+    return Array.from(this._pool.values())
+  }
+
+  set(peer, connection) {
+    const id = PeerConnectionPool.peerId(peer)
+    this._pool.set(id, connection)
+    this._timers.set(id, Date.now())
+  }
+
+  get(peer) {
+    const id = PeerConnectionPool.peerId(peer)
+    if (!id) { return }
+    this._timers.set(id, Date.now())
+    return this._pool.get(id)
+  }
+
+  remove(peer) {
+    const id = PeerConnectionPool.peerId(peer)
+    if (!id) { return }
+    this._pool.delete(id)
+    this._timers.delete(id)
+  }
+
+  addPending(peer) {
+    const id = PeerConnectionPool.peerId(peer)
+    const c = this._pending.get(id) ?? 0
+    this._pending.set(id, c + 1)
+  }
+
+  removePending(peer) {
+    const id = PeerConnectionPool.peerId(peer)
+    const c = this._pending.get(id) ?? 0
+    if (c === undefined) {
+      this._pending.set(id, 0)
+      return
+    }
+    this._pending.set(id, c - 1)
+  }
+
+  close(id) {
+    const c = this._pool.get(id)
+    if (!c) { return }
+    c.close()
+    this._pool.delete(id)
+    this._timers.delete(id)
+  }
+
+  timerPolling() {
+    if (this.polling) { return }
+    this.polling = setInterval(() => {
+      const now = Date.now()
+      for (const [id, t] of this._timers.entries()) {
+        const pending = this._pending.get(id)
+        if (pending < 1 && t < now - this.options.idle) {
+          this.close(id)
+        }
+      }
+    }, this.options.polling).unref()
+  }
+}
+
+module.exports = { Connection, PeerConnectionPool }

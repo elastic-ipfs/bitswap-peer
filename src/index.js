@@ -5,6 +5,7 @@ require('make-promises-safe')
 const { logger } = require('./logging')
 const { startService } = require('./service')
 const { createAwsClient } = require('./aws-client')
+const { PeerConnectionPool } = require('./networking')
 const { httpServer } = require('./http-server')
 const { getPeerId } = require('./peer-id')
 const config = require('./config')
@@ -42,7 +43,9 @@ async function boot() {
       awsClient,
       port: config.port,
       peerId,
-      peerAnnounceAddr: config.peerAnnounceAddr
+      peerAnnounceAddr: config.peerAnnounceAddr,
+      connectionPool: new PeerConnectionPool()
+      // TODO config
     }))
   } catch (err) {
     logger.fatal({ err }, 'Cannot start the service')

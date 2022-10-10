@@ -13,7 +13,7 @@ const { CID } = require('multiformats/cid')
 const { base58btc: base58 } = require('multiformats/bases/base58')
 
 const { loadEsmModule } = require('../../src/esm-loader')
-const { Connection } = require('../../src/networking')
+const { Connection, PeerConnectionPool } = require('../../src/networking')
 const { noiseCrypto } = require('../../src/noise-crypto')
 const { Message, RawMessage } = require('../../src/protocol')
 const { startService } = require('../../src/service')
@@ -50,12 +50,13 @@ async function getFreePort() {
 async function setup({ protocol, awsClient }) {
   const peerId = await PeerId.create()
   const port = await getFreePort()
-  const { service } = await startService({ peerId, port, awsClient })
+  const connectionPool = new PeerConnectionPool()
+  const { service } = await startService({ peerId, port, awsClient, connectionPool })
   const { stream, receiver, node } = await createClient(peerId, port, protocol)
 
   const connection = new Connection(stream)
 
-  return { service, client: node, connection, receiver }
+  return { service, client: node, connection, receiver, connectionPool }
 }
 
 async function teardown(client, service, connection) {

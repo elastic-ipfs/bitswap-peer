@@ -16,13 +16,13 @@ process.nextTick(async () => {
   processingQueue = new PQueue({ concurrency: config.processingQueueConcurrency })
 })
 
-function createContext({ service, peer, protocol, wantlist, awsClient, connectionPool }) {
+function createContext({ service, peerId, protocol, wantlist, awsClient, connectionPool }) {
   const context = {
     state: 'ok',
     awsClient,
     connectionPool,
     service,
-    peer,
+    peerId,
     protocol,
     blocks: wantlist.entries,
     done: 0,
@@ -44,7 +44,7 @@ function handle({ context, logger, batchSize = config.blocksBatchSize, processin
     }
 
     context.todo = context.blocks.length
-    context.connectionPool.addPending(context.peer)
+    context.connectionPool.addPending(context.peerId)
     telemetry.increaseCount('bitswap-total-entries', context.todo)
     telemetry.increaseCount('bitswap-pending-entries', context.todo)
     inspect.metrics.increase('blocks', context.todo)
@@ -140,7 +140,7 @@ async function batchResponse({ blocks, context, logger, last }) {
     context.connection.on('close', context.onConnectionClose)
   } catch (error) {
     // TODO add metric connection-error
-    logger.error({ error: serializeError(error), peer: context.peer?._idB58String || context.peer }, 'error on handler#batchResponse acquire connection')
+    logger.error({ error: serializeError(error), peerId: context.peerId?._idB58String || context.peerId }, 'error on handler#batchResponse acquire connection')
     last && endResponse(context)
     return
   }
@@ -180,7 +180,7 @@ function endResponse(context) {
     context.connection.off('close', context.onConnectionClose)
   }
 
-  context.connectionPool.removePending(context.peer)
+  context.connectionPool.removePending(context.peerId)
   telemetry.decreaseCount('bitswap-pending-entries', context.todo)
   inspect.metrics.decrease('requests')
   inspect.metrics.decrease('blocks', context.todo)

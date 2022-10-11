@@ -19,12 +19,11 @@ const { cid1, cid2, cid3, cid4, cid5, cid6, cid7, cid8, cid9 } = require('./fixt
 const helper = require('./utils/helper')
 const { mockBlockInfoSource, mockBlockDataSource, createMockAgent, mockAwsClient } = require('./utils/mock')
 
-let PQueue
-t.before(async () => {
-  PQueue = await loadEsmModule('p-queue')
-})
+function dummyPeer(id = 'the-dummy-peer-id') {
+  return { _idB58String: id }
+}
 
-async function spyContext({ blocks, protocol = BITSWAP_V_120 }) {
+async function spyContext({ blocks, protocol = BITSWAP_V_120, peerId }) {
   const service = {
     dial: async () => ({
       newStream: async () => ({ stream: 'the-stream' })
@@ -36,15 +35,20 @@ async function spyContext({ blocks, protocol = BITSWAP_V_120 }) {
     send: sinon.spy(),
     close: sinon.spy()
   }
-  const dummyPeer = { _idB58String: 'the-peer-id' }
+  const peer = peerId || dummyPeer()
   const connectionPoolStub = new PeerConnectionPool()
-  connectionPoolStub.set(dummyPeer, connectionSpy)
+  connectionPoolStub.set(peer, connectionSpy)
 
   const { awsClient } = await mockAwsClient(config)
   awsClient.agent = createMockAgent()
-  const context = createContext({ awsClient, service, peer: dummyPeer, wantlist: new WantList(blocks), protocol, connectionPool: connectionPoolStub })
+  const context = createContext({ awsClient, service, peerId: peer, wantlist: new WantList(blocks), protocol, connectionPool: connectionPoolStub })
   return context
 }
+
+let PQueue
+t.before(async () => {
+  PQueue = await loadEsmModule('p-queue')
+})
 
 t.test('handle', async t => {
   t.test('should handle a request successfully', async t => {
@@ -61,7 +65,7 @@ t.test('handle', async t => {
     mockBlockDataSource({ awsClient: contextSpy.awsClient, region: 'region', bucket: 'bucket', key: 'abc', offset: 0, length: 128, data: 'abc...' })
 
     const loggerSpy = helper.spyLogger()
-    const connectionSpy = contextSpy.connectionPool.get(contextSpy.peer)
+    const connectionSpy = contextSpy.connectionPool.get(contextSpy.peerId)
 
     await handle({ context: contextSpy, logger: loggerSpy })
 
@@ -92,7 +96,7 @@ t.test('handle', async t => {
     mockBlockDataSource({ awsClient: contextSpy.awsClient, region: 'region', bucket: 'bucket', key: 'abc', offset: 0, length: 128, data: 'abc...' })
 
     const loggerSpy = helper.spyLogger()
-    const connectionSpy = contextSpy.connectionPool.get(contextSpy.peer)
+    const connectionSpy = contextSpy.connectionPool.get(contextSpy.peerId)
 
     await handle({ context: contextSpy, logger: loggerSpy })
 
@@ -118,7 +122,7 @@ t.test('handle', async t => {
       ]
     })
     const loggerSpy = helper.spyLogger()
-    const connectionSpy = contextSpy.connectionPool.get(contextSpy.peer)
+    const connectionSpy = contextSpy.connectionPool.get(contextSpy.peerId)
 
     await handle({ context: contextSpy, logger: loggerSpy })
 
@@ -148,7 +152,7 @@ t.test('handle', async t => {
     mockBlockDataSource({ awsClient: contextSpy.awsClient, region: 'region', bucket: 'bucket', key: 'abc', offset: 0, length: 128, data: 'abc...' })
 
     const loggerSpy = helper.spyLogger()
-    const connectionSpy = contextSpy.connectionPool.get(contextSpy.peer)
+    const connectionSpy = contextSpy.connectionPool.get(contextSpy.peerId)
     const queue = new PQueue({ concurrency: 3 })
 
     await handle({ context: contextSpy, logger: loggerSpy, processing: queue, batchSize: 1 })
@@ -205,7 +209,7 @@ t.test('handle', async t => {
     mockBlockDataSource({ awsClient: contextsSpy[2].awsClient, region: 'region', bucket: 'bucket', key: 'cid1-car', offset: 100, length: 128, data: 'cid1-content' })
 
     const loggerSpy = helper.spyLogger()
-    const connectionsSpy = contextsSpy.map(c => c.connectionPool.get(c.peer))
+    const connectionsSpy = contextsSpy.map(c => c.connectionPool.get(c.peerId))
     const queue = new PQueue({ concurrency: 999 })
 
     await Promise.all(
@@ -271,13 +275,125 @@ t.test('handle', async t => {
     t.equal(loggerSpy.messages.warn.length, 0)
   })
 
-  t.todo('should handle multiple requests at the same time on differnt peers', async t => {
+  t.test('should handle multiple requests at the same time on different peers', async t => {
+    const contextsSpy = [
+      await spyContext({
+        peerId: dummyPeer('peer-id-1'),
+        blocks: [
+          new Entry(cid1, 1, false, Entry.WantType.Have, true),
+          new Entry(cid2, 1, false, Entry.WantType.Block, true),
+          new Entry(cid3, 1, false, Entry.WantType.Have, true), // not found
+          new Entry(cid4, 1, false, Entry.WantType.Block, true), // not found
+          new Entry('not-a-cid', 1, false, Entry.WantType.Block, true)
+        ]
+      }),
+      await spyContext({
+        peerId: dummyPeer('peer-id-2'),
+        blocks: [
+          new Entry(cid4, 1, false, Entry.WantType.Have, true), // not found
+          new Entry(cid5, 1, false, Entry.WantType.Block, true),
+          new Entry(cid6, 1, false, Entry.WantType.Have, true),
+          new Entry('not-a-cid', 1, false, Entry.WantType.Have, true)
+        ]
+      }),
+      await spyContext({
+        peerId: dummyPeer('peer-id-3'),
+        blocks: [
+          new Entry(cid7, 1, false, Entry.WantType.Have, true),
+          new Entry(cid8, 1, false, Entry.WantType.Block, true),
+          new Entry(cid9, 1, false, Entry.WantType.Have, true),
+          new Entry(cid1, 1, false, Entry.WantType.Block, true),
+          new Entry(cid1, 1, true, Entry.WantType.Block, true) // canceled
+        ]
+      })
+    ]
+
+    mockBlockInfoSource({ awsClient: contextsSpy[0].awsClient, key: cidToKey(cid1), info: { offset: 0, length: 128, car: 'region/bucket/cid1-car' } })
+    mockBlockInfoSource({ awsClient: contextsSpy[0].awsClient, key: cidToKey(cid2), info: { offset: 100, length: 128, car: 'region/bucket/cid2-car' } })
+    mockBlockDataSource({ awsClient: contextsSpy[0].awsClient, region: 'region', bucket: 'bucket', key: 'cid2-car', offset: 100, length: 128, data: 'cid2-content' })
+
+    mockBlockInfoSource({ awsClient: contextsSpy[1].awsClient, key: cidToKey(cid5), info: { offset: 123, length: 465, car: 'region/bucket/cid5-car' } })
+    mockBlockDataSource({ awsClient: contextsSpy[1].awsClient, region: 'region', bucket: 'bucket', key: 'cid5-car', offset: 123, length: 456, data: 'cid5-content' })
+    mockBlockInfoSource({ awsClient: contextsSpy[1].awsClient, key: cidToKey(cid6), info: { offset: 0, length: 128, car: 'region/bucket/cid6-car' } })
+
+    mockBlockInfoSource({ awsClient: contextsSpy[2].awsClient, key: cidToKey(cid7), info: { offset: 0, length: 1, car: 'region/bucket/cid7-car' } })
+    mockBlockInfoSource({ awsClient: contextsSpy[2].awsClient, key: cidToKey(cid5), info: { offset: 123, length: 465, car: 'region/bucket/cid5-car' } })
+    mockBlockDataSource({ awsClient: contextsSpy[2].awsClient, region: 'region', bucket: 'bucket', key: 'cid8-car', offset: 1, length: 2, data: 'cid8-content' })
+    mockBlockInfoSource({ awsClient: contextsSpy[2].awsClient, key: cidToKey(cid9), info: { offset: 0, length: 1, car: 'region/bucket/cid9-car' } })
+    mockBlockInfoSource({ awsClient: contextsSpy[2].awsClient, key: cidToKey(cid1), info: { offset: 100, length: 128, car: 'region/bucket/cid1-car' } })
+    mockBlockDataSource({ awsClient: contextsSpy[2].awsClient, region: 'region', bucket: 'bucket', key: 'cid1-car', offset: 100, length: 128, data: 'cid1-content' })
+
+    const loggerSpy = helper.spyLogger()
+    const connectionsSpy = contextsSpy.map(c => c.connectionPool.get(c.peerId))
+    const queue = new PQueue({ concurrency: 999 })
+
+    await Promise.all(
+      contextsSpy.map(context =>
+        handle({ context, logger: loggerSpy, processing: queue, batchSize: 2 })))
+
+    t.equal(connectionsSpy[0].send.callCount, 2)
+    t.equal(connectionsSpy[0].close.callCount, 0, 'should not close the peer connection')
+
+    let sent = helper.decodeMessage(connectionsSpy[0].send.args[0][0])
+    t.equal(sent.blocksInfo.length, 1)
+    t.ok(sent.blocksInfo.find(b => b.key === 'zQmZgTpJUbrss357x1D14Uo43JATwd7LhkZNbreqXVGFMmD' && b.type === 0)) // cid1
+    t.same(sent.blocksData, [{
+      cid: 'bafybeiey33y4jzylufvxqhcjliju72wzarrovx3fpqweuqhjjfdrkklegq', // cid2
+      data: '636964322d636f6e74656e74'
+    }])
+
+    sent = helper.decodeMessage(connectionsSpy[0].send.args[1][0])
+    t.equal(sent.blocksInfo.length, 2)
+    t.ok(sent.blocksInfo.find(b => b.key === 'zQmSnuWmxptJZdLJpKRarxBMS2Ju2oANVrgbr2xWbie9b2D' && b.type === 1)) // cid3
+    t.ok(sent.blocksInfo.find(b => b.key === 'zQmdmQXB2mzChmMeKY47C43LxUdg1NDJ5MWcKMKxDu7RgQm' && b.type === 1)) // cid4
+    t.same(sent.blocksData, [])
+
+    t.equal(connectionsSpy[1].send.callCount, 2)
+    t.equal(connectionsSpy[1].close.callCount, 0, 'should not close the peer connection')
+    sent = helper.decodeMessage(connectionsSpy[1].send.args[0][0])
+    t.same(sent, {
+      blocksInfo: [{ key: 'zQmQ32EbNWRjYT4sLukMBL7nvcnrGv8f4Enkr4PqdQo6xRV', type: 0 }],
+      blocksData: []
+    })
+    sent = helper.decodeMessage(connectionsSpy[1].send.args[1][0])
+    t.same(sent, {
+      blocksInfo: [{ key: 'zQmdmQXB2mzChmMeKY47C43LxUdg1NDJ5MWcKMKxDu7RgQm', type: 1 }],
+      blocksData: [
+        {
+          cid: 'bafkreifgrc4fuyblvxr62zcupvlkn6kd6e463slt3bc2ykewake7mxlpk4',
+          data: '636964352d636f6e74656e74'
+        }
+      ]
+    })
+
+    t.equal(connectionsSpy[2].send.callCount, 2)
+    t.equal(connectionsSpy[2].close.callCount, 0, 'should not close the peer connection')
+    sent = helper.decodeMessage(connectionsSpy[2].send.args[0][0])
+    t.same(sent, {
+      blocksInfo: [{ key: 'zQmXGyrrB12PGx7wacyY9XWjA287PBUnEhrQmBurc53TxW3', type: 0 }],
+      blocksData: [
+        {
+          cid: 'bafkreidisxbnj5j6rlsdumzjtma7r7npewzl3y3rwwchofkkcypfetzqui',
+          data: '6162632e2e2e'
+        }
+      ]
+    })
+    sent = helper.decodeMessage(connectionsSpy[2].send.args[1][0])
+    t.equal(sent.blocksInfo.length, 2)
+    t.ok(sent.blocksInfo.find(b => b.key === 'zQmUF7AvbU5HqeSypxoqTa3rRzpViZj3YjQWPhV8ykgmpBB' && b.type === 0))
+    t.ok(sent.blocksInfo.find(b => b.key === 'zQmbfSqvUycmA1zG5WAfMfCknSJwbGxDMCnaXF5BieZ7Xnz' && b.type === 1))
+    t.same(sent.blocksData, [])
+
+    t.equal(loggerSpy.messages.error.length, 2)
+    t.equal(loggerSpy.messages.error[0][1], 'invalid block cid')
+    t.equal(loggerSpy.messages.error[1][1], 'invalid block cid')
+    t.equal(loggerSpy.messages.warn.length, 0)
   })
 
   t.test('should handle and empty request', async t => {
     const contextSpy = await spyContext({ blocks: [] })
     const loggerSpy = helper.spyLogger()
-    const connectionSpy = contextSpy.connectionPool.get(contextSpy.peer)
+    const connectionSpy = contextSpy.connectionPool.get(contextSpy.peerId)
     connectionSpy.close = sinon.stub().throws()
 
     await handle({ context: contextSpy, logger: loggerSpy })
@@ -290,7 +406,7 @@ t.test('handle', async t => {
   t.test('should get log error on connection closing error', async t => {
     const contextSpy = await spyContext({ blocks: [new Entry('not-a-cid', 1, false, Entry.WantType.Have, true)] })
     const loggerSpy = helper.spyLogger()
-    const connectionSpy = contextSpy.connectionPool.get(contextSpy.peer)
+    const connectionSpy = contextSpy.connectionPool.get(contextSpy.peerId)
     connectionSpy.close = sinon.stub().throws()
 
     await handle({ context: contextSpy, logger: loggerSpy })
@@ -307,7 +423,7 @@ t.test('handle', async t => {
     const contextSpy = await spyContext({
       blocks: [new Entry(cid, 1, false, Entry.WantType.Have, true)]
     })
-    contextSpy.connectionPool.remove(contextSpy.peer)
+    contextSpy.connectionPool.remove(contextSpy.peerId)
     contextSpy.service.dial = async () => { throw new Error('DIAL_CONNECTION_ERROR') }
 
     mockBlockInfoSource({ awsClient: contextSpy.awsClient, key: cidToKey(cid), info: { offset: 0, length: 128, car: 'region/bucket/abc' } })

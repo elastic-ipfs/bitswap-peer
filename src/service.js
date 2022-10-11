@@ -53,7 +53,7 @@ async function startService({ peerId, port, peerAnnounceAddr, awsClient, connect
           }
 
           try {
-            const context = createContext({ service, peer: dial.remotePeer, protocol, wantlist: message.wantlist, awsClient, connectionPool })
+            const context = createContext({ service, peerId: dial.remotePeer, protocol, wantlist: message.wantlist, awsClient, connectionPool })
             handle({ context, logger })
           } catch (err) {
             logger.error({ err: serializeError(err) }, 'Error on request handle')

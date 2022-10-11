@@ -148,8 +148,8 @@ class PeerConnectionPool {
   }
 
   // throw err on invalid peer
-  static peerId(peer) {
-    return peer._idB58String
+  static peerId(peerId) {
+    return peerId._idB58String
   }
 
   connections() {
@@ -157,28 +157,28 @@ class PeerConnectionPool {
   }
 
   /**
-   * assumes peer has always the same `protocol` and `service`
+   * assumes peerId has always the same `protocol` and `service`
    */
-  async acquire({ peer, protocol, service }) {
-    let connection = this.get(peer)
+  async acquire({ peerId, protocol, service }) {
+    let connection = this.get(peerId)
     if (connection) {
       // refresh timer
-      this._timers.set(PeerConnectionPool.peerId(peer), Date.now())
+      this._timers.set(PeerConnectionPool.peerId(peerId), Date.now())
       return connection
     }
 
-    connection = await this._connect({ peer, protocol, service })
-    this.set(peer, connection)
+    connection = await this._connect({ peerId, protocol, service })
+    this.set(peerId, connection)
 
     return connection
   }
 
   /**
-   * establish connection, deduping by peer
+   * establish connection, deduping by peerId
    * coupled with acquire
    */
-  _connect({ peer, protocol, service }) {
-    const id = PeerConnectionPool.peerId(peer)
+  _connect({ peerId, protocol, service }) {
+    const id = PeerConnectionPool.peerId(peerId)
 
     let p = this._connecting.get(id)
     if (p) {
@@ -187,7 +187,7 @@ class PeerConnectionPool {
     }
 
     p = new Promise((resolve, reject) => {
-      this._acquireStream({ peer, protocol, service })
+      this._acquireStream({ peerId, protocol, service })
         .then((stream) => {
           const connection = new Connection(stream)
 
@@ -215,28 +215,28 @@ class PeerConnectionPool {
    * establish connection, deduping by peer
    * coupled with _connect
    */
-  async _acquireStream({ peer, protocol, service }) {
-    const dialConnection = await service.dial(peer)
+  async _acquireStream({ peerId, protocol, service }) {
+    const dialConnection = await service.dial(peerId)
     const { stream } = await dialConnection.newStream(protocol)
     return stream
   }
 
   // --- connection pool
 
-  set(peer, connection) {
-    const id = PeerConnectionPool.peerId(peer)
+  set(peerId, connection) {
+    const id = PeerConnectionPool.peerId(peerId)
     this._pool.set(id, connection)
     this._timers.set(id, Date.now())
   }
 
-  get(peer) {
-    const id = PeerConnectionPool.peerId(peer)
+  get(peerId) {
+    const id = PeerConnectionPool.peerId(peerId)
     if (!id) { return }
     return this._pool.get(id)
   }
 
-  remove(peer) {
-    const id = PeerConnectionPool.peerId(peer)
+  remove(peerId) {
+    const id = PeerConnectionPool.peerId(peerId)
     if (!id) { return }
     this._pool.delete(id)
     this._timers.delete(id)
@@ -244,14 +244,14 @@ class PeerConnectionPool {
     this._connecting.delete(id)
   }
 
-  addPending(peer) {
-    const id = PeerConnectionPool.peerId(peer)
+  addPending(peerId) {
+    const id = PeerConnectionPool.peerId(peerId)
     const c = this._pending.get(id) ?? 0
     this._pending.set(id, c + 1)
   }
 
-  removePending(peer) {
-    const id = PeerConnectionPool.peerId(peer)
+  removePending(peerId) {
+    const id = PeerConnectionPool.peerId(peerId)
     const c = this._pending.get(id) ?? 0
     if (c === undefined) {
       this._pending.set(id, 0)

@@ -1,5 +1,7 @@
 'use strict'
 
+// TODO upgrade libp2p and drop
+
 /*
 This is a workaround for ERR_MPLEX_STREAM_RESET errors
 This is related to:

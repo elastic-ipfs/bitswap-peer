@@ -31,7 +31,7 @@ t.test('send - after closing behavior', async t => {
 t.test('error handling', async t => {
   const peerId = await PeerId.create()
   const { port, service } = await startService({ peerId, port: await helper.getFreePort(), connectionPool: new PeerConnectionPool() })
-  const { stream, node: client } = await helper.createClient(peerId, port, protocol)
+  const { stream, client } = await helper.createClient(peerId, port, protocol)
 
   stream.source[Symbol.asyncIterator] = function () {
     return {
@@ -68,7 +68,7 @@ t.test('announced multiaddr', async t => {
   const peerAnnounceAddr = '/dns4/example.com/tcp/3000/ws'
   const peerId = await PeerId.create()
   const { port, service } = await startService({ peerId, port: await helper.getFreePort(), peerAnnounceAddr, connectionPool: new PeerConnectionPool() })
-  const { stream, node: client } = await helper.createClient(peerId, port, protocol)
+  const { stream, client } = await helper.createClient(peerId, port, protocol)
 
   const connection = new Connection(stream)
   connection.on('error', () => { })
@@ -85,4 +85,10 @@ t.test('announced multiaddr', async t => {
   await helper.teardown(client, service, connection)
 })
 
-// TODO PeerConnectionPool
+t.test('PeerConnectionPool', async t => {
+  // dedupe connection
+  // connect and acquireStream throws error
+  // connection events listeners cleared
+
+  // polling
+})

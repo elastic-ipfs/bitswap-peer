@@ -63,7 +63,7 @@ async function startService({ peerId, port, peerAnnounceAddr, awsClient, connect
         // When the incoming duplex stream finishes sending, close for writing.
         // Note: we never write to this stream - responses are always sent on
         // another multiplexed stream.
-        connection.on('end:receive', () => connection.close())
+        // connection.on('end:receive', () => connection.close())
 
         connection.on('error', err => {
           logger.error({ err: serializeError(err), dial, stream, protocol }, 'Connection error')
@@ -74,6 +74,7 @@ async function startService({ peerId, port, peerAnnounceAddr, awsClient, connect
       }
     })
 
+    // TODO move to networking
     service.connectionManager.on('peer:connect', connection => {
       try {
         if (enableKeepAlive) { startKeepAlive(connection.remotePeer, service) }
@@ -84,6 +85,7 @@ async function startService({ peerId, port, peerAnnounceAddr, awsClient, connect
       }
     })
 
+    // TODO move to networking
     service.connectionManager.on('peer:disconnect', connection => {
       try {
         if (enableKeepAlive) { stopKeepAlive(connection.remotePeer) }
@@ -95,6 +97,7 @@ async function startService({ peerId, port, peerAnnounceAddr, awsClient, connect
       }
     })
 
+    // TODO move to networking
     service.connectionManager.on('error', err => {
       logger.error({ err }, `libp2p connectionManager.error: ${serializeError(err)}`)
     })

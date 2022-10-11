@@ -372,14 +372,13 @@ t.test(`${protocol} - closes streams properly`, async t => {
   const wantList = new WantList([entry], false)
   const request = new Message(wantList, [], [], 0)
 
-  // request
   connection.send(request.encode(protocol))
   await receiveMessages(receiver, protocol, 1000, 1)
   connection.close()
+  client.stop()
 
-  // response
-  const responses = connectionPool.connections()
-  responses[0].close()
+  const sendingConnections = connectionPool.connections()
+  sendingConnections[0].close()
 
   // Wait for streams to be closed (happens asynchronously)
   await new Promise(resolve => setTimeout(resolve, 1000))

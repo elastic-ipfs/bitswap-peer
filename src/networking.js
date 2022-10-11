@@ -5,6 +5,7 @@ const { loadEsmModules } = require('./esm-loader')
 const { logger, serializeError } = require('./logging')
 
 class Connection extends EventEmitter {
+  // !TODO .setMaxListeners()
   constructor(stream) {
     super()
 
@@ -14,38 +15,39 @@ class Connection extends EventEmitter {
     this.resolves = []
     this.shouldClose = false
 
-    loadEsmModules(['it-length-prefixed', 'it-pipe']).then(([lengthPrefixedMessage, { pipe }]) => {
-      // Prepare for receiving
-      pipe(stream.source, lengthPrefixedMessage.decode(), async source => {
-        for await (const data of source) {
-          /*
-            This variable declaration is important
-            If you use data.slice() within the nextTick you will always emit the last received packet
-          */
-          const payload = data.slice()
-          process.nextTick(() => this.emit('data', payload))
-        }
-      })
-        .then(() => {
-          this.emit('end:receive')
+    loadEsmModules(['it-length-prefixed', 'it-pipe'])
+      .then(([lengthPrefixedMessage, { pipe }]) => {
+        // Prepare for receiving
+        pipe(stream.source, lengthPrefixedMessage.decode(), async source => {
+          for await (const data of source) {
+            /*
+              This variable declaration is important
+              If you use data.slice() within the nextTick you will always emit the last received packet
+            */
+            const payload = data.slice()
+            process.nextTick(() => this.emit('data', payload))
+          }
         })
-        .catch(err => {
-          this.emit('error', err)
-          this.emit('error:receive', err)
-          logger.debug({ err }, `Cannot receive data: ${serializeError(err)}`)
-        })
+          .then(() => {
+            this.emit('end:receive')
+          })
+          .catch(err => {
+            this.emit('error', err)
+            this.emit('error:receive', err)
+            logger.debug({ err }, `Cannot receive data: ${serializeError(err)}`)
+          })
 
-      // Prepare for sending
-      pipe(this, lengthPrefixedMessage.encode(), stream.sink)
-        .then(() => {
-          this.emit('end:send')
-        })
-        .catch(err => {
-          this.emit('error', err)
-          this.emit('error:send', err)
-          logger.debug({ err }, `Cannot send data: ${serializeError(err)}`)
-        })
-    })
+        // Prepare for sending
+        pipe(this, lengthPrefixedMessage.encode(), stream.sink)
+          .then(() => {
+            this.emit('end:send')
+          })
+          .catch(err => {
+            this.emit('error', err)
+            this.emit('error:send', err)
+            logger.debug({ err }, `Cannot send data: ${serializeError(err)}`)
+          })
+      })
   }
 
   send(value) {
@@ -63,22 +65,26 @@ class Connection extends EventEmitter {
   }
 
   close() {
-    /*
-      Do not do anything immediately here, just wait for the next request for data.
-      This way we are sure we have sent everything out.
-    */
+    try {
+      /*
+        Do not do anything immediately here, just wait for the next request for data.
+        This way we are sure we have sent everything out.
+      */
 
-    this.shouldClose = true
+      this.shouldClose = true
 
-    // If there are resolves, then there is nothing waiting to be sent out and
-    // we can close the stream for reading (and writing) immediately.
-    if (this.resolves.length) {
-      for (const resolve of this.resolves) {
-        resolve({ done: true })
+      // If there are resolves, then there is nothing waiting to be sent out and
+      // we can close the stream for reading (and writing) immediately.
+      if (this.resolves.length) {
+        for (const resolve of this.resolves) {
+          resolve({ done: true })
+        }
+        this.resolves = []
+        this.stream.close()
+        this.emit('close')
       }
-      this.resolves = []
-      this.stream.close()
-      this.emit('close')
+    } catch (error) {
+      logger.error({ error: serializeError(error) }, 'error on connection.close')
     }
   }
 
@@ -124,11 +130,15 @@ class Connection extends EventEmitter {
  * this kind of overlap the libp2p connectionManager, so we're going to adopt it after upgrading the libp2p to the last version
  */
 class PeerConnectionPool {
-  constructor({ idle = 2e3, polling = 2e3 } = {}) {
+  constructor({ logger, idle = 2e3, polling = 2e3 } = {}) {
     this.options = {
       idle,
       polling
     }
+    this.logger = logger
+
+    // to dedupe getting connection
+    this._connecting = new Map()
 
     this._pool = new Map()
     this._timers = new Map()
@@ -137,14 +147,81 @@ class PeerConnectionPool {
     this.timerPolling()
   }
 
+  // throw err on invalid peer
   static peerId(peer) {
-    // TODO throw err invalid peer?
     return peer._idB58String
   }
 
   connections() {
     return Array.from(this._pool.values())
   }
+
+  /**
+   * assumes peer has always the same `protocol` and `service`
+   */
+  async acquire({ peer, protocol, service }) {
+    let connection = this.get(peer)
+    if (connection) {
+      // refresh timer
+      this._timers.set(PeerConnectionPool.peerId(peer), Date.now())
+      return connection
+    }
+
+    connection = await this._connect({ peer, protocol, service })
+    this.set(peer, connection)
+
+    return connection
+  }
+
+  /**
+   * establish connection, deduping by peer
+   * coupled with acquire
+   */
+  _connect({ peer, protocol, service }) {
+    const id = PeerConnectionPool.peerId(peer)
+
+    let p = this._connecting.get(id)
+    if (p) {
+      console.log(' **** connection deduped', id)
+      return p
+    }
+
+    p = new Promise((resolve, reject) => {
+      this._acquireStream({ peer, protocol, service })
+        .then((stream) => {
+          const connection = new Connection(stream)
+
+          connection.on('error', err => {
+            this.logger.warn({ err: serializeError(err) }, 'outgoing connection error')
+            reject(err)
+          })
+
+          connection.on('close', () => { this.close(id) })
+
+          // TODO should resolve on connection ready
+          // Connection class should expose a "ready" event or something
+          // see service.on('peer:connect') and service.on('peer:disconnect') on service.js
+          resolve(connection)
+        })
+        .catch(err => reject(err))
+    })
+
+    this._connecting.set(id, p)
+
+    return p
+  }
+
+  /**
+   * establish connection, deduping by peer
+   * coupled with _connect
+   */
+  async _acquireStream({ peer, protocol, service }) {
+    const dialConnection = await service.dial(peer)
+    const { stream } = await dialConnection.newStream(protocol)
+    return stream
+  }
+
+  // --- connection pool
 
   set(peer, connection) {
     const id = PeerConnectionPool.peerId(peer)
@@ -155,7 +232,6 @@ class PeerConnectionPool {
   get(peer) {
     const id = PeerConnectionPool.peerId(peer)
     if (!id) { return }
-    this._timers.set(id, Date.now())
     return this._pool.get(id)
   }
 
@@ -164,6 +240,8 @@ class PeerConnectionPool {
     if (!id) { return }
     this._pool.delete(id)
     this._timers.delete(id)
+    this._pending.delete(id)
+    this._connecting.delete(id)
   }
 
   addPending(peer) {
@@ -185,9 +263,14 @@ class PeerConnectionPool {
   close(id) {
     const c = this._pool.get(id)
     if (!c) { return }
-    c.close()
+
+    this._connecting.delete(id)
     this._pool.delete(id)
     this._timers.delete(id)
+    this._pending.delete(id)
+
+    c.close()
+    c.removeAllListeners()
   }
 
   timerPolling() {

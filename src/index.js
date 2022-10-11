@@ -44,8 +44,8 @@ async function boot() {
       port: config.port,
       peerId,
       peerAnnounceAddr: config.peerAnnounceAddr,
-      connectionPool: new PeerConnectionPool()
       // TODO config
+      connectionPool: new PeerConnectionPool({ logger })
     }))
   } catch (err) {
     logger.fatal({ err }, 'Cannot start the service')

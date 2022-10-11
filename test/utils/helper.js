@@ -19,7 +19,7 @@ const { Message, RawMessage } = require('../../src/protocol')
 const { startService } = require('../../src/service')
 
 async function createClient(peerId, port, protocol) {
-  const node = await libp2p.create({
+  const client = await libp2p.create({
     modules: {
       transport: [Websockets],
       streamMuxer: [Multiplex],
@@ -27,11 +27,11 @@ async function createClient(peerId, port, protocol) {
     }
   })
 
-  const connection = await node.dial(`/ip4/127.0.0.1/tcp/${port}/ws/p2p/${peerId}`)
-  const { stream } = await connection.newStream(protocol)
+  const target = await client.dial(`/ip4/127.0.0.1/tcp/${port}/ws/p2p/${peerId}`)
+  const { stream } = await target.newStream(protocol)
   const receiver = new EventEmitter()
 
-  node.handle(protocol, async ({ connection: dialConnection, stream, protocol }) => {
+  client.handle(protocol, async ({ connection: dial, stream, protocol }) => {
     const connection = new Connection(stream)
 
     connection.on('data', data => {
@@ -39,7 +39,7 @@ async function createClient(peerId, port, protocol) {
     })
   })
 
-  return { connection, stream, receiver, node }
+  return { stream, receiver, client }
 }
 
 async function getFreePort() {
@@ -50,13 +50,12 @@ async function getFreePort() {
 async function setup({ protocol, awsClient }) {
   const peerId = await PeerId.create()
   const port = await getFreePort()
-  const connectionPool = new PeerConnectionPool()
+  const connectionPool = new PeerConnectionPool({ idle: 99e6 }) // idle is disabled
   const { service } = await startService({ peerId, port, awsClient, connectionPool })
-  const { stream, receiver, node } = await createClient(peerId, port, protocol)
-
+  const { stream, receiver, client } = await createClient(peerId, port, protocol)
   const connection = new Connection(stream)
 
-  return { service, client: node, connection, receiver, connectionPool }
+  return { service, client, connection, receiver, connectionPool }
 }
 
 async function teardown(client, service, connection) {

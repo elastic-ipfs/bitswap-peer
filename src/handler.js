@@ -4,7 +4,6 @@ const { loadEsmModule } = require('./esm-loader')
 const config = require('./config')
 const { serializeError } = require('./logging')
 const { Entry, BITSWAP_V_120, BLOCK_TYPE_INFO, BLOCK_TYPE_DATA } = require('./protocol')
-const { Connection } = require('./networking')
 const { Message } = require('./protocol')
 const { fetchBlocksData, fetchBlocksInfo } = require('./storage')
 const { telemetry } = require('./telemetry')
@@ -17,10 +16,7 @@ process.nextTick(async () => {
   processingQueue = new PQueue({ concurrency: config.processingQueueConcurrency })
 })
 
-/**
- * connection is optional, will be established at first send on handler
- */
-function createContext({ service, peer, protocol, wantlist, connection, awsClient, connectionPool }) {
+function createContext({ service, peer, protocol, wantlist, awsClient, connectionPool }) {
   const context = {
     state: 'ok',
     awsClient,
@@ -29,7 +25,6 @@ function createContext({ service, peer, protocol, wantlist, connection, awsClien
     peer,
     protocol,
     blocks: wantlist.entries,
-    connection,
     done: 0,
     todo: 0,
     batches: null,
@@ -39,120 +34,6 @@ function createContext({ service, peer, protocol, wantlist, connection, awsClien
   }
   context.end = new Promise(resolve => { context.close = resolve })
   return context
-}
-
-/**
- * @todo retry?
- */
-async function peerConnect(context, logger) {
-  if (context.connection) { return }
-
-  const connection = context.connectionPool.get(context.peer)
-  if (connection) {
-    context.connection = connection
-    return
-  }
-
-  // dedupe acquiring stream
-  if (!context.stream) {
-    await acquireStream(context)
-  }
-
-  await connect(context, logger)
-}
-
-/**
- * acquire peer stream, deduping by context - could be called multiple times while connecting
- * coupled with peerConnect
- */
-function acquireStream(context) {
-  console.log(' >>> acquireStream')
-  if (context.stream) { return Promise.resolve() }
-  if (context.acquiringStream) { return context.acquiringStream }
-
-  context.acquiringStream = new Promise((resolve, reject) => {
-    // TODO Connection class should handle the whole connection process
-    // either is has a stream or has to acquire it
-    context.service.dial(context.peer)
-      .then(dialConnection => {
-        return dialConnection.newStream(context.protocol)
-      })
-      .then(({ stream }) => {
-        context.stream = stream
-        console.log(' === acquireStream DONE')
-        resolve()
-      })
-      .catch(error => reject(error))
-  })
-
-  return context.acquiringStream
-}
-
-/**
- * establish connection, deduping by context - could be called multiple times while connecting
- * coupled with peerConnect
- */
-function connect(context, logger) {
-  console.log(' >>> connect')
-  if (context.connection) { return Promise.resolve() }
-  if (context.connecting) { return context.connecting }
-
-  context.connecting = new Promise((resolve, reject) => {
-    context.connection = new Connection(context.stream)
-    context.connectionPool.set(context.peer, context.connection)
-
-    console.log(' === connect DONE')
-
-    context.connection.on('error', err => {
-      context.state = 'error'
-      logger.warn({ err: serializeError(err) }, 'outgoing connection error')
-      // peerClose(context, logger)
-      reject(err)
-    })
-
-    // on closing connetion, due to inactivity or other external reason
-    // clean up context
-    context.connection.on('close', () => { peerClose(context, logger) })
-
-    // TODO should resolve on connection ready
-    // Connection class should expose a "ready" event or something
-    // see service.on('peer:connect') and service.on('peer:disconnect') on service.js
-    resolve()
-  })
-  return context.connecting
-}
-
-// close response
-// note: it does NOT disconnect the peer
-function closeResponse(context) {
-  if (context.state === 'end') {
-    return
-  }
-  context.connectionPool.removePending(context.peer)
-  telemetry.decreaseCount('bitswap-pending-entries', context.todo)
-  inspect.metrics.decrease('requests')
-  inspect.metrics.decrease('blocks', context.todo)
-
-  context.state = 'end'
-  context.close()
-}
-
-async function peerClose(context, logger) {
-  try {
-    closeResponse(context)
-    if (context.connection) {
-      // TODO remove? connection is already closed
-      // await context.connection.close()
-      context.connection = null
-    } else if (context.stream) {
-      // could happen that stream is established but context.connection is not
-      // TODO solve ^ > move the connection ops to Connection class
-      context.stream.close()
-      context.stream = null
-    }
-  } catch (error) {
-    logger.error({ error: serializeError(error) }, 'error on handler#peerClose')
-  }
 }
 
 function handle({ context, logger, batchSize = config.blocksBatchSize, processing = processingQueue }) {
@@ -250,13 +131,17 @@ async function batchResponse({ blocks, context, logger, last }) {
   if (!blocks) { return }
 
   try {
-    if (!context.connection) {
-      await peerConnect(context, logger)
-    }
+    context.connection = await context.connectionPool.acquire(context)
+
+    context.onConnectionError = () => { context.state = 'error' }
+    context.onConnectionClose = () => endResponse(context)
+
+    context.connection.on('error', context.onConnectionError)
+    context.connection.on('close', context.onConnectionClose)
   } catch (error) {
     // TODO add metric connection-error
-    logger.error({ error: serializeError(error), peer: context.peer?._idB58String || context.peer }, 'error on handler#batchResponse peerConnect')
-    last && closeResponse(context)
+    logger.error({ error: serializeError(error), peer: context.peer?._idB58String || context.peer }, 'error on handler#batchResponse acquire connection')
+    last && endResponse(context)
     return
   }
 
@@ -282,7 +167,26 @@ async function batchResponse({ blocks, context, logger, last }) {
     logger.error({ error: serializeError(error) }, 'error on handler#batchResponse')
   }
 
-  last && closeResponse(context)
+  last && endResponse(context)
+}
+
+// end response
+// note: it does NOT disconnect the peer
+function endResponse(context) {
+  if (context.state === 'end') { return }
+
+  if (context.connection) {
+    context.connection.off('error', context.onConnectionError)
+    context.connection.off('close', context.onConnectionClose)
+  }
+
+  context.connectionPool.removePending(context.peer)
+  telemetry.decreaseCount('bitswap-pending-entries', context.todo)
+  inspect.metrics.decrease('requests')
+  inspect.metrics.decrease('blocks', context.todo)
+
+  context.state = 'end'
+  context.close()
 }
 
 const messageSize = {

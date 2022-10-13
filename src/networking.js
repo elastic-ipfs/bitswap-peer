@@ -125,27 +125,23 @@ class Connection extends EventEmitter {
 
 function connectPeer({ context, logger }) {
   return new Promise((resolve, reject) => {
-    let solved
     _acquireStream(context)
       .then((stream) => {
         const connection = new Connection(stream)
 
         connection.on('error', err => {
-          logger.error({ err: serializeError(err) }, 'outgoing connection error')
-          if (!solved) { reject(err) }
-          solved = true
+          logger.warn({ err: serializeError(err) }, 'outgoing connection error')
+          context.state = 'error'
         })
 
         // TODO should resolve on connection ready
         // Connection class should expose a "ready" event or something
         // see service.on('peer:connect') and service.on('peer:disconnect') on service.js
-        if (!solved) { resolve(connection) }
-        solved = true
+        resolve(connection)
       })
       .catch(err => {
         logger.error({ peerId: context.peerId?._idB58String || context.peerId, err: serializeError(err) }, 'unable to connect to peer')
-        if (!solved) { reject(err) }
-        solved = true
+        reject(err)
       })
   })
 }

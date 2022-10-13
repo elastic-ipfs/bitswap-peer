@@ -121,7 +121,6 @@ async function batchResponse({ blocks, context, logger }) {
     if (!context.connection) {
       context.connecting = connectPeer({ context, logger })
       context.connection = await context.connecting
-      context.connection.on('error', () => { context.state = 'error' })
       context.connection.on('close', () => { endResponse({ context, logger }) })
     }
     await context.connecting

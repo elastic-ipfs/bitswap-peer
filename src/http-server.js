@@ -1,12 +1,14 @@
 'use strict'
 
 const { createServer } = require('http')
+const config = require('./config')
 const { logger } = require('./logging')
-const { healthCheck } = require('./health-check')
+const { checkReadiness } = require('./health-check')
 const { telemetry } = require('./telemetry')
+const inspect = require('./inspect')
 
 class HttpServer {
-  startServer(port) {
+  startServer({ port, awsClient, readiness }) {
     if (this.server) {
       return this.server
     }
@@ -18,15 +20,9 @@ class HttpServer {
           res.end()
           break
         case '/readiness': {
-          healthCheck
-            .checkReadiness()
+          checkReadiness({ awsClient, readiness, logger })
             .then(httpStatus => {
               res.writeHead(httpStatus)
-              res.end()
-            })
-            .catch(error => {
-              logger.error({ error }, 'Cannot check readiness.')
-              res.writeHead(500)
               res.end()
             })
           break
@@ -39,6 +35,54 @@ class HttpServer {
           res.end(telemetry.export())
           break
         }
+        case '/inspect/start': {
+          if (!config.allowInspection) {
+            res.writeHead(404).end()
+            break
+          }
+          inspect.start()
+          res.writeHead(200, {
+            connection: 'close',
+            'content-type': 'text/plain'
+          }).end('ok')
+          break
+        }
+        case '/inspect/stop': {
+          if (!config.allowInspection) {
+            res.writeHead(404).end()
+            break
+          }
+          inspect.stop()
+          res.writeHead(200, {
+            connection: 'close',
+            'content-type': 'application/json'
+          }).end('ok')
+          break
+        }
+        case '/inspect/chart': {
+          if (!config.allowInspection) {
+            res.writeHead(404).end()
+            break
+          }
+          res.writeHead(200, {
+            connection: 'close',
+            'content-type': 'text/html'
+          })
+          inspect.chart().then(chart => res.end(chart))
+          break
+        }
+        case '/inspect/gc': {
+          if (!config.allowInspection) {
+            res.writeHead(404).end()
+            break
+          }
+          if (global.gc()) {
+            res.writeHead(200).end()
+          } else {
+            res.writeHead(200).end('no gc, use --expose-gc flag')
+          }
+          break
+        }
         default:
           res.writeHead(404)
           res.end()
@@ -48,12 +92,12 @@ class HttpServer {
 
     return new Promise((resolve, reject) => {
       this.server.listen(port, '0.0.0.0', error => {
-        /* c8 ignore next 3 */
         if (error) {
           return reject(error)
         }
 
-        logger.info(`HTTP server started and listening on port ${this.server.address().port} ...`)
+        const { version } = require('../package.json')
+        logger.info(`[v${version}] HTTP server started and listening on port ${this.server.address().port} ...`)
         resolve(this.server)
       })
     })

@@ -6,11 +6,23 @@ _Variables in bold are required._
 
 | Name                  | Default       | Description                                                              |
 | --------------------- | ------------- | ------------------------------------------------------------------------ |
+| MAX_BLOCK_DATA_SIZE | `2 MB` | Maximum size for data block |
+| MAX_MESSAGE_SIZE | `4 MB` | Maximum size response message, must be larger than a single block info/data |
+| HANDLING_BLOCKS_BATCH_SIZE | `256` | Batch size of handling blocks - how many requested blocks are being processed in a batch |
+
 | CACHE_BLOCK_INFO     | `false`       | Set to `true` to cache block informations with in a in-memory LRU cache. |
 | CACHE_BLOCK_INFO_SIZE | `1000`       | Max entries of the block info cache.                                     |
 | CACHE_BLOCK_DATA      | `false`       | Set to `true` to cache block data with in a in-memory LRU cache.         |
 | CACHE_BLOCK_DATA_SIZE | `1000`        | Max entries of the block data cache.                                     |
-| CONCURRENCY           | `128`         | The maximum concurrency when searching CIDs.                             |
+
+| AWS_CLIENT_REFRESH_CREDENTIALS_INTERVAL | `50 * 60e3` | Credential rotation, in minutes. |
+| AWS_CLIENT_CONNECT_TIMEOUT | `120000` | The timeout after the HTTP client wait for establish the connection, for AWS client. |
+| AWS_CLIENT_KEEP_ALIVE_TIMEOUT | `60000` | The timeout after which a the HTTP socket without active requests will time out, for AWS client. |
+| AWS_CLIENT_CONCURRENCY | `128` | The maximum concurrent connections to AWS |
+| AWS_CLIENT_PIPELINING | `8` | The maximum request to pipeline in a single HTTP connections to AWS. |
+| AWS_ROLE_SESSION_NAME | `bitswap-peer` | Role session name in HTTP connections to AWS. |
+
+| DYNAMO_REGION | `$AWS_REGION` | The Dynamo region. |
 | DYNAMO_BLOCKS_TABLE   | `blocks`      | The DynamoDB table where store CIDs informations to.                     |
 | DYNAMO_CARS_TABLE     | `cars`        | The DynamoDB table where store CAR files informations to.                |
 | DYNAMO_BLOCKS_TABLE_V1| `v1-blocks`   | The DynamoDB table where store CIDs informations to.                     |
@@ -25,13 +37,14 @@ _Variables in bold are required._
 | NODE_ENV              |               | Set to `production` to disable pretty logging.                           |
 | PEER_ID_DIRECTORY     | `/tmp`        | The directory of the file containing the BitSwap PeerID in JSON format.  |
 | PEER_ID_FILE          | `peerId.json` | The filename of the file containing the BitSwap PeerID in JSON format.   |
-| PEER_ID_S3_BUCKET     |               | The S3 bucket to download the BitSwap PeerID in JSON format.             |
+| PEER_ID_S3_REGION     | `$AWS_REGION` | The S3 region to download the BitSwap PeerID. |
+| PEER_ID_S3_BUCKET     |               | The S3 bucket to download the BitSwap PeerID. |
 | PEER_ANNOUNCE_ADDR    |               | Swarm multiaddr to announce to the network (excluding peer ID).          |
-| PIPELINING            | `16`          | The maximum request to pipeline in a single HTTP connections in AWS.     |
-| ENABLE_KEEP_ALIVE   | `false`          | Enable Keep-alive for peers                       |
+| ENABLE_KEEP_ALIVE   | `true`          | Enable Keep-alive for peers                       |
 | PING_PERIOD_SECONDS   | `10`          | Wait interval for ping connected peer (Keep Alive)                       |
 | PORT                  | `3000`        | The port number to listen on.                                            |
 | TELEMETRY_PORT        | `3001`        | The telemetry port number for the OpenTelemetry server to listen on.     |
+| ALLOW_INSPECTION      | `false`       | Allow inspection functionalities - for dev and testing only. |
 
 Also check [AWS specifics configuration](https://github.com/elastic-ipfs/elastic-ipfs/blob/main/aws.md).
 

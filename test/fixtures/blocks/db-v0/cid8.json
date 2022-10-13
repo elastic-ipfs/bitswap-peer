@@ -16,7 +16,7 @@
             "N": "3000000"
           },
           "car": {
-            "S": "{AWS_REGION}/test-cars/test-cid8.car"
+            "S": "{AWS_REGION}/{BUCKET}/test-cid8.car"
           }
         }
       }

@@ -2,18 +2,48 @@
 
 require('make-promises-safe')
 
-const { httpPort } = require('./config')
 const { logger } = require('./logging')
 const { startService } = require('./service')
-const { ensureAwsCredentials } = require('./storage')
+const { createAwsClient } = require('./aws-client')
 const { httpServer } = require('./http-server')
+const { getPeerId } = require('./peer-id')
+const config = require('./config')
 
 async function boot() {
   try {
-    await ensureAwsCredentials()
-    await httpServer.startServer(httpPort)
+    const awsClient = await createAwsClient(config, logger)
 
-    process.nextTick(startService)
+    const peerId = await getPeerId({
+      awsClient,
+      peerIdS3Region: config.peerIdS3Region,
+      peerIdS3Bucket: config.peerIdS3Bucket,
+      peerIdJsonFile: config.peerIdJsonFile,
+      peerIdJsonPath: config.peerIdJsonPath
+    })
+
+    await httpServer.startServer({
+      port: config.httpPort,
+      awsClient,
+      readiness: {
+        dynamo: {
+          table: config.linkTableV1,
+          keyName: config.linkTableBlockKey,
+          keyValue: 'readiness'
+        },
+        s3: {
+          region: config.peerIdS3Region,
+          bucket: config.peerIdS3Bucket,
+          key: config.peerIdJsonFile
+        }
+      }
+    })
+
+    process.nextTick(() => startService({
+      awsClient,
+      port: config.port,
+      peerId,
+      peerAnnounceAddr: config.peerAnnounceAddr
+    }))
   } catch (err) {
     logger.fatal({ err }, 'Cannot start the service')
   }

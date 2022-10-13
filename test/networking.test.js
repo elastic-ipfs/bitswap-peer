@@ -1,17 +1,18 @@
 'use strict'
 
-process.env.LOG_LEVEL = 'fatal'
-
 const PeerId = require('peer-id')
 const t = require('tap')
 
+const config = require('../src/config')
 const { Connection } = require('../src/networking')
 const { BITSWAP_V_100: protocol } = require('../src/protocol')
 const { startService } = require('../src/service')
-const { getFreePort, createClient, prepare, teardown } = require('./utils/helpers')
+const helper = require('./utils/helper')
+const { mockAWS } = require('./utils/mock')
 
 t.test('send - after closing behavior', async t => {
-  const { client, service, connection } = await prepare(t, protocol)
+  const { awsClient } = await mockAWS(config)
+  const { client, service, connection } = await helper.setup({ protocol, awsClient })
 
   connection.close()
 
@@ -24,15 +25,13 @@ t.test('send - after closing behavior', async t => {
   // Nothing is returned
   t.strictSame(await connection[Symbol.asyncIterator]().next(), { done: true, value: undefined })
 
-  await teardown(t, client, service, connection)
+  await helper.teardown(client, service, connection)
 })
 
 t.test('error handling', async t => {
-  t.plan(2)
-
   const peerId = await PeerId.create()
-  const { port, service } = await startService({ peerId, currentPort: await getFreePort() })
-  const { stream, node: client } = await createClient(peerId, port, protocol)
+  const { port, service } = await startService({ peerId, port: await helper.getFreePort() })
+  const { stream, client } = await helper.createClient(peerId, port, protocol)
 
   stream.source[Symbol.asyncIterator] = function () {
     return {
@@ -47,7 +46,7 @@ t.test('error handling', async t => {
   }
 
   const connection = new Connection(stream)
-  connection.on('error', () => {})
+  connection.on('error', () => { })
 
   const receiveError = new Promise(resolve => {
     connection.once('error:receive', resolve)
@@ -62,19 +61,17 @@ t.test('error handling', async t => {
   t.equal((await receiveError).message, 'SOURCE ERROR')
   t.equal((await sendError).message, 'SINK ERROR')
 
-  await teardown(t, client, service, connection)
+  await helper.teardown(client, service, connection)
 })
 
 t.test('announced multiaddr', async t => {
-  t.plan(2)
-
-  const announceAddr = '/dns4/example.com/tcp/3000/ws'
+  const peerAnnounceAddr = '/dns4/example.com/tcp/3000/ws'
   const peerId = await PeerId.create()
-  const { port, service } = await startService({ peerId, currentPort: await getFreePort(), announceAddr })
-  const { stream, node: client } = await createClient(peerId, port, protocol)
+  const { port, service } = await startService({ peerId, port: await helper.getFreePort(), peerAnnounceAddr })
+  const { stream, client } = await helper.createClient(peerId, port, protocol)
 
   const connection = new Connection(stream)
-  connection.on('error', () => {})
+  connection.on('error', () => { })
 
   // libp2p needs a tick to store announced addresses in peer store
   await new Promise(resolve => setTimeout(resolve))
@@ -82,8 +79,10 @@ t.test('announced multiaddr', async t => {
   const peer = client.peerStore.get(peerId)
   t.ok(peer, `${peerId} exists in peer store`)
 
-  const isAnnounced = peer.addresses.some(a => a.multiaddr.toString().startsWith(announceAddr))
-  t.ok(isAnnounced, `${announceAddr} is announced`)
+  const isAnnounced = peer.addresses.some(a => a.multiaddr.toString().startsWith(peerAnnounceAddr))
+  t.ok(isAnnounced, `${peerAnnounceAddr} is announced`)
 
-  await teardown(t, client, service, connection)
+  await helper.teardown(client, service, connection)
 })
+
+// TODO connectPeer

@@ -9,18 +9,17 @@ const Websockets = require('libp2p-websockets')
 const { equals } = require('multiformats/hashes/digest')
 const { sha256 } = require('multiformats/hashes/sha2')
 const PeerId = require('peer-id')
+const { CID } = require('multiformats/cid')
+const { base58btc: base58 } = require('multiformats/bases/base58')
 
 const { loadEsmModule } = require('../../src/esm-loader')
 const { Connection } = require('../../src/networking')
 const { noiseCrypto } = require('../../src/noise-crypto')
 const { Message, RawMessage } = require('../../src/protocol')
 const { startService } = require('../../src/service')
-const { mockAWS } = require('./mock')
-
-let currentPort = 53000 + parseInt(process.env.TAP_CHILD_ID) * 100
 
 async function createClient(peerId, port, protocol) {
-  const node = await libp2p.create({
+  const client = await libp2p.create({
     modules: {
       transport: [Websockets],
       streamMuxer: [Multiplex],
@@ -28,11 +27,11 @@ async function createClient(peerId, port, protocol) {
     }
   })
 
-  const connection = await node.dial(`/ip4/127.0.0.1/tcp/${port}/ws/p2p/${peerId}`)
-  const { stream } = await connection.newStream(protocol)
+  const target = await client.dial(`/ip4/127.0.0.1/tcp/${port}/ws/p2p/${peerId}`)
+  const { stream } = await target.newStream(protocol)
   const receiver = new EventEmitter()
 
-  node.handle(protocol, async ({ connection: dialConnection, stream, protocol }) => {
+  client.handle(protocol, async ({ connection: dial, stream, protocol }) => {
     const connection = new Connection(stream)
 
     connection.on('data', data => {
@@ -40,51 +39,48 @@ async function createClient(peerId, port, protocol) {
     })
   })
 
-  return { connection, stream, receiver, node }
+  return { stream, receiver, client }
 }
 
 async function getFreePort() {
   const getPort = await loadEsmModule('get-port')
-  return getPort({ port: currentPort++ })
+  return getPort()
 }
 
-async function prepare(t, protocol, dispatcher) {
+async function setup({ protocol, awsClient }) {
   const peerId = await PeerId.create()
   const port = await getFreePort()
-
-  if (!dispatcher) {
-    dispatcher = await mockAWS(t)
-  }
-
-  const { service } = await startService({ peerId, currentPort: port, dispatcher })
-  const { stream, receiver, node } = await createClient(peerId, port, protocol)
-
+  const { service } = await startService({ peerId, port, awsClient })
+  const { stream, receiver, client } = await createClient(peerId, port, protocol)
   const connection = new Connection(stream)
 
-  return { service, client: node, connection, receiver }
+  return { service, client, connection, receiver }
 }
 
-async function teardown(t, client, service, connection) {
+async function teardown(client, service, connection) {
   await connection.close()
   await client.stop()
   await service.stop()
 }
 
-async function receiveMessages(receiver, protocol, timeout = 10000, limit = 1, raw = false) {
+// TODO remove hard timeouts
+async function receiveMessages(receiver, protocol, timeout = 5000, limit = 1, raw = false) {
   let timeoutHandle
   const responses = []
 
   return new Promise((resolve, reject) => {
     let resolved = false
 
-    timeoutHandle = setTimeout(() => {
-      if (resolved) {
-        return
-      }
+    if (timeout > 0) {
+      timeoutHandle = setTimeout(() => {
+        if (resolved) {
+          return
+        }
 
-      resolved = true
-      resolve(responses)
-    }, timeout)
+        resolved = true
+        resolve(responses)
+      }, timeout)
+    }
 
     // Return all the response we receive in a certain timeout
     receiver.on('message', message => {
@@ -105,7 +101,7 @@ async function receiveMessages(receiver, protocol, timeout = 10000, limit = 1, r
       }
     })
   }).finally(() => {
-    clearTimeout(timeoutHandle)
+    timeoutHandle && clearTimeout(timeoutHandle)
     receiver.removeAllListeners('message')
   })
 }
@@ -156,7 +152,43 @@ function safeGetDAGLinks(block) {
   }
 }
 
+function decodeCidToKey(cid) {
+  return base58.encode(CID.decode(cid).multihash.bytes)
+}
+
+function decodeMessage(message) {
+  const { blockPresences: blocksInfo, payload: blocksData } = RawMessage.decode(message)
+
+  return {
+    blocksInfo: blocksInfo.map(b => ({
+      key: decodeCidToKey(b.cid),
+      type: b.type
+    })),
+    blocksData: blocksData.map(b => ({
+      cid: CID.create(b.prefix[0], b.prefix[1], sha256.digest(b.data)).toString(),
+      data: b.data.toString('utf8')
+    }))
+  }
+}
+
+function dummyLogger() {
+  return { fatal: noop, error: noop, warn: noop, info: noop, debug: noop }
+}
+
+function spyLogger() {
+  const spy = { messages: {} }
+  for (const l of ['fatal', 'error', 'error', 'warn', 'info', 'debug']) {
+    spy.messages[l] = []
+    spy[l] = (...args) => { spy.messages[l].push(args) }
+  }
+  return spy
+}
+
+function noop() { }
+
 module.exports = {
+  dummyLogger,
+  spyLogger,
   createClient,
   getFreePort,
   getPresence,
@@ -166,8 +198,9 @@ module.exports = {
   hasSingleBlockWithHash,
   hasSingleDAGBlock,
   hasSingleRawBlock,
-  prepare,
+  setup,
   receiveMessages,
   safeGetDAGLinks,
+  decodeMessage,
   teardown
 }

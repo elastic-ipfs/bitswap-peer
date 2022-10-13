@@ -8,8 +8,7 @@ t.test('config - defaults', async t => {
   t.same(config, {
     maxBlockDataSize: 2097152,
     maxMessageSize: 4194304,
-    processingQueueConcurrency: 256,
-    blocksBatchSize: 8,
+    blocksBatchSize: 256,
     blocksTable: 'blocks',
     cacheBlockInfo: false,
     cacheBlockInfoSize: 1000,
@@ -24,7 +23,7 @@ t.test('config - defaults', async t => {
     carsTablePrimaryKey: 'path',
     linkTableBlockKey: 'blockmultihash',
     linkTableCarKey: 'carpath',
-    enableKeepAlive: false,
+    enableKeepAlive: true,
     pingPeriodSecs: 10,
     awsClientRefreshCredentialsInterval: 3000000,
     awsClientKeepAliveTimeout: 60000,

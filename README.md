@@ -8,8 +8,7 @@ _Variables in bold are required._
 | --------------------- | ------------- | ------------------------------------------------------------------------ |
 | MAX_BLOCK_DATA_SIZE | `2 MB` | Maximum size for data block |
 | MAX_MESSAGE_SIZE | `4 MB` | Maximum size response message, must be larger than a single block info/data |
-| HANDLING_BLOCKS_BATCH_SIZE | `8` | Batch size of handling blocks - how many requested blocks are being processed in a batch |
-| PROCESSING_QUEUE_CONCURRENCY | `256` | Concurrent responding operations - how many operations are been executed concurrently to respond |
+| HANDLING_BLOCKS_BATCH_SIZE | `256` | Batch size of handling blocks - how many requested blocks are being processed in a batch |
 
 | CACHE_BLOCK_INFO     | `false`       | Set to `true` to cache block informations with in a in-memory LRU cache. |
 | CACHE_BLOCK_INFO_SIZE | `1000`       | Max entries of the block info cache.                                     |
@@ -41,7 +40,7 @@ _Variables in bold are required._
 | PEER_ID_S3_REGION     | `$AWS_REGION` | The S3 region to download the BitSwap PeerID. |
 | PEER_ID_S3_BUCKET     |               | The S3 bucket to download the BitSwap PeerID. |
 | PEER_ANNOUNCE_ADDR    |               | Swarm multiaddr to announce to the network (excluding peer ID).          |
-| ENABLE_KEEP_ALIVE   | `false`          | Enable Keep-alive for peers                       |
+| ENABLE_KEEP_ALIVE   | `true`          | Enable Keep-alive for peers                       |
 | PING_PERIOD_SECONDS   | `10`          | Wait interval for ping connected peer (Keep Alive)                       |
 | PORT                  | `3000`        | The port number to listen on.                                            |
 | TELEMETRY_PORT        | `3001`        | The telemetry port number for the OpenTelemetry server to listen on.     |

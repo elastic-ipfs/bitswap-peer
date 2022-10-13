@@ -8,7 +8,6 @@ const {
   MAX_BLOCK_DATA_SIZE: maxBlockDataSize,
   MAX_MESSAGE_SIZE: maxMessageSize,
 
-  PROCESSING_QUEUE_CONCURRENCY: processingQueueConcurrency,
   BLOCKS_BATCH_SIZE: blocksBatchSize,
 
   CACHE_BLOCK_INFO: cacheBlockInfo,
@@ -39,7 +38,6 @@ const {
   PORT: rawPort,
   HTTP_PORT: rawHttpPort,
 
-  // TODO drop keep alive feature
   ENABLE_KEEP_ALIVE: enableKeepAlive,
   PING_PERIOD_SECONDS: pingPeriodSecs,
 
@@ -57,8 +55,7 @@ const httpPort = parseInt(rawHttpPort)
 module.exports = {
   maxBlockDataSize: maxBlockDataSize ? parseInt(maxBlockDataSize) : 2 * 1024 * 1024, // 2 MB
   maxMessageSize: maxMessageSize ? parseInt(maxMessageSize) : 4 * 1024 * 1024, // 4 MB
-  processingQueueConcurrency: processingQueueConcurrency ? parseInt(processingQueueConcurrency) : 256,
-  blocksBatchSize: blocksBatchSize ? parseInt(blocksBatchSize) : 8,
+  blocksBatchSize: blocksBatchSize ? parseInt(blocksBatchSize) : 256,
 
   blocksTable: blocksTable ?? 'blocks',
   cacheBlockInfo: cacheBlockInfo === 'true',
@@ -78,7 +75,7 @@ module.exports = {
   linkTableBlockKey: 'blockmultihash',
   linkTableCarKey: 'carpath',
 
-  enableKeepAlive: enableKeepAlive ?? false,
+  enableKeepAlive: enableKeepAlive !== 'false',
   pingPeriodSecs: pingPeriodSecs ?? 10,
 
   awsClientRefreshCredentialsInterval: awsClientRefreshCredentialsInterval ?? 50 * 60e3, // 50 min

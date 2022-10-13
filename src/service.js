@@ -15,7 +15,7 @@ const { handle, createContext } = require('./handler')
 const { telemetry } = require('./telemetry')
 const inspect = require('./inspect')
 
-async function startService({ peerId, port, peerAnnounceAddr, awsClient, connectionPool, logger = defaultLogger } = {}) {
+async function startService({ peerId, port, peerAnnounceAddr, awsClient, logger = defaultLogger } = {}) {
   try {
     // TODO params validation
 
@@ -53,10 +53,10 @@ async function startService({ peerId, port, peerAnnounceAddr, awsClient, connect
           }
 
           try {
-            const context = createContext({ service, peerId: dial.remotePeer, protocol, wantlist: message.wantlist, awsClient, connectionPool })
-            handle({ context, logger })
+            const context = createContext({ service, peerId: dial.remotePeer, protocol, wantlist: message.wantlist, awsClient })
+            process.nextTick(handle, { context, logger })
           } catch (err) {
-            logger.error({ err: serializeError(err) }, 'Error on request handle')
+            logger.error({ err: serializeError(err) }, 'Error creating context')
           }
         })
 
@@ -89,7 +89,6 @@ async function startService({ peerId, port, peerAnnounceAddr, awsClient, connect
     service.connectionManager.on('peer:disconnect', connection => {
       try {
         if (enableKeepAlive) { stopKeepAlive(connection.remotePeer) }
-        connectionPool.remove(connection.remotePeer)
         telemetry.decreaseCount('bitswap-total-connections')
         inspect.metrics.decrease('connections')
       } catch (err) {

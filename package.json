@@ -29,7 +29,6 @@
     "lru-cache": "^7.14.0",
     "make-promises-safe": "^5.1.0",
     "mnemonist": "^0.39.2",
-    "p-queue": "^7.3.0",
     "pino": "^8.6.1",
     "piscina": "^3.2.0",
     "protobufjs": "^7.1.2",

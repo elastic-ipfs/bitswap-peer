@@ -4,7 +4,7 @@ const PeerId = require('peer-id')
 const t = require('tap')
 
 const config = require('../src/config')
-const { Connection, PeerConnectionPool } = require('../src/networking')
+const { Connection } = require('../src/networking')
 const { BITSWAP_V_100: protocol } = require('../src/protocol')
 const { startService } = require('../src/service')
 const helper = require('./utils/helper')
@@ -30,7 +30,7 @@ t.test('send - after closing behavior', async t => {
 
 t.test('error handling', async t => {
   const peerId = await PeerId.create()
-  const { port, service } = await startService({ peerId, port: await helper.getFreePort(), connectionPool: new PeerConnectionPool() })
+  const { port, service } = await startService({ peerId, port: await helper.getFreePort() })
   const { stream, client } = await helper.createClient(peerId, port, protocol)
 
   stream.source[Symbol.asyncIterator] = function () {
@@ -67,7 +67,7 @@ t.test('error handling', async t => {
 t.test('announced multiaddr', async t => {
   const peerAnnounceAddr = '/dns4/example.com/tcp/3000/ws'
   const peerId = await PeerId.create()
-  const { port, service } = await startService({ peerId, port: await helper.getFreePort(), peerAnnounceAddr, connectionPool: new PeerConnectionPool() })
+  const { port, service } = await startService({ peerId, port: await helper.getFreePort(), peerAnnounceAddr })
   const { stream, client } = await helper.createClient(peerId, port, protocol)
 
   const connection = new Connection(stream)
@@ -85,10 +85,4 @@ t.test('announced multiaddr', async t => {
   await helper.teardown(client, service, connection)
 })
 
-t.test('PeerConnectionPool', async t => {
-  // dedupe connection
-  // connect and acquireStream throws error
-  // connection events listeners cleared
-
-  // polling
-})
+// TODO connectPeer

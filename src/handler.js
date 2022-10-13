@@ -1,42 +1,34 @@
 'use strict'
 
-const { loadEsmModule } = require('./esm-loader')
 const config = require('./config')
 const { serializeError } = require('./logging')
 const { Entry, BITSWAP_V_120, BLOCK_TYPE_INFO, BLOCK_TYPE_DATA } = require('./protocol')
 const { Message } = require('./protocol')
 const { fetchBlocksData, fetchBlocksInfo } = require('./storage')
 const { telemetry } = require('./telemetry')
+const { connectPeer } = require('./networking')
 const inspect = require('./inspect')
 const { cidToKey, sizeofBlockInfo } = require('./util')
 
-let PQueue, processingQueue
-process.nextTick(async () => {
-  PQueue = await loadEsmModule('p-queue')
-  processingQueue = new PQueue({ concurrency: config.processingQueueConcurrency })
-})
-
-function createContext({ service, peerId, protocol, wantlist, awsClient, connectionPool }) {
+function createContext({ service, peerId, protocol, wantlist, awsClient, connection }) {
   const context = {
     state: 'ok',
+    connection,
+    connecting: connection ? Promise.resolve() : null,
     awsClient,
-    connectionPool,
     service,
     peerId,
     protocol,
     blocks: wantlist.entries,
     done: 0,
     todo: 0,
-    batches: null,
-    // use `end` and `close` to sync context processing end
-    close: null,
-    end: null
+    batchesTodo: 0,
+    batchesDone: 0
   }
-  context.end = new Promise(resolve => { context.close = resolve })
   return context
 }
 
-function handle({ context, logger, batchSize = config.blocksBatchSize, processing = processingQueue }) {
+function handle({ context, logger, batchSize = config.blocksBatchSize }) {
   return new Promise(resolve => {
     if (context.blocks.length < 1) {
       resolve()
@@ -44,14 +36,13 @@ function handle({ context, logger, batchSize = config.blocksBatchSize, processin
     }
 
     context.todo = context.blocks.length
-    context.connectionPool.addPending(context.peerId)
     telemetry.increaseCount('bitswap-total-entries', context.todo)
     telemetry.increaseCount('bitswap-pending-entries', context.todo)
     inspect.metrics.increase('blocks', context.todo)
     inspect.metrics.increase('requests')
 
     let blocksLength
-    let batches = Math.ceil(context.todo / batchSize)
+    context.batchesTodo = Math.ceil(context.todo / batchSize)
     do {
       const blocks = context.blocks.splice(0, batchSize)
 
@@ -60,27 +51,25 @@ function handle({ context, logger, batchSize = config.blocksBatchSize, processin
       }
 
       blocksLength = blocks.length
-      processing.add(async () => {
-        // state can be 'error' or 'end'
-        // in those cases skip fetching and response, iterate pending batches and close
-        if (context.state === 'ok') {
-          // append content to its block
-          const fetched = await batchFetch(blocks, context, logger)
-          // close connection on last batch
-          batches--
-          await batchResponse({ blocks: fetched, context, logger, last: batches === 0 })
-        }
-      })
+      process.nextTick(_handleBatch, { blocks, context, logger, resolve })
     } while (blocksLength === batchSize)
-
-    // TODO metrics response time / entries by type (info or data)
-    // use: context.done
-
-    processing.add(async () => {
-      await context.end
-      resolve()
-    })
   })
+}
+
+async function _handleBatch({ blocks, context, logger, resolve }) {
+  // state can be 'error' or 'end'
+  // in those cases skip fetching and response, iterate pending batches and close
+  if (context.state === 'ok') {
+    // append content to its block
+    const fetched = await batchFetch(blocks, context, logger)
+    // close connection on last batch
+    await batchResponse({ blocks: fetched, context, logger })
+  }
+  context.batchesDone++
+  if (context.batchesDone === context.batchesTodo) {
+    endResponse({ context, logger })
+    resolve()
+  }
 }
 
 /**
@@ -127,21 +116,19 @@ async function batchFetch(blocks, context, logger) {
   }
 }
 
-async function batchResponse({ blocks, context, logger, last }) {
+async function batchResponse({ blocks, context, logger }) {
   if (!blocks) { return }
 
   try {
-    context.connection = await context.connectionPool.acquire(context)
-
-    context.onConnectionError = () => { context.state = 'error' }
-    context.onConnectionClose = () => endResponse(context)
-
-    context.connection.on('error', context.onConnectionError)
-    context.connection.on('close', context.onConnectionClose)
+    if (!context.connection) {
+      context.connecting = connectPeer({ context, logger })
+      context.connection = await context.connecting
+      context.connection.on('error', () => { context.state = 'error' })
+      context.connection.on('close', () => { endResponse({ context, logger }) })
+    }
+    await context.connecting
   } catch (error) {
     // TODO add metric connection-error
-    logger.error({ error: serializeError(error), peerId: context.peerId?._idB58String || context.peerId }, 'error on handler#batchResponse acquire connection')
-    last && endResponse(context)
     return
   }
 
@@ -166,27 +153,26 @@ async function batchResponse({ blocks, context, logger, last }) {
   } catch (error) {
     logger.error({ error: serializeError(error) }, 'error on handler#batchResponse')
   }
-
-  last && endResponse(context)
 }
 
-// end response
-// note: it does NOT disconnect the peer
-function endResponse(context) {
+// end response, close connection
+async function endResponse({ context, logger }) {
   if (context.state === 'end') { return }
 
+  context.state = 'end'
+
   if (context.connection) {
-    context.connection.off('error', context.onConnectionError)
-    context.connection.off('close', context.onConnectionClose)
+    try {
+      await context.connection.close()
+      context.connection.removeAllListeners()
+    } catch (error) {
+      logger.error({ error: serializeError(error) }, 'error on close connection handler#endResponse')
+    }
   }
 
-  context.connectionPool.removePending(context.peerId)
   telemetry.decreaseCount('bitswap-pending-entries', context.todo)
   inspect.metrics.decrease('requests')
   inspect.metrics.decrease('blocks', context.todo)
-
-  context.state = 'end'
-  context.close()
 }
 
 const messageSize = {

@@ -13,7 +13,7 @@ const { CID } = require('multiformats/cid')
 const { base58btc: base58 } = require('multiformats/bases/base58')
 
 const { loadEsmModule } = require('../../src/esm-loader')
-const { Connection, PeerConnectionPool } = require('../../src/networking')
+const { Connection } = require('../../src/networking')
 const { noiseCrypto } = require('../../src/noise-crypto')
 const { Message, RawMessage } = require('../../src/protocol')
 const { startService } = require('../../src/service')
@@ -50,12 +50,11 @@ async function getFreePort() {
 async function setup({ protocol, awsClient }) {
   const peerId = await PeerId.create()
   const port = await getFreePort()
-  const connectionPool = new PeerConnectionPool({ idle: 99e6 }) // idle is disabled
-  const { service } = await startService({ peerId, port, awsClient, connectionPool })
+  const { service } = await startService({ peerId, port, awsClient })
   const { stream, receiver, client } = await createClient(peerId, port, protocol)
   const connection = new Connection(stream)
 
-  return { service, client, connection, receiver, connectionPool }
+  return { service, client, connection, receiver }
 }
 
 async function teardown(client, service, connection) {
@@ -167,7 +166,7 @@ function decodeMessage(message) {
     })),
     blocksData: blocksData.map(b => ({
       cid: CID.create(b.prefix[0], b.prefix[1], sha256.digest(b.data)).toString(),
-      data: b.data.toString('hex')
+      data: b.data.toString('utf8')
     }))
   }
 }

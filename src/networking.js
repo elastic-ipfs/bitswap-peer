@@ -5,7 +5,6 @@ const { loadEsmModules } = require('./esm-loader')
 const { logger, serializeError } = require('./logging')
 
 class Connection extends EventEmitter {
-  // !TODO .setMaxListeners()
   constructor(stream) {
     super()
 
@@ -124,167 +123,41 @@ class Connection extends EventEmitter {
   }
 }
 
-/**
- * this a temporary solution to manage connections
- * the main purpose is to avoid to call the peer connection process on every request, if the connection is still established
- * this kind of overlap the libp2p connectionManager, so we're going to adopt it after upgrading the libp2p to the last version
- */
-class PeerConnectionPool {
-  constructor({ logger, idle = 2e3, polling = 2e3 } = {}) {
-    this.options = {
-      idle,
-      polling
-    }
-    this.logger = logger
+function connectPeer({ context, logger }) {
+  return new Promise((resolve, reject) => {
+    let solved
+    _acquireStream(context)
+      .then((stream) => {
+        const connection = new Connection(stream)
 
-    // to dedupe getting connection
-    this._connecting = new Map()
-
-    this._pool = new Map()
-    this._timers = new Map()
-    this._pending = new Map()
-
-    this.timerPolling()
-  }
-
-  // throw err on invalid peer
-  static peerId(peerId) {
-    return peerId._idB58String
-  }
-
-  connections() {
-    return Array.from(this._pool.values())
-  }
-
-  /**
-   * assumes peerId has always the same `protocol` and `service`
-   */
-  async acquire({ peerId, protocol, service }) {
-    let connection = this.get(peerId)
-    if (connection) {
-      // refresh timer
-      this._timers.set(PeerConnectionPool.peerId(peerId), Date.now())
-      return connection
-    }
-
-    connection = await this._connect({ peerId, protocol, service })
-    this.set(peerId, connection)
-
-    return connection
-  }
-
-  /**
-   * establish connection, deduping by peerId
-   * coupled with acquire
-   */
-  _connect({ peerId, protocol, service }) {
-    const id = PeerConnectionPool.peerId(peerId)
-
-    let p = this._connecting.get(id)
-    if (p) {
-      console.log(' **** connection deduped', id)
-      return p
-    }
-
-    p = new Promise((resolve, reject) => {
-      this._acquireStream({ peerId, protocol, service })
-        .then((stream) => {
-          const connection = new Connection(stream)
-
-          connection.on('error', err => {
-            this.logger.warn({ err: serializeError(err) }, 'outgoing connection error')
-            reject(err)
-          })
-
-          connection.on('close', () => { this.close(id) })
-
-          // TODO should resolve on connection ready
-          // Connection class should expose a "ready" event or something
-          // see service.on('peer:connect') and service.on('peer:disconnect') on service.js
-          resolve(connection)
+        connection.on('error', err => {
+          logger.error({ err: serializeError(err) }, 'outgoing connection error')
+          if (!solved) { reject(err) }
+          solved = true
         })
-        .catch(err => reject(err))
-    })
 
-    this._connecting.set(id, p)
-
-    return p
-  }
-
-  /**
-   * establish connection, deduping by peer
-   * coupled with _connect
-   */
-  async _acquireStream({ peerId, protocol, service }) {
-    const dialConnection = await service.dial(peerId)
-    const { stream } = await dialConnection.newStream(protocol)
-    return stream
-  }
-
-  // --- connection pool
-
-  set(peerId, connection) {
-    const id = PeerConnectionPool.peerId(peerId)
-    this._pool.set(id, connection)
-    this._timers.set(id, Date.now())
-  }
-
-  get(peerId) {
-    const id = PeerConnectionPool.peerId(peerId)
-    if (!id) { return }
-    return this._pool.get(id)
-  }
-
-  remove(peerId) {
-    const id = PeerConnectionPool.peerId(peerId)
-    if (!id) { return }
-    this._pool.delete(id)
-    this._timers.delete(id)
-    this._pending.delete(id)
-    this._connecting.delete(id)
-  }
-
-  addPending(peerId) {
-    const id = PeerConnectionPool.peerId(peerId)
-    const c = this._pending.get(id) ?? 0
-    this._pending.set(id, c + 1)
-  }
-
-  removePending(peerId) {
-    const id = PeerConnectionPool.peerId(peerId)
-    const c = this._pending.get(id) ?? 0
-    if (c === undefined) {
-      this._pending.set(id, 0)
-      return
-    }
-    this._pending.set(id, c - 1)
-  }
-
-  close(id) {
-    const c = this._pool.get(id)
-    if (!c) { return }
-
-    this._connecting.delete(id)
-    this._pool.delete(id)
-    this._timers.delete(id)
-    this._pending.delete(id)
-
-    c.close()
-    c.removeAllListeners()
-  }
-
-  timerPolling() {
-    if (this.polling) { return }
-    this.polling = setInterval(() => {
-      const now = Date.now()
-      for (const [id, t] of this._timers.entries()) {
-        const pending = this._pending.get(id)
-        if (pending < 1 && t < now - this.options.idle) {
-          this.close(id)
-        }
-      }
-    }, this.options.polling).unref()
-  }
+        // TODO should resolve on connection ready
+        // Connection class should expose a "ready" event or something
+        // see service.on('peer:connect') and service.on('peer:disconnect') on service.js
+        if (!solved) { resolve(connection) }
+        solved = true
+      })
+      .catch(err => {
+        logger.error({ peerId: context.peerId?._idB58String || context.peerId, err: serializeError(err) }, 'unable to connect to peer')
+        if (!solved) { reject(err) }
+        solved = true
+      })
+  })
 }
 
-module.exports = { Connection, PeerConnectionPool }
+/**
+ * establish connection, deduping by peer
+ * coupled with _connect
+ */
+async function _acquireStream(context) {
+  const dialConnection = await context.service.dial(context.peerId)
+  const { stream } = await dialConnection.newStream(context.protocol)
+  return stream
+}
+
+module.exports = { Connection, connectPeer }

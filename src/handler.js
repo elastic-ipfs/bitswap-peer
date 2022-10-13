@@ -51,25 +51,23 @@ function handle({ context, logger, batchSize = config.blocksBatchSize }) {
       }
 
       blocksLength = blocks.length
-      process.nextTick(_handleBatch, { blocks, context, logger, resolve })
+      process.nextTick(async () => {
+        // state can be 'error' or 'end'
+        // in those cases skip fetching and response, iterate pending batches and close
+        if (context.state === 'ok') {
+          // append content to its block
+          const fetched = await batchFetch(blocks, context, logger)
+          // close connection on last batch
+          await batchResponse({ blocks: fetched, context, logger })
+        }
+        context.batchesDone++
+        if (context.batchesDone === context.batchesTodo) {
+          endResponse({ context, logger })
+          resolve()
+        }
+      })
     } while (blocksLength === batchSize)
   })
-}
-
-async function _handleBatch({ blocks, context, logger, resolve }) {
-  // state can be 'error' or 'end'
-  // in those cases skip fetching and response, iterate pending batches and close
-  if (context.state === 'ok') {
-    // append content to its block
-    const fetched = await batchFetch(blocks, context, logger)
-    // close connection on last batch
-    await batchResponse({ blocks: fetched, context, logger })
-  }
-  context.batchesDone++
-  if (context.batchesDone === context.batchesTodo) {
-    endResponse({ context, logger })
-    resolve()
-  }
 }
 
 /**

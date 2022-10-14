@@ -16,36 +16,45 @@ class Connection extends EventEmitter {
 
     loadEsmModules(['it-length-prefixed', 'it-pipe'])
       .then(([lengthPrefixedMessage, { pipe }]) => {
-        // Prepare for receiving
-        pipe(stream.source, lengthPrefixedMessage.decode(), async source => {
-          for await (const data of source) {
-            /*
-              This variable declaration is important
-              If you use data.slice() within the nextTick you will always emit the last received packet
-            */
-            const payload = data.slice()
-            process.nextTick(() => this.emit('data', payload))
-          }
-        })
-          .then(() => {
-            this.emit('end:receive')
+        try {
+          // Prepare for receiving
+          pipe(stream.source, lengthPrefixedMessage.decode(), async source => {
+            for await (const data of source) {
+              /*
+                  This variable declaration is important
+                  If you use data.slice() within the nextTick you will always emit the last received packet
+                */
+              const payload = data.slice()
+              process.nextTick(() => this.emit('data', payload))
+            }
           })
-          .catch(err => {
-            this.emit('error', err)
-            this.emit('error:receive', err)
-            logger.debug({ err }, `Cannot receive data: ${serializeError(err)}`)
-          })
+            .then(() => {
+              this.emit('end:receive')
+            })
+            .catch(err => {
+              this.emit('error', err)
+              this.emit('error:receive', err)
+              logger.debug({ err: serializeError(err) }, 'Cannot receive data')
+            })
 
-        // Prepare for sending
-        pipe(this, lengthPrefixedMessage.encode(), stream.sink)
-          .then(() => {
-            this.emit('end:send')
-          })
-          .catch(err => {
-            this.emit('error', err)
-            this.emit('error:send', err)
-            logger.debug({ err }, `Cannot send data: ${serializeError(err)}`)
-          })
+          // Prepare for sending
+          pipe(this, lengthPrefixedMessage.encode(), stream.sink)
+            .then(() => {
+              this.emit('end:send')
+            })
+            .catch(err => {
+              this.emit('error', err)
+              this.emit('error:send', err)
+              logger.debug({ err: serializeError(err) }, 'Cannot send data')
+            })
+        } catch (err) {
+          // TODO introduce async "init" method
+          // the connection is ready after init, the constructor cant be async
+          // this is a temp solution to prevent unhandled rejections
+          // see connectPeer function
+          logger.error({ err: serializeError(err) }, 'connection stream pipe')
+          process.nextTick(() => this.emit('error:pipe', err))
+        }
       })
   }
 
@@ -127,17 +136,26 @@ function connectPeer({ context, logger }) {
   return new Promise((resolve, reject) => {
     _acquireStream(context)
       .then((stream) => {
-        const connection = new Connection(stream)
+        try {
+          const connection = new Connection(stream)
 
-        connection.on('error', err => {
-          logger.warn({ err: serializeError(err) }, 'outgoing connection error')
-          context.state = 'error'
-        })
+          connection.on('error', err => {
+            logger.warn({ err: serializeError(err) }, 'outgoing connection error')
+            context.state = 'error'
+          })
 
-        // TODO should resolve on connection ready
-        // Connection class should expose a "ready" event or something
-        // see service.on('peer:connect') and service.on('peer:disconnect') on service.js
-        resolve(connection)
+          connection.on('error:pipe', () => {
+            context.state = 'error'
+          })
+
+          // TODO should resolve on connection ready
+          // Connection class should expose a "ready" event or something
+          // see service.on('peer:connect') and service.on('peer:disconnect') on service.js
+          resolve(connection)
+        } catch (err) {
+          logger.error({ err: serializeError(err) }, 'creating outgoing connection error')
+          reject(err)
+        }
       })
       .catch(err => {
         logger.error({ peerId: context.peerId?._idB58String || context.peerId, err: serializeError(err) }, 'unable to connect to peer')

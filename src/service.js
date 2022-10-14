@@ -38,7 +38,7 @@ async function startService({ peerId, port, peerAnnounceAddr, awsClient, logger 
 
     service.handle(protocols, async ({ connection: dial, stream, protocol }) => {
       try {
-        const connection = new Connection(stream, logger)
+        const connection = new Connection(stream)
 
         // Open a send connection to the peer
         connection.on('data', data => {

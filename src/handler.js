@@ -118,13 +118,14 @@ async function batchResponse({ blocks, context, logger }) {
   if (!blocks) { return }
 
   try {
-    if (!context.connection) {
+    if (!context.connection && !context.connecting) {
       context.connecting = connectPeer({ context, logger })
       context.connection = await context.connecting
       context.connection.on('close', () => { endResponse({ context, logger }) })
     }
     await context.connecting
   } catch (error) {
+    context.state = 'error'
     // TODO add metric connection-error
     return
   }

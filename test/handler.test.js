@@ -24,7 +24,7 @@ function dummyPeer(id = 'the-dummy-peer-id') {
 async function spyContext({ blocks, protocol = BITSWAP_V_120, peerId }) {
   const service = {
     dial: async () => ({
-      newStream: async () => ({ stream: 'the-stream' })
+      newStream: async () => ({ stream: null })
     })
   }
   const connectionSpy = {
@@ -305,13 +305,14 @@ t.test('handle', async t => {
     t.equal(loggerSpy.messages.error[1][1], 'error on close connection handler#endResponse')
   })
 
-  t.test('should not send a response without connecting to the peer and handle the error', async t => {
+  t.test('should not send a response without connecting to the peer and handle the error - cant acquire stream', async t => {
     const cid = CID.parse('bafkreifiqpnpysanizxoatqnnwuynply5mp52ily2bdjg4r5uoupsxkcxy')
 
     const contextSpy = await spyContext({
       blocks: [new Entry(cid, 1, false, Entry.WantType.Have, true)]
     })
     delete contextSpy.connection
+    delete contextSpy.connecting
     contextSpy.service.dial = async () => { throw new Error('DIAL_CONNECTION_ERROR') }
 
     mockBlockInfoSource({ awsClient: contextSpy.awsClient, key: cidToKey(cid), info: { offset: 0, length: 128, car: 'region/bucket/abc' } })
@@ -320,10 +321,39 @@ t.test('handle', async t => {
 
     await handle({ context: contextSpy, logger: loggerSpy })
 
+    t.ok(contextSpy.connection === undefined)
+    t.type(contextSpy.connecting, 'Promise')
+    t.equal(contextSpy.state, 'end')
+    t.equal(loggerSpy.messages.warn.length, 0)
     t.equal(loggerSpy.messages.warn.length, 0)
     t.equal(loggerSpy.messages.error.length, 1)
     t.equal(loggerSpy.messages.error[0][1], 'unable to connect to peer')
     t.equal(contextSpy.done, 0)
+  })
+
+  t.test('should not send a response without connecting to the peer and handle the error - error on stream connection', async t => {
+    const cid = CID.parse('bafkreifiqpnpysanizxoatqnnwuynply5mp52ily2bdjg4r5uoupsxkcxy')
+
+    const contextSpy = await spyContext({
+      blocks: [new Entry(cid, 1, false, Entry.WantType.Have, true)]
+    })
+    delete contextSpy.connection
+    delete contextSpy.connecting
+    contextSpy.service.dial = async () => ({
+      newStream: async () => ({ stream: 'invalid-stream-makes-connection-class-fail' })
+    })
+
+    mockBlockInfoSource({ awsClient: contextSpy.awsClient, key: cidToKey(cid), info: { offset: 0, length: 128, car: 'region/bucket/abc' } })
+
+    const loggerSpy = helper.spyLogger()
+
+    await handle({ context: contextSpy, logger: loggerSpy })
+
+    t.type(contextSpy.connecting, 'Promise')
+    t.equal(contextSpy.state, 'end')
+    t.equal(loggerSpy.messages.warn.length, 0)
+    t.equal(loggerSpy.messages.warn.length, 0)
+    t.equal(loggerSpy.messages.error.length, 0)
   })
 
   // !TODO error on batchResponse after a few batches

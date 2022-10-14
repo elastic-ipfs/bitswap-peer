@@ -70,7 +70,7 @@ async function startService({ peerId, port, peerAnnounceAddr, awsClient, logger 
           service.emit('error:connection', err)
         })
       } catch (err) {
-        logger.error({ err, dial, stream, protocol }, `Error while creating connection: ${serializeError(err)}`)
+        logger.error({ err: serializeError(err), dial, stream, protocol }, 'Error while creating connection')
       }
     })
 

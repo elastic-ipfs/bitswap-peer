@@ -327,7 +327,7 @@ t.test('handle', async t => {
     t.equal(loggerSpy.messages.warn.length, 0)
     t.equal(loggerSpy.messages.warn.length, 0)
     t.equal(loggerSpy.messages.error.length, 1)
-    t.equal(loggerSpy.messages.error[0][1], 'unable to connect to peer')
+    t.equal(loggerSpy.messages.error[0][1], 'outgoing connection error, unable to connect to peer')
     t.equal(contextSpy.done, 0)
   })
 

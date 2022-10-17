@@ -52,18 +52,23 @@ function handle({ context, logger, batchSize = config.blocksBatchSize }) {
 
       blocksLength = blocks.length
       process.nextTick(async () => {
-        // state can be 'error' or 'end'
-        // in those cases skip fetching and response, iterate pending batches and close
-        if (context.state === 'ok') {
-          // append content to its block
-          const fetched = await batchFetch(blocks, context, logger)
-          // close connection on last batch
-          await batchResponse({ blocks: fetched, context, logger })
-        }
-        context.batchesDone++
-        if (context.batchesDone === context.batchesTodo) {
-          endResponse({ context, logger })
-          resolve()
+        // catch asyn error in libp2p connection
+        try {
+          // state can be 'error' or 'end'
+          // in those cases skip fetching and response, iterate pending batches and close
+          if (context.state === 'ok') {
+            // append content to its block
+            const fetched = await batchFetch(blocks, context, logger)
+            // close connection on last batch
+            await batchResponse({ blocks: fetched, context, logger })
+          }
+          context.batchesDone++
+          if (context.batchesDone === context.batchesTodo) {
+            endResponse({ context, logger })
+            resolve()
+          }
+        } catch (err) {
+          logger.error({ err: serializeError(err) }, 'error on handler#nextTick')
         }
       })
     } while (blocksLength === batchSize)

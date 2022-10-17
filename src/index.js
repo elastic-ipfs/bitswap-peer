@@ -2,7 +2,7 @@
 
 require('make-promises-safe')
 
-const { logger } = require('./logging')
+const { logger, serializeError } = require('./logging')
 const { startService } = require('./service')
 const { createAwsClient } = require('./aws-client')
 const { httpServer } = require('./http-server')
@@ -50,7 +50,11 @@ async function boot() {
 }
 
 process.on('uncaughtExceptionMonitor', (err, origin) => {
-  logger.fatal({ err, origin }, 'uncaught exception')
+  logger.fatal({ err: serializeError(err), origin }, 'uncaught exception')
+})
+
+process.on('unhandledRejection', (err, promise) => {
+  logger.fatal({ err: serializeError(err), promise }, 'unhandled rejection')
 })
 
 boot()

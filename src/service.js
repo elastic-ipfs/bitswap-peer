@@ -67,6 +67,7 @@ async function startService({ peerId, port, peerAnnounceAddr, awsClient, logger 
 
         connection.on('error', err => {
           logger.error({ err: serializeError(err), dial, stream, protocol }, 'Connection error')
+          // TODO remove unlistened events
           service.emit('error:connection', err)
         })
       } catch (err) {

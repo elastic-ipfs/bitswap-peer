@@ -53,7 +53,7 @@ class Connection extends EventEmitter {
           // this is a temp solution to prevent unhandled rejections
           // see connectPeer function
           logger.error({ err: serializeError(err) }, 'connection stream pipe')
-          process.nextTick(() => this.emit('error:pipe', err))
+          this.emit('error:pipe', err)
         }
       })
   }
@@ -132,36 +132,29 @@ class Connection extends EventEmitter {
   }
 }
 
-function connectPeer({ context, logger }) {
-  return new Promise((resolve, reject) => {
-    _acquireStream(context)
-      .then((stream) => {
-        try {
-          const connection = new Connection(stream)
+async function connectPeer({ context, logger }) {
+  try {
+    const stream = await _acquireStream(context)
+    const connection = new Connection(stream)
 
-          connection.on('error', err => {
-            logger.warn({ err: serializeError(err) }, 'outgoing connection error')
-            context.state = 'error'
-          })
+    connection.on('error', err => {
+      logger.warn({ err: serializeError(err) }, 'outgoing connection error')
+      context.state = 'error'
+    })
 
-          connection.on('error:pipe', () => {
-            context.state = 'error'
-          })
+    connection.on('error:pipe', () => {
+      context.state = 'error'
+    })
 
-          // TODO should resolve on connection ready
-          // Connection class should expose a "ready" event or something
-          // see service.on('peer:connect') and service.on('peer:disconnect') on service.js
-          resolve(connection)
-        } catch (err) {
-          logger.error({ err: serializeError(err) }, 'creating outgoing connection error')
-          reject(err)
-        }
-      })
-      .catch(err => {
-        logger.error({ peerId: context.peerId?._idB58String || context.peerId, err: serializeError(err) }, 'unable to connect to peer')
-        reject(err)
-      })
-  })
+    // TODO should resolve on connection ready
+    // Connection class should expose a "ready" event or something
+    // see service.on('peer:connect') and service.on('peer:disconnect') on service.js
+    return connection
+  } catch (err) {
+    context.state = 'error'
+    logger.error({ err: serializeError(err), peerId: context.peerId?._idB58String || context.peerId }, 'outgoing connection error, unable to connect to peer')
+    throw err
+  }
 }
 
 /**

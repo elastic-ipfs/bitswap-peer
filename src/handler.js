@@ -62,13 +62,20 @@ function handle({ context, logger, batchSize = config.blocksBatchSize }) {
             // close connection on last batch
             await batchResponse({ blocks: fetched, context, logger })
           }
+        } catch (err) {
+          // TODO remove? probably not needed
+          logger.error({ err: serializeError(err) }, 'error on handler#nextTick batch op')
+        }
+
+        try {
           context.batchesDone++
           if (context.batchesDone === context.batchesTodo) {
             endResponse({ context, logger })
             resolve()
           }
         } catch (err) {
-          logger.error({ err: serializeError(err) }, 'error on handler#nextTick')
+          // TODO remove? probably not needed
+          logger.error({ err: serializeError(err) }, 'error on handler#nextTick end response')
         }
       })
     } while (blocksLength === batchSize)

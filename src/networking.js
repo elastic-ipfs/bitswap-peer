@@ -19,13 +19,18 @@ class Connection extends EventEmitter {
         try {
           // Prepare for receiving
           pipe(stream.source, lengthPrefixedMessage.decode(), async source => {
-            for await (const data of source) {
-              /*
-                  This variable declaration is important
-                  If you use data.slice() within the nextTick you will always emit the last received packet
-                */
-              const payload = data.slice()
-              process.nextTick(() => this.emit('data', payload))
+            try {
+              for await (const data of source) {
+                /*
+                    This variable declaration is important
+                    If you use data.slice() within the nextTick you will always emit the last received packet
+                  */
+                const payload = data.slice()
+                process.nextTick(() => this.emit('data', payload))
+              }
+            } catch (err) {
+              // TODO probably not needed
+              logger.error({ err: serializeError(err) }, 'connection pipe, stream source error')
             }
           })
             .then(() => {

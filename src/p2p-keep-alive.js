@@ -1,4 +1,3 @@
-'use strict'
 
 // TODO upgrade libp2p and drop
 
@@ -12,18 +11,19 @@ This was written based on:
 https://github.com/status-im/js-waku/issues/185
 */
 
-const { logger, serializeError } = require('./logging')
-const { pingPeriodSecs } = require('./config')
+import { logger, serializeError } from './logging.js'
+import config from './config.js'
 
 const pingKeepAliveTimers = {}
 
-function startKeepAlive(peerId, currentNode) {
+function startKeepAlive (peerId, currentNode) {
+  if (!peerId) { return }
   // Just in case a timer already exist for this peer
   stopKeepAlive(peerId)
 
-  const peerIdStr = peerId.toB58String()
+  const peerIdStr = peerId.toString()
 
-  if (pingPeriodSecs !== 0) {
+  if (config.pingPeriodSecs !== 0) {
     pingKeepAliveTimers[peerIdStr] = setInterval(() => {
       currentNode.ping(peerId).catch(err => {
         if (err.code !== 'ERR_MPLEX_STREAM_RESET' && err.code !== 'ERR_UNSUPPORTED_PROTOCOL') {
@@ -31,12 +31,13 @@ function startKeepAlive(peerId, currentNode) {
         }
         stopKeepAlive(peerId)
       })
-    }, pingPeriodSecs * 1000)
+    }, config.pingPeriodSecs * 1000)
   }
 }
 
-function stopKeepAlive(peerId) {
-  const peerIdStr = peerId.toB58String()
+function stopKeepAlive (peerId) {
+  if (!peerId) { return }
+  const peerIdStr = peerId.toString()
 
   if (pingKeepAliveTimers[peerIdStr]) {
     clearInterval(pingKeepAliveTimers[peerIdStr])
@@ -44,4 +45,4 @@ function stopKeepAlive(peerId) {
   }
 }
 
-module.exports = { startKeepAlive, stopKeepAlive }
+export { startKeepAlive, stopKeepAlive }

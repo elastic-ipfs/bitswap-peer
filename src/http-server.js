@@ -1,14 +1,14 @@
-'use strict'
 
-const { createServer } = require('http')
-const config = require('./config')
-const { logger } = require('./logging')
-const { checkReadiness } = require('./health-check')
-const { telemetry } = require('./telemetry')
-const inspect = require('./inspect')
+import { createServer } from 'http'
+import config from './config.js'
+import { logger } from './logging.js'
+import { checkReadiness } from './health-check.js'
+import { telemetry } from './telemetry.js'
+import inspect from './inspect/index.js'
+import { version } from './util.js'
 
 class HttpServer {
-  startServer({ port, awsClient, readiness }) {
+  startServer ({ port, awsClient, readiness }) {
     if (this.server) {
       return this.server
     }
@@ -95,12 +95,13 @@ class HttpServer {
         if (error) {
           return reject(error)
         }
-
-        const { version } = require('../package.json')
         logger.info(`[v${version}] HTTP server started and listening on port ${this.server.address().port} ...`)
         resolve(this.server)
       })
     })
   }
 }
-module.exports = { httpServer: new HttpServer() }
+
+const httpServer = new HttpServer()
+
+export { httpServer }

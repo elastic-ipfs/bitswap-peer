@@ -1,20 +1,19 @@
-'use strict'
+
+import { get } from 'http'
+import t from 'tap'
+
+import { logger } from '../src/logging.js'
+import { telemetry } from '../src/telemetry.js'
+import { httpServer } from '../src/http-server.js'
 
 process.env.NOW = 'now'
-
-const { get } = require('http')
-const t = require('tap')
-
-const { logger } = require('../src/logging')
-const { telemetry } = require('../src/telemetry')
-const { httpServer } = require('../src/http-server')
 
 t.test('telemetry - ensure all metrics are defined in YAML file', async t => {
   t.throws(() => telemetry.decreaseCount('unknown'), 'Metrics unknown not found.')
 })
 
 t.test('telemetry - export', async t => {
-  function requestMetrics(url) {
+  function requestMetrics (url) {
     return new Promise((resolve, reject) => {
       get(url, res => {
         const { statusCode, headers } = res
@@ -33,7 +32,7 @@ t.test('telemetry - export', async t => {
 
   telemetry.metrics.clear()
   telemetry.logger = {
-    info(arg) {}
+    info (arg) {}
   }
 
   const server = await httpServer.startServer(0)

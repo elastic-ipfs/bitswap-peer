@@ -1,44 +1,39 @@
 #!/usr/bin/env node
 
-'use strict'
-
-const { Noise } = require('@web3-storage/libp2p-noise')
-const { readFileSync } = require('fs')
-const libp2p = require('libp2p')
-const Multiplex = require('libp2p-mplex')
-const Websockets = require('libp2p-websockets')
-const { CID } = require('multiformats/cid')
-
-const { logger, serializeError } = require('../src/logging')
-const { Connection } = require('../src/networking')
-const { noiseCrypto } = require('../src/noise-crypto')
-const { protocols, Entry, Message, WantList } = require('../src/protocol')
+import fs from 'fs'
+import { createLibp2p } from 'libp2p'
+import { webSockets } from '@libp2p/websockets'
+import { noise } from '@chainsafe/libp2p-noise'
+import { mplex } from '@libp2p/mplex'
+import { CID } from 'multiformats/cid'
+import { logger, serializeError } from '../src/logging.js'
+import { Connection } from '../src/networking.js'
+import { noiseCrypto } from '../src/noise-crypto.js'
+import { protocols, Entry, Message, WantList } from '../src/protocol.js'
 
 const durationUnits = {
   milliseconds: 1e6,
   seconds: 1e9
 }
 
-const allCids = readFileSync(process.argv[3], 'utf-8')
+const allCids = fs.readFileSync(process.argv[3], 'utf-8')
   .split('\n')
   .map(c => c.trim())
   .filter(c => c)
   .map(c => CID.parse(c))
 
-function elapsed(startTime, precision = 3, unit = 'milliseconds') {
+function elapsed (startTime, precision = 3, unit = 'milliseconds') {
   const dividend = durationUnits[unit] ?? durationUnits.milliseconds
   return (Number(process.hrtime.bigint() - startTime) / dividend).toFixed(precision)
 }
 
-async function client() {
+async function client () {
   let start = process.hrtime.bigint()
 
-  const node = await libp2p.create({
-    modules: {
-      transport: [Websockets],
-      streamMuxer: [Multiplex],
-      connEncryption: [new Noise(null, null, noiseCrypto)]
-    }
+  const node = await createLibp2p({
+    transports: [webSockets()],
+    connectionEncryption: [noise({ crypto: noiseCrypto })],
+    streamMuxers: [mplex()]
   })
 
   // Connect to the BitSwap peer
@@ -47,7 +42,7 @@ async function client() {
   const dialConnection = await node.dial(multiaddr)
   logger.info(`Connected in ${elapsed(start)} ms.`)
 
-  const { stream, protocol } = await dialConnection.newStream(protocols)
+  const stream = await dialConnection.newStream(protocols)
   const duplex = new Connection(stream)
 
   let dataReceived = 0
@@ -59,7 +54,7 @@ async function client() {
   start = process.hrtime.bigint()
   let current = 0
 
-  node.handle(protocols, async ({ connection: dialConnection, stream, protocol }) => {
+  node.handle(protocols, async ({ connection: dialConnection, stream }) => {
     const connection = new Connection(stream)
 
     connection.on('data', async data => {
@@ -75,7 +70,7 @@ async function client() {
       logger.info(
         {
           timing: elapsed(start),
-          current: current,
+          current,
           currentSize: data.length,
           totalSize: dataReceived,
           blocks,
@@ -106,7 +101,7 @@ async function client() {
       [],
       [],
       0
-    ).encode(protocol)
+    ).encode(stream.stat.protocol)
   )
 
   logger.info('Request sent.')

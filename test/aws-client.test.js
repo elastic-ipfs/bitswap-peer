@@ -1,15 +1,14 @@
-'use strict'
 
-const t = require('tap')
+import t from 'tap'
 
-const path = require('path')
-const fs = require('fs').promises
-const { Agent, MockAgent } = require('undici')
-const { marshall } = require('@aws-sdk/util-dynamodb')
-const config = require('../src/config')
-const { awsClientOptions, Client } = require('../src/aws-client')
-const helper = require('./utils/helper')
-const { createMockAgent } = require('./utils/mock')
+import path from 'path'
+import fs from 'fs/promises'
+import { Agent, MockAgent } from 'undici'
+import { marshall } from '@aws-sdk/util-dynamodb'
+import config from '../src/config.js'
+import { awsClientOptions, Client } from '../src/aws-client/index.js'
+import * as helper from './utils/helper.js'
+import { createMockAgent } from './utils/mock.js'
 
 t.test('Client', async t => {
   t.test('constructor', async t => {

@@ -1,16 +1,15 @@
-'use strict'
 
-const { readFileSync } = require('fs')
-const { build: buildHistogram } = require('hdr-histogram-js')
-const { load } = require('js-yaml')
-const { join } = require('path')
+import { readFileSync } from 'fs'
+import { join } from 'path'
+import { load } from 'js-yaml'
+import { build as buildHistogram } from 'hdr-histogram-js'
 
-const { logger } = require('./logging')
+import { logger } from './logging.js'
 
 const percentiles = [0.001, 0.01, 0.1, 1, 2.5, 10, 25, 50, 75, 90, 97.5, 99, 99.9, 99.99, 99.999]
 
 class Aggregator {
-  constructor(category, description, metric) {
+  constructor (category, description, metric) {
     this.tag = `${category}-${metric}`
     this.description = `${description} (${metric})`
     this.exportName = this.tag.replaceAll('-', '_')
@@ -32,7 +31,7 @@ class Aggregator {
     })
   }
 
-  record(value) {
+  record (value) {
     this.sum += value
 
     if (this.type === 'histogram') {
@@ -40,12 +39,12 @@ class Aggregator {
     }
   }
 
-  reset() {
+  reset () {
     this.sum = 0
     this.histogram.reset()
   }
 
-  current() {
+  current () {
     const { minNonZeroValue: min, maxValue: max, mean, stdDeviation: stdDev, totalCount: count } = this.histogram
 
     const value = {
@@ -75,7 +74,7 @@ class Aggregator {
 }
 
 class Telemetry {
-  constructor() {
+  constructor () {
     const { component, metrics, version, buildDate } = load(readFileSync(join(process.cwd(), 'metrics.yml'), 'utf-8'))
 
     // Setup
@@ -94,13 +93,13 @@ class Telemetry {
     }
   }
 
-  createMetric(category, description, metric) {
+  createMetric (category, description, metric) {
     const instance = new Aggregator(category, description, metric)
 
     this.metrics.set(instance.tag, instance)
   }
 
-  ensureMetric(category, metric) {
+  ensureMetric (category, metric) {
     const metricObject = this.metrics.get(`${category}-${metric}`)
 
     if (!metricObject) {
@@ -110,7 +109,7 @@ class Telemetry {
     return metricObject
   }
 
-  export() {
+  export () {
     let output = ''
 
     for (const metric of this.metrics.values()) {
@@ -145,17 +144,17 @@ class Telemetry {
     return output.trim()
   }
 
-  increaseCount(category, amount = 1) {
+  increaseCount (category, amount = 1) {
     const metric = this.ensureMetric(category, 'count')
     metric.record(amount)
   }
 
-  decreaseCount(category, amount = 1) {
+  decreaseCount (category, amount = 1) {
     const metric = this.ensureMetric(category, 'count')
     metric.record(-1 * amount)
   }
 
-  async trackDuration(category, promise) {
+  async trackDuration (category, promise) {
     const metric = this.ensureMetric(category, 'durations')
     const startTime = process.hrtime.bigint()
 
@@ -167,4 +166,5 @@ class Telemetry {
   }
 }
 
-module.exports = { telemetry: new Telemetry() }
+const telemetry = new Telemetry()
+export { telemetry }

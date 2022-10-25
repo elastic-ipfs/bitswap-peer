@@ -1,8 +1,6 @@
-'use strict'
 
-const t = require('tap')
-
-const config = require('../src/config')
+import t from 'tap'
+import config from '../src/config.js'
 
 t.test('config - defaults', async t => {
   t.same(config, {

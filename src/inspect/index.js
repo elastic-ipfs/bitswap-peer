@@ -1,9 +1,9 @@
-'use strict'
 
-const path = require('path')
-const fs = require('fs/promises')
-const doc = require('@dnlup/doc')
-const config = require('../config')
+import path from 'path'
+import fs from 'fs/promises'
+import doc from '@dnlup/doc'
+import config from '../config.js'
+import { dirname } from '../util.js'
 
 const MB = 1024 * 1024
 
@@ -91,7 +91,7 @@ const inspect = {
       return 'no trace'
     }
 
-    const html = await fs.readFile(path.join(__dirname, 'chart-src.html'), 'utf8')
+    const html = await fs.readFile(path.join(dirname(import.meta.url), 'chart-src.html'), 'utf8')
 
     const data0 = []
 
@@ -169,7 +169,7 @@ if (!config.allowInspection) {
     inspect.metrics._track =
     inspect.metrics.increase =
     inspect.metrics.decrease =
-    inspect.metrics.set = function noop() { }
+    inspect.metrics.set = function noop () { }
 }
 
-module.exports = inspect
+export default inspect

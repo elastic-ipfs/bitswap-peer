@@ -1,12 +1,12 @@
-'use strict'
 
-const t = require('tap')
+import t from 'tap'
+import { get } from 'http'
+import esmock from 'esmock'
+import config from '../src/config.js'
 
-const config = require('../src/config')
-const { get } = require('http')
-
-async function startServer(readinessFunction, port) {
-  const httpServerModuleWithMocks = await t.mock('../src/http-server.js', {
+async function startServer (readinessFunction, port) {
+  // TODO fix mock
+  const httpServerModuleWithMocks = await esmock('../src/http-server.js', {
     '../src/health-check.js': {
       checkReadiness: readinessFunction
     },
@@ -19,7 +19,7 @@ async function startServer(readinessFunction, port) {
   return await httpServerModuleWithMocks.httpServer.startServer({ port })
 }
 
-function doHttpRequest(path, server) {
+function doHttpRequest (path, server) {
   return new Promise((resolve, reject) => {
     const req = get({
       hostname: server.address().address,

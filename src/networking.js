@@ -1,11 +1,11 @@
-'use strict'
 
-const { EventEmitter } = require('events')
-const { loadEsmModules } = require('./esm-loader')
-const { logger, serializeError } = require('./logging')
+import { EventEmitter } from 'events'
+import { logger, serializeError } from './logging.js'
+import * as lp from 'it-length-prefixed'
+import { pipe } from 'it-pipe'
 
 class Connection extends EventEmitter {
-  constructor(stream) {
+  constructor (stream) {
     super()
 
     this.stream = stream
@@ -14,51 +14,50 @@ class Connection extends EventEmitter {
     this.resolves = []
     this.shouldClose = false
 
-    loadEsmModules(['it-length-prefixed', 'it-pipe'])
-      .then(([lengthPrefixedMessage, { pipe }]) => {
-        try {
-          // Prepare for receiving
-          pipe(stream.source, lengthPrefixedMessage.decode(), async source => {
-            for await (const data of source) {
-              /*
-                  This variable declaration is important
-                  If you use data.slice() within the nextTick you will always emit the last received packet
-                */
-              const payload = data.slice()
-              process.nextTick(() => this.emit('data', payload))
-            }
-          })
-            .then(() => {
-              this.emit('end:receive')
-            })
-            .catch(err => {
-              this.emit('error', err)
-              this.emit('error:receive', err)
-              logger.debug({ err: serializeError(err) }, 'Cannot receive data')
-            })
-
-          // Prepare for sending
-          pipe(this, lengthPrefixedMessage.encode(), stream.sink)
-            .then(() => {
-              this.emit('end:send')
-            })
-            .catch(err => {
-              this.emit('error', err)
-              this.emit('error:send', err)
-              logger.debug({ err: serializeError(err) }, 'Cannot send data')
-            })
-        } catch (err) {
-          // TODO introduce async "init" method
-          // the connection is ready after init, the constructor cant be async
-          // this is a temp solution to prevent unhandled rejections
-          // see connectPeer function
-          logger.error({ err: serializeError(err) }, 'connection stream pipe')
-          this.emit('error:pipe', err)
+    try {
+      // Prepare for receiving
+      pipe(stream.source, lp.decode(), async source => {
+        for await (const data of source) {
+          /*
+              This variable declaration is important
+              If you use data.slice() within the nextTick you will always emit the last received packet
+            */
+          const payload = data.slice()
+          if (payload.length > 0) {
+            process.nextTick(() => this.emit('data', payload))
+          }
         }
       })
+        .then(() => {
+          this.emit('end:receive')
+        })
+        .catch(err => {
+          this.emit('error', err)
+          this.emit('error:receive', err)
+          logger.debug({ err: serializeError(err) }, 'Cannot receive data')
+        })
+
+      // Prepare for sending
+      pipe(this, lp.encode(), stream.sink)
+        .then(() => {
+          this.emit('end:send')
+        })
+        .catch(err => {
+          this.emit('error', err)
+          this.emit('error:send', err)
+          logger.debug({ err: serializeError(err) }, 'Cannot send data')
+        })
+    } catch (err) {
+      // TODO introduce async "init" method
+      // the connection is ready after init, the constructor cant be async
+      // this is a temp solution to prevent unhandled rejections
+      // see connectPeer function
+      logger.error({ err: serializeError(err) }, 'connection stream pipe')
+      this.emit('error:pipe', err)
+    }
   }
 
-  send(value) {
+  send (value) {
     if (this.shouldClose || this.done) {
       throw new Error('The stream is closed.')
     }
@@ -72,7 +71,7 @@ class Connection extends EventEmitter {
     this.values.push(value)
   }
 
-  close() {
+  close () {
     try {
       /*
         Do not do anything immediately here, just wait for the next request for data.
@@ -96,7 +95,7 @@ class Connection extends EventEmitter {
     }
   }
 
-  [Symbol.asyncIterator]() {
+  [Symbol.asyncIterator] () {
     return {
       next: () => {
         // Marked as done, exit without processing additional values
@@ -132,7 +131,7 @@ class Connection extends EventEmitter {
   }
 }
 
-async function connectPeer({ context, logger }) {
+async function connectPeer ({ context, logger }) {
   try {
     const stream = await _acquireStream(context)
     const connection = new Connection(stream)
@@ -152,7 +151,7 @@ async function connectPeer({ context, logger }) {
     return connection
   } catch (err) {
     context.state = 'error'
-    logger.error({ err: serializeError(err), peerId: context.peerId?._idB58String || context.peerId }, 'outgoing connection error, unable to connect to peer')
+    logger.error({ err: serializeError(err), peerId: context.peerId?.toString() }, 'outgoing connection error, unable to connect to peer')
     throw err
   }
 }
@@ -161,10 +160,10 @@ async function connectPeer({ context, logger }) {
  * establish connection, deduping by peer
  * coupled with _connect
  */
-async function _acquireStream(context) {
+async function _acquireStream (context) {
   const dialConnection = await context.service.dial(context.peerId)
-  const { stream } = await dialConnection.newStream(context.protocol)
+  const stream = await dialConnection.newStream(context.protocol)
   return stream
 }
 
-module.exports = { Connection, connectPeer }
+export { Connection, connectPeer }

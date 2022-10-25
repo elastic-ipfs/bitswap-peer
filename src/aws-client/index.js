@@ -1,10 +1,8 @@
-'use strict'
 
-const Client = require('./Client')
+import { Client } from './Client.js'
 
-function awsClientOptions(config, logger) {
+function awsClientOptions (config, logger) {
   const awsAgentOptions = {
-    // connect: { timeout: config.awsClientConnectTimeout },
     connectTimeout: config.awsClientConnectTimeout,
     keepAliveTimeout: config.awsClientKeepAliveTimeout,
     connections: config.awsClientConcurrency,
@@ -22,13 +20,13 @@ function awsClientOptions(config, logger) {
   }
 }
 
-async function createAwsClient(config, logger) {
+async function createAwsClient (config, logger) {
   const awsClient = new Client(awsClientOptions(config, logger))
   await awsClient.init()
   return awsClient
 }
 
-module.exports = {
+export {
   createAwsClient,
   awsClientOptions,
   Client

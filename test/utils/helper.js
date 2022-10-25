@@ -1,37 +1,34 @@
-'use strict'
 
-const { Noise } = require('@web3-storage/libp2p-noise')
-const dagPB = require('@ipld/dag-pb')
-const { EventEmitter } = require('events')
-const libp2p = require('libp2p')
-const Multiplex = require('libp2p-mplex')
-const Websockets = require('libp2p-websockets')
-const { equals } = require('multiformats/hashes/digest')
-const { sha256 } = require('multiformats/hashes/sha2')
-const PeerId = require('peer-id')
-const { CID } = require('multiformats/cid')
-const { base58btc: base58 } = require('multiformats/bases/base58')
+import { createLibp2p } from 'libp2p'
+import { webSockets } from '@libp2p/websockets'
+import { noise } from '@chainsafe/libp2p-noise'
+import { mplex } from '@libp2p/mplex'
+import * as dagPB from '@ipld/dag-pb'
+import { createEd25519PeerId } from '@libp2p/peer-id-factory'
+import { EventEmitter } from 'events'
+import { equals } from 'multiformats/hashes/digest'
+import { sha256 } from 'multiformats/hashes/sha2'
+import { CID } from 'multiformats/cid'
+import { base58btc as base58 } from 'multiformats/bases/base58'
+import getPort from 'get-port'
 
-const { loadEsmModule } = require('../../src/esm-loader')
-const { Connection } = require('../../src/networking')
-const { noiseCrypto } = require('../../src/noise-crypto')
-const { Message, RawMessage } = require('../../src/protocol')
-const { startService } = require('../../src/service')
+import { Connection } from '../../src/networking.js'
+import { noiseCrypto } from '../../src/noise-crypto.js'
+import { Message, RawMessage } from '../../src/protocol.js'
+import { startService } from '../../src/service.js'
 
-async function createClient(peerId, port, protocol) {
-  const client = await libp2p.create({
-    modules: {
-      transport: [Websockets],
-      streamMuxer: [Multiplex],
-      connEncryption: [new Noise(null, null, noiseCrypto)]
-    }
+async function createClient (peerId, port, protocol) {
+  const client = await createLibp2p({
+    transports: [webSockets()],
+    connectionEncryption: [noise({ crypto: noiseCrypto })],
+    streamMuxers: [mplex()]
   })
 
   const target = await client.dial(`/ip4/127.0.0.1/tcp/${port}/ws/p2p/${peerId}`)
-  const { stream } = await target.newStream(protocol)
+  const stream = await target.newStream(protocol)
   const receiver = new EventEmitter()
 
-  client.handle(protocol, async ({ connection: dial, stream, protocol }) => {
+  client.handle(protocol, async ({ stream }) => {
     const connection = new Connection(stream)
 
     connection.on('data', data => {
@@ -42,29 +39,29 @@ async function createClient(peerId, port, protocol) {
   return { stream, receiver, client }
 }
 
-async function getFreePort() {
-  const getPort = await loadEsmModule('get-port')
+async function getFreePort () {
   return getPort()
 }
 
-async function setup({ protocol, awsClient }) {
-  const peerId = await PeerId.create()
+async function setup ({ protocol, awsClient }) {
+  const peerId = await createEd25519PeerId()
   const port = await getFreePort()
-  const { service } = await startService({ peerId, port, awsClient })
+  const logger = spyLogger()
+  const { service } = await startService({ peerId, port, awsClient, logger })
   const { stream, receiver, client } = await createClient(peerId, port, protocol)
   const connection = new Connection(stream)
 
-  return { service, client, connection, receiver }
+  return { service, client, connection, receiver, logger }
 }
 
-async function teardown(client, service, connection) {
+async function teardown (client, service, connection) {
   await connection.close()
   await client.stop()
   await service.stop()
 }
 
 // TODO remove hard timeouts
-async function receiveMessages(receiver, protocol, timeout = 5000, limit = 1, raw = false) {
+async function receiveMessages (receiver, protocol, timeout = 1000, limit = 1, raw = false) {
   let timeoutHandle
   const responses = []
 
@@ -106,7 +103,7 @@ async function receiveMessages(receiver, protocol, timeout = 5000, limit = 1, ra
   })
 }
 
-function getPresence(t, response, cid) {
+function getPresence (t, response, cid) {
   const presences = response.blockPresences.filter(b => b.cid.equals(cid))
 
   t.equal(presences.length, 1)
@@ -114,49 +111,41 @@ function getPresence(t, response, cid) {
   return presences[0]
 }
 
-function hasDAGBlock(t, response, link, times) {
+function hasDAGBlock (t, response, link, times) {
   const found = response.blocks.filter(b => safeGetDAGLinks(b)?.[0]?.Name === link)
 
   t.equal(found.length, times)
 }
 
-function hasRawBlock(t, response, content, times) {
-  const blocks = response.blocks.filter(b => b.data.toString() === content)
+function hasRawBlock (t, response, content, times) {
+  const blocks = response.blocks.filter(b => Buffer.from(b.data).toString('utf8') === content)
 
   t.equal(blocks.length, times)
 }
 
-async function hasBlockWithHash(t, response, multihash, hasNot, times) {
+async function hasBlockWithHash (t, response, multihash, hasNot, times) {
   const hashes = await Promise.all(response.blocks.map(b => sha256.digest(b.data)))
 
   t.equal(hashes.filter(h => equals(h, multihash)).length, hasNot ? 0 : times)
 }
 
-function hasSingleDAGBlock(t, response, link) {
-  hasDAGBlock(t, response, link, 1)
-}
-
-function hasSingleRawBlock(t, response, content) {
-  hasRawBlock(t, response, content, 1)
-}
-
-async function hasSingleBlockWithHash(t, response, multihash, hasNot) {
+async function hasSingleBlockWithHash (t, response, multihash, hasNot) {
   await hasBlockWithHash(t, response, multihash, hasNot, 1)
 }
 
-function safeGetDAGLinks(block) {
+function safeGetDAGLinks (block) {
   try {
-    return Object.values(dagPB.decode(Buffer.isBuffer(block) ? block : block.data).Links)
-  } catch (e) {
-    return [{}]
+    return Object.values(dagPB.decode(block).Links)
+  } catch (err) {
+    return []
   }
 }
 
-function decodeCidToKey(cid) {
+function decodeCidToKey (cid) {
   return base58.encode(CID.decode(cid).multihash.bytes)
 }
 
-function decodeMessage(message) {
+function decodeMessage (message) {
   const { blockPresences: blocksInfo, payload: blocksData } = RawMessage.decode(message)
 
   return {
@@ -171,11 +160,11 @@ function decodeMessage(message) {
   }
 }
 
-function dummyLogger() {
+function dummyLogger () {
   return { fatal: noop, error: noop, warn: noop, info: noop, debug: noop }
 }
 
-function spyLogger() {
+function spyLogger () {
   const spy = { messages: {} }
   for (const l of ['fatal', 'error', 'error', 'warn', 'info', 'debug']) {
     spy.messages[l] = []
@@ -184,9 +173,9 @@ function spyLogger() {
   return spy
 }
 
-function noop() { }
+function noop () { }
 
-module.exports = {
+export {
   dummyLogger,
   spyLogger,
   createClient,
@@ -196,8 +185,6 @@ module.exports = {
   hasDAGBlock,
   hasRawBlock,
   hasSingleBlockWithHash,
-  hasSingleDAGBlock,
-  hasSingleRawBlock,
   setup,
   receiveMessages,
   safeGetDAGLinks,

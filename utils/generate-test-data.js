@@ -1,16 +1,14 @@
 #!/usr/bin/env node
 
-'use strict'
-
-const { CarWriter } = require('@ipld/car')
-const dagPB = require('@ipld/dag-pb')
-const { randomBytes } = require('crypto')
-const { createWriteStream } = require('fs')
-const { CID } = require('multiformats/cid')
-const { code: rawCode } = require('multiformats/codecs/raw')
-const { sha256 } = require('multiformats/hashes/sha2')
-const { Readable } = require('stream')
-const { cid1Content, cid2Link } = require('../test/fixtures/cids')
+import { CarWriter } from '@ipld/car'
+import * as dagPB from '@ipld/dag-pb'
+import { randomBytes } from 'crypto'
+import { createWriteStream } from 'fs'
+import { CID } from 'multiformats/cid'
+import { code as rawCode } from 'multiformats/codecs/raw'
+import { sha256 } from 'multiformats/hashes/sha2'
+import { Readable } from 'stream'
+import { cid1Content, cid2Link } from '../test/fixtures/cids.js'
 
 /*
   Keep this configuration up-to-date with cids definition in test/utils.js.
@@ -32,7 +30,7 @@ const configuration = {
   cid9: 4 * 1024 * 1024
 }
 
-async function createCAR(path, configuration) {
+async function createCAR (path, configuration) {
   let content
   const code = configuration === 'dag-pb' ? dagPB.code : rawCode
 
@@ -66,7 +64,7 @@ async function createCAR(path, configuration) {
   return [cid, path]
 }
 
-async function main() {
+async function main () {
   const prefix = process.argv[2] || 'test'
   const bucket = process.argv[3] || 'test'
 

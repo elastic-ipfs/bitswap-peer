@@ -1,23 +1,22 @@
-'use strict'
 
-const { readFileSync } = require('fs')
-const { resolve } = require('path')
-const { MockAgent } = require('undici')
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
+import { MockAgent } from 'undici'
 
-const config = require('../../src/config')
-const { Client: AwsClient, awsClientOptions } = require('../../src/aws-client')
-const { cidToKey } = require('../../src/util')
-const helper = require('./helper')
+import config from '../../src/config.js'
+import { Client as AwsClient, awsClientOptions } from '../../src/aws-client/index.js'
+import { cidToKey } from '../../src/util.js'
+import * as helper from './helper.js'
 
-const { cid1, cid2, cid3, cid4, cid5, cid6, cid7, cid8, cid9 } = require('../fixtures/cids')
+import { cid1, cid2, cid3, cid4, cid5, cid6, cid7, cid8, cid9 } from '../fixtures/cids.js'
 
-function readData(file, from, to) {
+function readData (file, from, to) {
   const buffer = readFileSync(resolve(process.cwd(), `test/fixtures/${file}`))
 
   return from && to ? buffer.slice(from, to + 1) : buffer
 }
 
-function readBlock(file, region, bucket) {
+function readBlock (file, region, bucket) {
   const json = readFileSync(resolve(process.cwd(), `test/fixtures/${file}`), 'utf-8')
   return JSON.parse(json
     .replaceAll('{AWS_REGION}', region)
@@ -25,7 +24,7 @@ function readBlock(file, region, bucket) {
   )
 }
 
-function mockDynamoItem({ pool, table, keyName, key, response, times = 1 }) {
+function mockDynamoItem ({ pool, table, keyName, key, response, times = 1 }) {
   pool
     .intercept({
       method: 'POST',
@@ -41,7 +40,7 @@ function mockDynamoItem({ pool, table, keyName, key, response, times = 1 }) {
     .times(times)
 }
 
-function mockDynamoQuery({ pool, table, keyName, key, response, times = 1 }) {
+function mockDynamoQuery ({ pool, table, keyName, key, response, times = 1 }) {
   pool
     .intercept({
       method: 'POST',
@@ -59,7 +58,7 @@ function mockDynamoQuery({ pool, table, keyName, key, response, times = 1 }) {
     .times(times)
 }
 
-function mockS3Object({ pool, key, range, response, times = 1 }) {
+function mockS3Object ({ pool, key, range, response, times = 1 }) {
   const headers = range ? { range } : undefined
 
   pool
@@ -72,7 +71,7 @@ function mockS3Object({ pool, key, range, response, times = 1 }) {
     .times(times)
 }
 
-function mockBlockInfoSource({ awsClient, key, info, times = 1 }) {
+function mockBlockInfoSource ({ awsClient, key, info, times = 1 }) {
   const pool = awsClient.agent.get(awsClient.dynamoUrl)
 
   mockDynamoQuery({
@@ -89,20 +88,20 @@ function mockBlockInfoSource({ awsClient, key, info, times = 1 }) {
   })
 }
 
-function mockBlockDataSource({ awsClient, region, bucket, offset, length, key, data, times = 1 }) {
+function mockBlockDataSource ({ awsClient, region, bucket, offset, length, key, data, times = 1 }) {
   const pool = awsClient.agent.get(awsClient.s3Url(region, bucket))
 
   mockS3Object({ pool, bucket, key, offset, length, response: data, times })
 }
 
-function createMockAgent() {
+function createMockAgent () {
   const mockAgent = new MockAgent()
   mockAgent.disableNetConnect()
 
   return mockAgent
 }
 
-async function mockAwsClient(config) {
+async function mockAwsClient (config) {
   const logger = helper.spyLogger()
   const options = awsClientOptions(config, logger)
   options.agent = createMockAgent()
@@ -112,7 +111,7 @@ async function mockAwsClient(config) {
 }
 
 // TODO remove this massive mock
-async function mockAWS(config) {
+async function mockAWS (config) {
   const { awsClient, logger } = await mockAwsClient(config)
   const s3 = {
     region: 'region-test',
@@ -154,7 +153,7 @@ async function mockAWS(config) {
   return { awsClient, logger, s3 }
 }
 
-module.exports = {
+export {
   createMockAgent,
   mockAwsClient,
   mockAWS,

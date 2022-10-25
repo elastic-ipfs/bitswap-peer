@@ -1,15 +1,13 @@
 #!/usr/bin/env node
 
-'use strict'
+import { CarWriter } from '@ipld/car'
+import { createWriteStream } from 'fs'
+import { CID } from 'multiformats/cid'
+import { encode as encodeRaw, code } from 'multiformats/codecs/raw'
+import { sha256 } from 'multiformats/hashes/sha2'
+import { Readable } from 'stream'
 
-const { CarWriter } = require('@ipld/car')
-const { createWriteStream } = require('fs')
-const { CID } = require('multiformats/cid')
-const { encode: encodeRaw, code } = require('multiformats/codecs/raw')
-const { sha256 } = require('multiformats/hashes/sha2')
-const { Readable } = require('stream')
-
-async function generate() {
+async function generate () {
   const content = Buffer.allocUnsafe(4 * 1024 * 1024).fill('\u2222')
   const hash = await sha256.digest(encodeRaw(content))
   const cid = CID.create(1, code, hash)

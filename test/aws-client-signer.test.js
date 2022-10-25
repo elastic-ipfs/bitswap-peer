@@ -1,8 +1,6 @@
-'use strict'
 
-const t = require('tap')
-
-const signerWorker = require('../src/aws-client/signer-worker')
+import t from 'tap'
+import { default as signerWorker } from '../src/aws-client/signer-worker.cjs'
 
 t.test('signer-worker - can handle both session and session-less signing', async t => {
   t.notOk(

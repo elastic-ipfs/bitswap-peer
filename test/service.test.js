@@ -1,13 +1,11 @@
-'use strict'
 
-const { once } = require('events')
-const t = require('tap')
+import t from 'tap'
 
-const config = require('../src/config')
-const { BITSWAP_V_100: protocol, Entry, Message, WantList } = require('../src/protocol')
-const { cid1, cid1Content, cid2 } = require('./fixtures/cids')
-const helper = require('./utils/helper')
-const { mockAWS, createMockAgent } = require('./utils/mock')
+import config from '../src/config.js'
+import { BITSWAP_V_100 as protocol, Entry, Message, WantList } from '../src/protocol.js'
+import { cid1, cid1Content, cid2 } from './fixtures/cids.js'
+import * as helper from './utils/helper.js'
+import { mockAWS, createMockAgent } from './utils/mock.js'
 
 t.test('service - blocks are cached', async t => {
   // TODO fix, is not asserting cache, only responses
@@ -38,13 +36,14 @@ t.test('service - blocks are cached', async t => {
 
 t.test('service - handles connection error', async t => {
   const { awsClient } = await mockAWS(config)
-  const { client, service, connection } = await helper.setup({ protocol, awsClient })
+  const { client, service, connection, receiver, logger } = await helper.setup({ protocol, awsClient })
 
   connection.send(Buffer.from([0, 1, 2, 3]))
-  const [error] = await once(service, 'error:receive')
 
-  t.equal(error.constructor.name, 'RangeError')
-  t.equal(error.message, 'index out of range: 4 + 3 > 4')
+  await helper.receiveMessages(receiver, protocol)
+
+  t.match(logger.messages.warn[0][0].err, '[RangeError] index out of range: 4 + 3 > 4\nRangeError: index out of range: 4 + 3 > 4\n')
+  t.equal(logger.messages.warn[0][1], 'Cannot decode received data')
 
   await helper.teardown(client, service, connection)
 })

@@ -1,16 +1,14 @@
-'use strict'
 
-const config = require('./config')
-const { serializeError } = require('./logging')
-const { Entry, BITSWAP_V_120, BLOCK_TYPE_INFO, BLOCK_TYPE_DATA } = require('./protocol')
-const { Message } = require('./protocol')
-const { fetchBlocksData, fetchBlocksInfo } = require('./storage')
-const { telemetry } = require('./telemetry')
-const { connectPeer } = require('./networking')
-const inspect = require('./inspect')
-const { cidToKey, sizeofBlockInfo } = require('./util')
+import config from './config.js'
+import { serializeError } from './logging.js'
+import { Entry, BITSWAP_V_120, BLOCK_TYPE_INFO, BLOCK_TYPE_DATA, Message } from './protocol.js'
+import { fetchBlocksData, fetchBlocksInfo } from './storage.js'
+import { telemetry } from './telemetry.js'
+import { connectPeer } from './networking.js'
+import inspect from './inspect/index.js'
+import { cidToKey, sizeofBlockInfo } from './util.js'
 
-function createContext({ service, peerId, protocol, wantlist, awsClient, connection }) {
+function createContext ({ service, peerId, protocol, wantlist, awsClient, connection }) {
   const context = {
     state: 'ok',
     connection,
@@ -28,7 +26,7 @@ function createContext({ service, peerId, protocol, wantlist, awsClient, connect
   return context
 }
 
-function handle({ context, logger, batchSize = config.blocksBatchSize }) {
+function handle ({ context, logger, batchSize = config.blocksBatchSize }) {
   return new Promise(resolve => {
     if (context.blocks.length < 1) {
       resolve()
@@ -86,7 +84,7 @@ function handle({ context, logger, batchSize = config.blocksBatchSize }) {
  * fetch blocks content from storage
  * append content to its block
  */
-async function batchFetch(blocks, context, logger) {
+async function batchFetch (blocks, context, logger) {
   try {
     const dataBlocks = []
     const infoBlocks = []
@@ -126,7 +124,7 @@ async function batchFetch(blocks, context, logger) {
   }
 }
 
-async function batchResponse({ blocks, context, logger }) {
+async function batchResponse ({ blocks, context, logger }) {
   if (!blocks) { return }
 
   try {
@@ -166,7 +164,7 @@ async function batchResponse({ blocks, context, logger }) {
 }
 
 // end response, close connection
-async function endResponse({ context, logger }) {
+async function endResponse ({ context, logger }) {
   if (context.state === 'end') { return }
 
   context.state = 'end'
@@ -200,6 +198,6 @@ const sentMetrics = {
   }
 }
 
-module.exports = {
+export {
   handle, createContext
 }

@@ -1,16 +1,14 @@
-'use strict'
 
-const t = require('tap')
-
-const {
+import t from 'tap'
+import { cid3 } from './fixtures/cids.js'
+import {
   BITSWAP_V_120,
   Block,
   BlockPresence,
   Entry,
   maxPriority,
   WantList
-} = require('../src/protocol')
-const { cid3 } = require('./fixtures/cids')
+} from '../src/protocol.js'
 
 t.test('protocol - Protocol Buffers messages are properly sanitized and encoded', async t => {
   t.equal(new Block(cid3, Buffer.alloc(10)).encode(BITSWAP_V_120).toString('base64'), 'CgQBcBIgEgoAAAAAAAAAAAAA')

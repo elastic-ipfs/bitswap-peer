@@ -1,17 +1,16 @@
-'use strict'
 
-const path = require('path')
-const fs = require('fs/promises')
-const { Piscina } = require('piscina')
-const { Agent, request } = require('undici')
-const { xml2js } = require('xml-js')
-const { BufferList } = require('bl')
-const { unmarshall } = require('@aws-sdk/util-dynamodb')
-const { serializeError } = require('../logging')
-const sleep = require('util').promisify(setTimeout)
+import path from 'path'
+import fs from 'fs/promises'
+import { Piscina } from 'piscina'
+import { Agent, request } from 'undici'
+import { xml2js } from 'xml-js'
+import { BufferList } from 'bl'
+import { unmarshall } from '@aws-sdk/util-dynamodb'
+import { serializeError } from '../logging.js'
+import { sleep, dirname } from '../util.js'
 
 const signerWorker = new Piscina({
-  filename: path.resolve(__dirname, './signer-worker.js'),
+  filename: path.resolve(dirname(import.meta.url), './signer-worker.cjs'),
   idleTimeout: Math.pow(2, 31) - 1
 })
 
@@ -21,7 +20,7 @@ const signerWorker = new Piscina({
  * @see https://docs.aws.amazon.com/index.html
  */
 class Client {
-  constructor({ agent, awsAgentOptions, s3Options, dynamoOptions, refreshCredentialsInterval, roleArn = process.env.AWS_ROLE_ARN, identityToken, roleSessionName, logger }) {
+  constructor ({ agent, awsAgentOptions, s3Options, dynamoOptions, refreshCredentialsInterval, roleArn = process.env.AWS_ROLE_ARN, identityToken, roleSessionName, logger }) {
     // TODO validate params
 
     if (!dynamoOptions?.region) {
@@ -49,7 +48,7 @@ class Client {
     }
   }
 
-  async init() {
+  async init () {
     // custom agent is set for testing purpose only
     if (this.agent) {
       return
@@ -79,11 +78,11 @@ class Client {
     return this.refreshCredentials()
   }
 
-  close() {
+  close () {
     this.credentialRefreshTimer && clearInterval(this.credentialRefreshTimer)
   }
 
-  async refreshCredentials() {
+  async refreshCredentials () {
     const url = new URL('https://sts.amazonaws.com')
 
     url.searchParams.append('Version', '2011-06-15')
@@ -113,11 +112,11 @@ class Client {
     this.credentials.sessionToken = response.AssumeRoleWithWebIdentityResult.Credentials.SessionToken._text
   }
 
-  s3Url(region, bucket, key = '') {
+  s3Url (region, bucket, key = '') {
     return 'https://' + bucket + '.s3.' + region + '.amazonaws.com' + key
   }
 
-  async s3Fetch({ region, bucket, key, offset, length, retries, retryDelay }) {
+  async s3Fetch ({ region, bucket, key, offset, length, retries, retryDelay }) {
     if (length !== undefined && length < 1) {
       this.logger.warn({ key }, 'Called s3Fetch with length 0')
       return Buffer.alloc(0)
@@ -165,7 +164,7 @@ class Client {
   /**
    * @see https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadBucket.html
    */
-  async s3HeadBucket({ region, bucket }) {
+  async s3HeadBucket ({ region, bucket }) {
     const url = this.s3Url(region, bucket)
     const plainHeaders = {
       url,
@@ -187,7 +186,7 @@ class Client {
     }
   }
 
-  async s3Request({ url, headers }) {
+  async s3Request ({ url, headers }) {
     const { statusCode, body } = await request(url, {
       method: 'GET',
       headers,
@@ -212,7 +211,7 @@ class Client {
   /**
    * @see https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html
    */
-  async dynamoQueryBySortKey({ table, keyName, keyValue, retries, retryDelay }) {
+  async dynamoQueryBySortKey ({ table, keyName, keyValue, retries, retryDelay }) {
     if (!retries) { retries = this.dynamoOptions.maxRetries }
     if (!retryDelay) { retryDelay = this.dynamoOptions.retryDelay }
 
@@ -265,7 +264,7 @@ class Client {
   /**
    * @see https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_GetItem.htm
    */
-  async dynamoGetItem({ table, keyName, keyValue, projection, retries, retryDelay }) {
+  async dynamoGetItem ({ table, keyName, keyValue, projection, retries, retryDelay }) {
     if (!retries) { retries = this.dynamoOptions.maxRetries }
     if (!retryDelay) { retryDelay = this.dynamoOptions.retryDelay }
 
@@ -318,7 +317,7 @@ class Client {
   /**
    * @see https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_DescribeTable.html
    */
-  async dynamoDescribeTable(table) {
+  async dynamoDescribeTable (table) {
     const payload = JSON.stringify({ TableName: table })
 
     const headers = await signerWorker.run({
@@ -342,7 +341,7 @@ class Client {
     }
   }
 
-  async dynamoRequest({ url, headers, payload }) {
+  async dynamoRequest ({ url, headers, payload }) {
     const { statusCode, body } = await request(url, {
       method: 'POST',
       path: '/',
@@ -365,4 +364,4 @@ class Client {
   }
 }
 
-module.exports = Client
+export { Client }

@@ -1,6 +1,5 @@
-'use strict'
 
-const { CID } = require('multiformats/cid')
+import { CID } from 'multiformats/cid'
 
 // cid1 and cid2 exists, the other two don't, cid1 is a raw block, cid2 is a dag-pb
 const cid1 = CID.parse('bafkreifiqpnpysanizxoatqnnwuynply5mp52ily2bdjg4r5uoupsxkc6q')
@@ -17,7 +16,10 @@ const cid8 = CID.parse('bafkreigf7cgkeki5favqpdyrxosouw6jw3bo4bsfag6qxx3v2gc5jag
 // cid9 is 500 byte less than the block limit
 const cid9 = CID.parse('bafkreieezcbuz6d2otuscqyv6xhmhd5walvwehvat7uk66nb6k2rksc7ia')
 
-module.exports = {
+const cid1Content = '1234\n'
+const cid2Link = 'abc'
+
+export {
   cid1,
   cid2,
   cid3,
@@ -27,6 +29,6 @@ module.exports = {
   cid7,
   cid8,
   cid9,
-  cid1Content: '1234\n',
-  cid2Link: 'abc'
+  cid1Content,
+  cid2Link
 }

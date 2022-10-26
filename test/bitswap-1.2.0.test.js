@@ -370,7 +370,7 @@ t.test(`${protocol} - large presences splitted in multiple responses - single bl
   t.equal(getPresence(t, responses[2], cid5).type, BlockPresence.Type.Have)
 })
 
-t.todo(`${protocol} - closes streams properly`, async t => {
+t.test(`${protocol} - closes streams properly`, async t => {
   const { awsClient } = await mockAWS(config)
   const { client, service, connection, receiver } = await setup({ protocol, awsClient })
 
@@ -384,7 +384,7 @@ t.todo(`${protocol} - closes streams properly`, async t => {
   client.stop()
 
   // Wait for streams to be closed (happens asynchronously)
-  await sleep(500)
+  await sleep(50)
 
   const peerConnections = Array.from(service.connectionManager.connections.entries())
   t.equal(peerConnections.length, 1, 'Service has only 1 peer with connections')

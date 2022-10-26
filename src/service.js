@@ -60,7 +60,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, logger
           // When the incoming duplex stream finishes sending, close for writing.
           // Note: we never write to this stream - responses are always sent on
           // another multiplexed stream.
-          // connection.on('end:receive', () => connection.close())
+          connection.on('end:receive', () => connection.close())
 
           connection.on('error', err => {
             logger.error({ err: serializeError(err), dial, stream, protocol }, 'Connection error')
@@ -101,8 +101,17 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, logger
     await service.start()
 
     logger.info(
-      { address: service.components.transportManager.getAddrs() },
-      `BitSwap peer started with PeerId ${service.peerId} and listening on port ${port} ...`
+      {
+        address: service.components.transportManager.getAddrs(),
+        peerId: service.peerId.toString(),
+        port
+      },
+      'BitSwap peer started'
+    )
+
+    logger.info(service.components.transportManager.getAddrs()
+      .map(a => `${a}/${service.peerId}`)
+      .join('\n')
     )
 
     return { service, port, peerId }

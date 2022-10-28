@@ -8,8 +8,8 @@
   "scripts": {
     "test": "NODE_OPTIONS=--loader=esmock NODE_NO_WARNINGS=1 c8 --reporter=text --reporter=html tap --rcfile=test/utils/config.yml",
     "test:ci": "npm run lint && NODE_OPTIONS=--loader=esmock NODE_NO_WARNINGS=1 c8 --reporter=text --reporter=json --check-coverage --branches 90 --functions 90 --lines 90 --statements 90 tap --rcfile=test/utils/config.yml",
-    "format": "eslint src test utils playground --fix",
-    "lint": "eslint src test utils playground"
+    "format": "eslint src test utils --fix",
+    "lint": "eslint src test utils"
   },
   "dependencies": {
     "@aws-sdk/client-sqs": "3.196.0",

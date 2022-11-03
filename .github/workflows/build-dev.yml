@@ -1,0 +1,13 @@
+---
+name: Dev | Build And Deploy 
+on:
+  workflow_dispatch:
+env:
+  REGISTRY: ghcr.io
+jobs:
+  build:
+    permissions:
+      packages: write
+    uses: elastic-ipfs/bitswap-peer/.github/workflows/shared-build.yaml@main
+    with:
+      docker_image_version_suffix_label: dev

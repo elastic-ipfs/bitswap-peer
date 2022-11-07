@@ -10,19 +10,3 @@ jobs:
     permissions:
       packages: write
     uses: elastic-ipfs/bitswap-peer/.github/workflows/shared-build.yaml@main
-  deploy-to-staging:
-    uses: elastic-ipfs/bitswap-peer/.github/workflows/shared-deploy.yaml@main
-    needs: build
-    with:
-      deploy_to_environment: staging
-      docker_image_version: ${{ needs.build.outputs.build_date }}
-    secrets:
-      deployment_personal_access_token: ${{ secrets.GH_TOKEN }}
-  deploy-to-prod:
-    uses: elastic-ipfs/bitswap-peer/.github/workflows/shared-deploy.yaml@main
-    needs: build
-    with:
-      deploy_to_environment: prod
-      docker_image_version: ${{ needs.build.outputs.build_date }}
-    secrets:
-      deployment_personal_access_token: ${{ secrets.GH_TOKEN }}

@@ -1,7 +1,8 @@
 ---
-name: Dev | Build And Deploy 
+name: Staging/Prod | Build
 on:
-  workflow_dispatch:
+  push:
+    branches: [main]
 env:
   REGISTRY: ghcr.io
 jobs:
@@ -9,5 +10,3 @@ jobs:
     permissions:
       packages: write
     uses: elastic-ipfs/bitswap-peer/.github/workflows/shared-build.yaml@main
-    with:
-      docker_image_version_suffix_label: dev

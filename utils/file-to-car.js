@@ -1,9 +1,7 @@
 #!/usr/bin/env node
 
-'use strict'
-
-const { packToFs } = require('ipfs-car/pack/fs')
-const { FsBlockStore } = require('ipfs-car/blockstore/fs')
+import { packToFs } from 'ipfs-car/pack/fs'
+import { FsBlockStore } from 'ipfs-car/blockstore/fs'
 
 packToFs({
   input: process.argv[2],

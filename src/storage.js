@@ -1,14 +1,20 @@
-'use strict'
 
-const LRUCache = require('mnemonist/lru-cache')
-const config = require('./config')
-const { logger, serializeError } = require('./logging')
-const { telemetry } = require('./telemetry')
+import { Agent as HttpsAgent } from 'https'
+import LRUCache from 'mnemonist/lru-cache.js'
+import config from './config.js'
+import { logger, serializeError } from './logging.js'
+import { telemetry } from './telemetry.js'
+
+// TODO when the v0 tables will not be used anymore, following dependencies will be removed
+import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs'
+import { NodeHttpHandler } from '@aws-sdk/node-http-handler'
+import LRU from 'lru-cache'
+// /TODO
 
 const blockInfoCache = config.cacheBlockInfo ? new LRUCache(config.cacheBlockInfoSize) : null
 const blockDataCache = config.cacheBlockData ? new LRUCache(config.cacheBlockDataSize) : null
 
-async function searchCarInDynamoV1({
+async function searchCarInDynamoV1 ({
   awsClient,
   table = config.linkTableV1,
   keyName = config.linkTableBlockKey,
@@ -44,7 +50,7 @@ async function searchCarInDynamoV1({
 /**
  * this function will be removed after the migration will be completed
  */
-async function searchCarInDynamoV0({
+async function searchCarInDynamoV0 ({
   awsClient,
   table = config.blocksTable,
   keyName = config.blocksTablePrimaryKey,
@@ -71,7 +77,7 @@ async function searchCarInDynamoV0({
 /**
  * content will be appended to each block
  */
-async function fetchBlocksData({ blocks, logger, awsClient }) {
+async function fetchBlocksData ({ blocks, logger, awsClient }) {
   // load blocks info to get offset and length
   await fetchBlocksInfo({ blocks, logger, awsClient })
 
@@ -79,7 +85,7 @@ async function fetchBlocksData({ blocks, logger, awsClient }) {
     .map(block => fetchBlockData({ block, logger, awsClient })))
 }
 
-async function fetchBlockData({ block, logger, awsClient }) {
+async function fetchBlockData ({ block, logger, awsClient }) {
   if (block.cancel) {
     telemetry.increaseCount('bitswap-block-data-canceled')
     return
@@ -137,12 +143,12 @@ async function fetchBlockData({ block, logger, awsClient }) {
 /**
  * info will be appended to each block
  */
-async function fetchBlocksInfo({ blocks, logger, awsClient }) {
+async function fetchBlocksInfo ({ blocks, logger, awsClient }) {
   await Promise.allSettled(blocks
     .map(block => fetchBlockInfo({ block, logger, awsClient })))
 }
 
-async function fetchBlockInfo({ block, logger, awsClient }) {
+async function fetchBlockInfo ({ block, logger, awsClient }) {
   if (block.cancel) {
     telemetry.increaseCount('bitswap-block-info-canceled')
     return
@@ -181,15 +187,6 @@ async function fetchBlockInfo({ block, logger, awsClient }) {
   telemetry.increaseCount('bitswap-block-info-misses')
 }
 
-// --- temporary solution to lazy recover missing car files
-// will send to the indexer queue the missing car file, using the list to avoid to send the same car multiple times
-// TODO when the v0 tables will not be used anymore, following dependencies will be removed
-
-const { SQSClient, SendMessageCommand } = require('@aws-sdk/client-sqs')
-const { NodeHttpHandler } = require('@aws-sdk/node-http-handler')
-const LRU = require('lru-cache')
-const { Agent: HttpsAgent } = require('https')
-
 const recovering = new LRU({
   ttl: 12 * 60 * 60 * 1000, // 12 h in ms
   ttlResolution: 10e3, // ttl check rate 10 s
@@ -199,7 +196,11 @@ const sqsClient = new SQSClient({
   requestHandler: new NodeHttpHandler({ httpsAgent: new HttpsAgent({ keepAlive: true, keepAliveMsecs: 60000 }) })
 })
 
-async function recoverV0Tables(car, queue = 'indexer-topic') {
+// --- temporary solution to lazy recover missing car files
+// will send to the indexer queue the missing car file, using the list to avoid to send the same car multiple times
+// TODO when the v0 tables will not be used anymore, following dependencies will be removed
+
+async function recoverV0Tables (car, queue = 'indexer-topic') {
   try {
     if (recovering.has(car)) { return }
     logger.info({ car }, 'recovering car')
@@ -212,7 +213,7 @@ async function recoverV0Tables(car, queue = 'indexer-topic') {
   }
 }
 
-module.exports = {
+export {
   fetchBlocksData,
   fetchBlocksInfo,
   fetchBlockData,

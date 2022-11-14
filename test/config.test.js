@@ -1,8 +1,6 @@
-'use strict'
 
-const t = require('tap')
-
-const config = require('../src/config')
+import t from 'tap'
+import config from '../src/config.js'
 
 t.test('config - defaults', async t => {
   t.same(config, {
@@ -25,7 +23,7 @@ t.test('config - defaults', async t => {
     linkTableCarKey: 'carpath',
     enableKeepAlive: true,
     pingPeriodSecs: 10,
-    awsClientRefreshCredentialsInterval: 3000000,
+    awsClientRefreshCredentialsInterval: 600000,
     awsClientKeepAliveTimeout: 60000,
     awsClientConnectTimeout: 120000,
     awsClientConcurrency: 128,

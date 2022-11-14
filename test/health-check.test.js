@@ -1,9 +1,8 @@
-'use strict'
 
-const t = require('tap')
+import t from 'tap'
 
-const { checkReadiness } = require('../src/health-check')
-const helper = require('./utils/helper')
+import { checkReadiness } from '../src/health-check.js'
+import * as helper from './utils/helper.js'
 
 t.test('checkReadiness', async t => {
   const readiness = {

@@ -1,15 +1,12 @@
-'use strict'
 
-require('make-promises-safe')
+import { logger, serializeError } from './logging.js'
+import config from './config.js'
+import { startService } from './service.js'
+import { createAwsClient } from './aws-client/index.js'
+import { httpServer } from './http-server.js'
+import { getPeerId } from './peer-id.js'
 
-const { logger, serializeError } = require('./logging')
-const { startService } = require('./service')
-const { createAwsClient } = require('./aws-client')
-const { httpServer } = require('./http-server')
-const { getPeerId } = require('./peer-id')
-const config = require('./config')
-
-async function boot() {
+async function boot () {
   try {
     const awsClient = await createAwsClient(config, logger)
 

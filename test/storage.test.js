@@ -1,14 +1,13 @@
-'use strict'
+
+import t from 'tap'
+import config from '../src/config.js'
+
+import { searchCarInDynamoV0, searchCarInDynamoV1, fetchBlocksData, fetchBlocksInfo } from '../src/storage.js'
+import { mockDynamoQuery, mockDynamoItem, mockAwsClient, createMockAgent, mockBlockInfoSource, mockBlockDataSource } from './utils/mock.js'
+import { dummyLogger } from './utils/helper.js'
 
 process.env.LOG_LEVEL = 'fatal'
 process.env.AWS_REGION = 'region'
-
-const t = require('tap')
-const config = require('../src/config')
-
-const { searchCarInDynamoV0, searchCarInDynamoV1, fetchBlocksData, fetchBlocksInfo } = require('../src/storage')
-const { mockDynamoQuery, mockDynamoItem, mockAwsClient, createMockAgent, mockBlockInfoSource, mockBlockDataSource } = require('./utils/mock')
-const { dummyLogger } = require('./utils/helper')
 
 t.test('searchCarInDynamoV0', async t => {
   t.test('get result', async t => {

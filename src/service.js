@@ -1,84 +1,80 @@
-'use strict'
 
-const { Noise } = require('@web3-storage/libp2p-noise')
-const libp2p = require('libp2p')
-const Multiplex = require('libp2p-mplex')
-const Websockets = require('libp2p-websockets')
+import { createLibp2p } from 'libp2p'
+import { webSockets } from '@libp2p/websockets'
+import { noise } from '@chainsafe/libp2p-noise'
+import { mplex } from '@libp2p/mplex'
 
-const { enableKeepAlive } = require('./config')
-const { logger: defaultLogger, serializeError } = require('./logging')
-const { Message, protocols } = require('./protocol')
-const { Connection } = require('./networking')
-const { noiseCrypto } = require('./noise-crypto')
-const { startKeepAlive, stopKeepAlive } = require('./p2p-keep-alive.js')
-const { handle, createContext } = require('./handler')
-const { telemetry } = require('./telemetry')
-const inspect = require('./inspect')
+import { noiseCrypto } from './noise-crypto.js'
+import config from './config.js'
+import { Message, protocols } from './protocol.js'
+import { Connection } from './networking.js'
+import { startKeepAlive, stopKeepAlive } from './p2p-keep-alive.js'
+import { handle, createContext } from './handler.js'
+import { telemetry } from './telemetry.js'
+import { logger as defaultLogger, serializeError } from './logging.js'
+import inspect from './inspect/index.js'
 
-async function startService({ peerId, port, peerAnnounceAddr, awsClient, logger = defaultLogger } = {}) {
+async function startService ({ peerId, port, peerAnnounceAddr, awsClient, logger = defaultLogger } = {}) {
   try {
     // TODO params validation
 
-    const service = await libp2p.create({
+    const service = await createLibp2p({
       peerId,
       addresses: {
         listen: [`/ip4/0.0.0.0/tcp/${port}/ws`],
         announce: peerAnnounceAddr ? [peerAnnounceAddr] : undefined
       },
-      modules: {
-        transport: [Websockets],
-        streamMuxer: [Multiplex],
-        connEncryption: [new Noise(null, null, noiseCrypto)]
-      }
+      transports: [webSockets()],
+      connectionEncryption: [noise({ crypto: noiseCrypto })],
+      streamMuxers: [mplex()]
     })
 
-    service.on('error', err => {
+    service.addEventListener('error', err => {
       logger.warn({ err }, `libp2p error: ${serializeError(err)}`)
     })
 
-    service.handle(protocols, async ({ connection: dial, stream, protocol }) => {
-      try {
-        const connection = new Connection(stream)
+    for (const protocol of protocols) {
+      service.handle(protocol, async ({ connection: dial, stream }) => {
+        try {
+          const connection = new Connection(stream)
 
-        // Open a send connection to the peer
-        connection.on('data', data => {
-          let message
+          // Open a send connection to the peer
+          connection.on('data', data => {
+            let message
 
-          try {
-            message = Message.decode(data, protocol)
-          } catch (err) {
-            logger.warn({ err: serializeError(err) }, 'Cannot decode received data')
-            service.emit('error:receive', err)
-            return
-          }
+            try {
+              message = Message.decode(data, protocol)
+            } catch (err) {
+              logger.warn({ err: serializeError(err) }, 'Cannot decode received data')
+              return
+            }
 
-          try {
-            const context = createContext({ service, peerId: dial.remotePeer, protocol, wantlist: message.wantlist, awsClient })
-            process.nextTick(handle, { context, logger })
-          } catch (err) {
-            logger.error({ err: serializeError(err) }, 'Error creating context')
-          }
-        })
+            try {
+              const context = createContext({ service, peerId: dial.remotePeer, protocol, wantlist: message.wantlist, awsClient })
+              process.nextTick(handle, { context, logger })
+            } catch (err) {
+              logger.error({ err: serializeError(err) }, 'Error creating context')
+            }
+          })
 
-        // When the incoming duplex stream finishes sending, close for writing.
-        // Note: we never write to this stream - responses are always sent on
-        // another multiplexed stream.
-        // connection.on('end:receive', () => connection.close())
+          // When the incoming duplex stream finishes sending, close for writing.
+          // Note: we never write to this stream - responses are always sent on
+          // another multiplexed stream.
+          connection.on('end:receive', () => connection.close())
 
-        connection.on('error', err => {
-          logger.error({ err: serializeError(err), dial, stream, protocol }, 'Connection error')
-          // TODO remove unlistened events
-          service.emit('error:connection', err)
-        })
-      } catch (err) {
-        logger.error({ err: serializeError(err), dial, stream, protocol }, 'Error while creating connection')
-      }
-    })
+          connection.on('error', err => {
+            logger.error({ err: serializeError(err), dial, stream, protocol }, 'Connection error')
+          })
+        } catch (err) {
+          logger.error({ err: serializeError(err), dial, stream, protocol }, 'Error while creating connection')
+        }
+      })
+    }
 
     // TODO move to networking
-    service.connectionManager.on('peer:connect', connection => {
+    service.connectionManager.addEventListener('peer:connect', connection => {
       try {
-        if (enableKeepAlive) { startKeepAlive(connection.remotePeer, service) }
+        if (config.enableKeepAlive) { startKeepAlive(connection.remotePeer, service) }
         telemetry.increaseCount('bitswap-total-connections')
         inspect.metrics.increase('connections')
       } catch (err) {
@@ -87,9 +83,9 @@ async function startService({ peerId, port, peerAnnounceAddr, awsClient, logger 
     })
 
     // TODO move to networking
-    service.connectionManager.on('peer:disconnect', connection => {
+    service.connectionManager.addEventListener('peer:disconnect', connection => {
       try {
-        if (enableKeepAlive) { stopKeepAlive(connection.remotePeer) }
+        if (config.enableKeepAlive) { stopKeepAlive(connection.remotePeer) }
         telemetry.decreaseCount('bitswap-total-connections')
         inspect.metrics.decrease('connections')
       } catch (err) {
@@ -98,21 +94,31 @@ async function startService({ peerId, port, peerAnnounceAddr, awsClient, logger 
     })
 
     // TODO move to networking
-    service.connectionManager.on('error', err => {
+    service.connectionManager.addEventListener('error', err => {
       logger.error({ err }, `libp2p connectionManager.error: ${serializeError(err)}`)
     })
 
     await service.start()
 
     logger.info(
-      { address: service.transportManager.getAddrs() },
-      `BitSwap peer started with PeerId ${service.peerId} and listening on port ${port} ...`
+      {
+        address: service.components.transportManager.getAddrs(),
+        peerId: service.peerId.toString(),
+        port
+      },
+      'BitSwap peer started'
+    )
+
+    logger.info(service.components.transportManager.getAddrs()
+      .map(a => `${a}/${service.peerId}`)
+      .join('\n')
     )
 
     return { service, port, peerId }
   } catch (err) {
-    logger.error({ err: serializeError(err) }, 'Generic error on service')
+    logger.error({ err: serializeError(err) }, 'error on start service')
+    throw err
   }
 }
 
-module.exports = { startService }
+export { startService }

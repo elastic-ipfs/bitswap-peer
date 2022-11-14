@@ -1,27 +1,26 @@
-'use strict'
+
+import t from 'tap'
+import sinon from 'sinon'
+import { CID } from 'multiformats/cid'
+
+import config from '../src/config.js'
+import { BITSWAP_V_120, Entry, BlockPresence, WantList } from '../src/protocol.js'
+
+import { handle, createContext } from '../src/handler.js'
+import { cidToKey } from '../src/util.js'
+
+import { cid1, cid2, cid3, cid4, cid5, cid6, cid7, cid8, cid9 } from './fixtures/cids.js'
+import * as helper from './utils/helper.js'
+import { mockBlockInfoSource, mockBlockDataSource, createMockAgent, mockAwsClient } from './utils/mock.js'
 
 process.env.CACHE_BLOCK_INFO = 'true'
 process.env.CACHE_BLOCK_DATA = 'true'
 
-const t = require('tap')
-const sinon = require('sinon')
-const { CID } = require('multiformats/cid')
-
-const config = require('../src/config')
-const { BITSWAP_V_120, Entry, WantList } = require('../src/protocol')
-
-const { handle, createContext } = require('../src/handler')
-const { cidToKey } = require('../src/util')
-
-const { cid1, cid2, cid3, cid4, cid5, cid6, cid7, cid8, cid9 } = require('./fixtures/cids')
-const helper = require('./utils/helper')
-const { mockBlockInfoSource, mockBlockDataSource, createMockAgent, mockAwsClient } = require('./utils/mock')
-
-function dummyPeer(id = 'the-dummy-peer-id') {
-  return { _idB58String: id }
+function dummyPeer (id = 'the-dummy-peer-id') {
+  return { string: id }
 }
 
-async function spyContext({ blocks, protocol = BITSWAP_V_120, peerId }) {
+async function spyContext ({ blocks, protocol = BITSWAP_V_120, peerId }) {
   const service = {
     dial: async () => ({
       newStream: async () => ({ stream: null })
@@ -39,6 +38,27 @@ async function spyContext({ blocks, protocol = BITSWAP_V_120, peerId }) {
   awsClient.agent = createMockAgent()
   const context = createContext({ awsClient, service, peerId: peer, wantlist: new WantList(blocks), protocol, connection: connectionSpy })
   return context
+}
+
+function mergeResponses (responses) {
+  return responses.reduce((response, r) => {
+    if (!response) { return r }
+    response.blocksInfo = response.blocksInfo.concat(r.blocksInfo)
+    response.blocksData = response.blocksData.concat(r.blocksData)
+    return response
+  })
+}
+
+function responseContainsInfo (response, cid, type) {
+  return response.blocksInfo.find(b => {
+    return b.key === cidToKey(cid) && b.type === type
+  })
+}
+
+function responseContainsData (response, block) {
+  return response.blocksData.find(b => {
+    return b.cid === block.cid && b.data === block.data
+  })
 }
 
 t.test('handle', async t => {
@@ -207,69 +227,68 @@ t.test('handle', async t => {
 
     t.equal(connectionsSpy[0].send.callCount, 2)
     t.equal(connectionsSpy[0].close.callCount, 1, 'should close the peer connection')
-
-    // TODO fix response order is not strict, next assertions may fails because of response order
+    t.equal(connectionsSpy[1].send.callCount, 2)
+    t.equal(connectionsSpy[1].close.callCount, 1, 'should close the peer connection')
+    t.equal(connectionsSpy[2].send.callCount, 2)
+    t.equal(connectionsSpy[2].close.callCount, 1, 'should close the peer connection')
 
     // first response
 
-    let sent = helper.decodeMessage(connectionsSpy[0].send.args[0][0])
-    t.equal(sent.blocksInfo.length, 1)
-    t.ok(sent.blocksInfo.find(b => b.key === cidToKey(cid1) && b.type === 0)) // cid1 found
-    t.same(sent.blocksData, [{
-      cid: 'bafybeiey33y4jzylufvxqhcjliju72wzarrovx3fpqweuqhjjfdrkklegq', // cid2 data
+    { const response = mergeResponses([
+      helper.decodeMessage(connectionsSpy[0].send.args[0][0]),
+      helper.decodeMessage(connectionsSpy[0].send.args[1][0])
+    ])
+
+    t.equal(response.blocksInfo.length, 3)
+    t.equal(response.blocksData.length, 1)
+
+    t.ok(responseContainsInfo(response, cid1, BlockPresence.Type.Have))
+    t.ok(responseContainsInfo(response, cid3, BlockPresence.Type.DontHave))
+    t.ok(responseContainsInfo(response, cid4, BlockPresence.Type.DontHave))
+    t.ok(responseContainsData(response, {
+      cid: 'bafybeiey33y4jzylufvxqhcjliju72wzarrovx3fpqweuqhjjfdrkklegq',
       data: 'cid2-content'
-    }])
-
-    sent = helper.decodeMessage(connectionsSpy[0].send.args[1][0])
-    t.equal(sent.blocksInfo.length, 2)
-    t.ok(sent.blocksInfo.find(b => b.key === cidToKey(cid3) && b.type === 1)) // cid3 not found
-    t.ok(sent.blocksInfo.find(b => b.key === cidToKey(cid4) && b.type === 1)) // cid4 not found
-    t.same(sent.blocksData, [])
-
+    }))
+    }
     // second response
 
-    t.equal(connectionsSpy[1].send.callCount, 2)
-    t.equal(connectionsSpy[1].close.callCount, 1, 'should close the peer connection')
-    sent = helper.decodeMessage(connectionsSpy[1].send.args[0][0])
-    t.same(sent, {
-      blocksInfo: [{ key: cidToKey(cid6), type: 0 }], // cid6 found
-      blocksData: []
-    })
-    sent = helper.decodeMessage(connectionsSpy[1].send.args[1][0])
-    t.same(sent, {
-      blocksInfo: [{ key: cidToKey(cid4), type: 1 }], // cid4 not found
-      blocksData: [
-        {
-          cid: 'bafkreifgrc4fuyblvxr62zcupvlkn6kd6e463slt3bc2ykewake7mxlpk4', // cid5 data
-          data: 'cid5-content'
-        }
-      ]
-    })
+    { const response = mergeResponses([
+      helper.decodeMessage(connectionsSpy[1].send.args[0][0]),
+      helper.decodeMessage(connectionsSpy[1].send.args[1][0])
+    ])
+
+    t.equal(response.blocksInfo.length, 2)
+    t.equal(response.blocksData.length, 1)
+
+    t.ok(responseContainsInfo(response, cid6, BlockPresence.Type.Have))
+    t.ok(responseContainsInfo(response, cid4, BlockPresence.Type.DontHave))
+    t.ok(responseContainsData(response, {
+      cid: 'bafkreifgrc4fuyblvxr62zcupvlkn6kd6e463slt3bc2ykewake7mxlpk4',
+      data: 'cid5-content'
+    }))
+    }
 
     // third response
 
-    t.equal(connectionsSpy[2].send.callCount, 2)
-    t.equal(connectionsSpy[2].close.callCount, 1, 'should close the peer connection')
-    sent = helper.decodeMessage(connectionsSpy[2].send.args[0][0])
-    t.same(sent, {
-      blocksInfo: [{ key: cidToKey(cid7), type: 0 }], // cid7 found
-      blocksData: [
-        {
-          cid: 'bafkreihtgll4nt4euynqnkjrg3vclmmmvo7srby4qul6pc4uiiayorplmu', // cid8 data
-          data: 'cid8-content'
-        }
-      ]
-    })
-    sent = helper.decodeMessage(connectionsSpy[2].send.args[1][0])
-    t.same(sent, {
-      blocksInfo: [{ key: cidToKey(cid9), type: 0 }], // cid9 found
-      blocksData: [
-        {
-          cid: 'bafkreia6rl74tk7lwetxgol4pjbknva4474ecxkx7vlhviz7xpsfascqhu', // cid1 data
-          data: 'cid1-content'
-        }
-      ]
-    })
+    { const response = mergeResponses([
+      helper.decodeMessage(connectionsSpy[2].send.args[0][0]),
+      helper.decodeMessage(connectionsSpy[2].send.args[1][0])
+    ])
+
+    t.equal(response.blocksInfo.length, 2)
+    t.equal(response.blocksData.length, 2)
+
+    t.ok(responseContainsInfo(response, cid7, BlockPresence.Type.Have))
+    t.ok(responseContainsInfo(response, cid9, BlockPresence.Type.Have))
+    t.ok(responseContainsData(response, {
+      cid: 'bafkreihtgll4nt4euynqnkjrg3vclmmmvo7srby4qul6pc4uiiayorplmu',
+      data: 'cid8-content'
+    }))
+    t.ok(responseContainsData(response, {
+      cid: 'bafkreia6rl74tk7lwetxgol4pjbknva4474ecxkx7vlhviz7xpsfascqhu',
+      data: 'cid1-content'
+    }))
+    }
 
     t.equal(loggerSpy.messages.error.length, 2)
     t.equal(loggerSpy.messages.error[0][1], 'invalid block cid')

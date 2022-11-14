@@ -1,10 +1,8 @@
 #!/usr/bin/env node
 
-'use strict'
-
-const { base58btc: base58 } = require('multiformats/bases/base58')
-const { CID } = require('multiformats/cid')
-const { decode: digestDecode } = require('multiformats/hashes/digest')
+import { base58btc as base58 } from 'multiformats/bases/base58'
+import { CID } from 'multiformats/cid'
+import { decode as digestDecode } from 'multiformats/hashes/digest'
 
 const digest = digestDecode(base58.decode(process.argv[2]))
 const codec = parseInt(process.argv[3])

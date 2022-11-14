@@ -30,8 +30,6 @@ _Variables in bold are required._
 | S3_MAX_RETRIES        | 3             | S3 max attempts in case of failure.                                      |
 | S3_RETRY_DELAY        | 500           | S3 delay between attempts in case of failure, in milliseconds.           |
 | ENV_FILE_PATH         | `$PWD/.env`   | The environment file to load.                                            |
-| NODE_DEBUG            |               | If it contains `aws-ipfs`, debug mode is enabled.                        |
-| NODE_ENV              |               | Set to `production` to disable pretty logging.                           |
 | PEER_ID_DIRECTORY     | `/tmp`        | The directory of the file containing the BitSwap PeerID in JSON format.  |
 | PEER_ID_FILE          | `peerId.json` | The filename of the file containing the BitSwap PeerID in JSON format.   |
 | PEER_ID_S3_REGION     | `$AWS_REGION` | The S3 region to download the BitSwap PeerID. |
@@ -42,6 +40,9 @@ _Variables in bold are required._
 | PORT                  | `3000`        | The port number to listen on.                                            |
 | TELEMETRY_PORT        | `3001`        | The telemetry port number for the OpenTelemetry server to listen on.     |
 | ALLOW_INSPECTION      | `false`       | Allow inspection functionalities - for dev and testing only. |
+| NODE_DEBUG            |               | If it contains `aws-ipfs`, debug mode is enabled.                        |
+| LOG_LEVEL            | `info` | Logging level. |
+| LOG_PRETTY            | `false` | Enable pretty logging. |
 
 Also check [AWS specifics configuration](https://github.com/elastic-ipfs/elastic-ipfs/blob/main/aws.md).
 

@@ -1,8 +1,7 @@
-'use strict'
 
-const { serializeError } = require('./logging')
+import { serializeError } from './logging.js'
 
-async function checkReadiness({ awsClient, readiness, logger }) {
+async function checkReadiness ({ awsClient, readiness, logger }) {
   try {
     await Promise.all([
       awsClient.dynamoQueryBySortKey({
@@ -23,4 +22,4 @@ async function checkReadiness({ awsClient, readiness, logger }) {
   }
 }
 
-module.exports = { checkReadiness }
+export { checkReadiness }

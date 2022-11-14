@@ -1,102 +1,56 @@
-'use strict'
 
-const { join, resolve } = require('path')
+import path from 'path'
+import dotenv from 'dotenv'
 
-require('dotenv').config({ path: process.env.ENV_FILE_PATH || resolve(process.cwd(), '.env') })
+dotenv.config({ path: process.env.ENV_FILE_PATH || path.resolve(process.cwd(), '.env') })
 
-const {
-  MAX_BLOCK_DATA_SIZE: maxBlockDataSize,
-  MAX_MESSAGE_SIZE: maxMessageSize,
+const config = {
+  maxBlockDataSize: process.env.MAX_BLOCK_DATA_SIZE ? parseInt(process.env.MAX_BLOCK_DATA_SIZE) : 2 * 1024 * 1024, // 2 MB
+  maxMessageSize: process.env.MAX_MESSAGE_SIZE ? parseInt(process.env.MAX_MESSAGE_SIZE) : 4 * 1024 * 1024, // 4 MB
+  blocksBatchSize: process.env.BLOCKS_BATCH_SIZE ? parseInt(process.env.BLOCKS_BATCH_SIZE) : 256,
 
-  BLOCKS_BATCH_SIZE: blocksBatchSize,
+  blocksTable: process.env.BLOCKS_TABLE ?? 'blocks',
+  cacheBlockInfo: process.env.CACHE_BLOCK_INFO === 'true',
+  cacheBlockInfoSize: process.env.CACHE_BLOCK_INFO_SIZE ? parseInt(process.env.CACHE_BLOCK_INFO_SIZE) : 1e3,
 
-  CACHE_BLOCK_INFO: cacheBlockInfo,
-  CACHE_BLOCK_INFO_SIZE: cacheBlockInfoSize,
+  cacheBlockData: process.env.CACHE_BLOCK_DATA === 'true',
+  cacheBlockDataSize: process.env.CACHE_BLOCK_DATA_SIZE ? parseInt(process.env.CACHE_BLOCK_DATA_SIZE) : 1e3,
 
-  CACHE_BLOCK_DATA: cacheBlockData,
-  CACHE_BLOCK_DATA_SIZE: cacheBlockDataSize,
-
-  AWS_CLIENT_REFRESH_CREDENTIALS_INTERVAL: awsClientRefreshCredentialsInterval,
-  AWS_CLIENT_CONCURRENCY: awsClientConcurrency,
-  AWS_CLIENT_PIPELINING: awsClientPipelining,
-  AWS_CLIENT_KEEP_ALIVE_TIMEOUT: awsClientKeepAliveTimeout,
-  AWS_CLIENT_CONNECT_TIMEOUT: awsClientConnectTimeout,
-  AWS_ROLE_SESSION_NAME: awsRoleSessionName,
-
-  DYNAMO_REGION: dynamoRegion,
-  DYNAMO_BLOCKS_TABLE: blocksTable,
-  DYNAMO_CARS_TABLE: carsTable,
-  DYNAMO_BLOCKS_TABLE_V1: blocksTableV1,
-  DYNAMO_CARS_TABLE_V1: carsTableV1,
-  DYNAMO_LINK_TABLE_V1: linkTableV1,
-
-  PEER_ID_DIRECTORY: peerIdJsonDirectory,
-  PEER_ID_FILE: peerIdJsonFile,
-  PEER_ID_S3_REGION: peerIdS3Region,
-  PEER_ID_S3_BUCKET: peerIdS3Bucket,
-  PEER_ANNOUNCE_ADDR: peerAnnounceAddr,
-  PORT: rawPort,
-  HTTP_PORT: rawHttpPort,
-
-  ENABLE_KEEP_ALIVE: enableKeepAlive,
-  PING_PERIOD_SECONDS: pingPeriodSecs,
-
-  DYNAMO_MAX_RETRIES: dynamoMaxRetries,
-  DYNAMO_RETRY_DELAY: dynamoRetryDelay,
-  S3_MAX_RETRIES: s3MaxRetries,
-  S3_RETRY_DELAY: s3RetryDelay,
-
-  ALLOW_INSPECTION: allowInspection
-} = process.env
-
-const port = parseInt(rawPort)
-const httpPort = parseInt(rawHttpPort)
-
-module.exports = {
-  maxBlockDataSize: maxBlockDataSize ? parseInt(maxBlockDataSize) : 2 * 1024 * 1024, // 2 MB
-  maxMessageSize: maxMessageSize ? parseInt(maxMessageSize) : 4 * 1024 * 1024, // 4 MB
-  blocksBatchSize: blocksBatchSize ? parseInt(blocksBatchSize) : 256,
-
-  blocksTable: blocksTable ?? 'blocks',
-  cacheBlockInfo: cacheBlockInfo === 'true',
-  cacheBlockInfoSize: cacheBlockInfoSize ? parseInt(cacheBlockInfoSize) : 1e3,
-
-  cacheBlockData: cacheBlockData === 'true',
-  cacheBlockDataSize: cacheBlockDataSize ? parseInt(cacheBlockDataSize) : 1e3,
-
-  dynamoRegion: dynamoRegion ?? process.env.AWS_REGION,
-  carsTable: carsTable ?? 'cars',
-  blocksTableV1: blocksTableV1 ?? 'v1-blocks',
-  carsTableV1: carsTableV1 ?? 'v1-cars',
-  linkTableV1: linkTableV1 ?? 'v1-blocks-cars-position',
+  dynamoRegion: process.env.DYNAMO_REGION ?? process.env.AWS_REGION,
+  carsTable: process.env.DYNAMO_CARS_TABLE ?? 'cars',
+  blocksTableV1: process.env.DYNAMO_BLOCKS_TABLE_V1 ?? 'v1-blocks',
+  carsTableV1: process.env.DYNAMO_CARS_TABLE_V1 ?? 'v1-cars',
+  linkTableV1: process.env.DYNAMO_LINK_TABLE_V1 ?? 'v1-blocks-cars-position',
 
   blocksTablePrimaryKey: 'multihash',
   carsTablePrimaryKey: 'path',
   linkTableBlockKey: 'blockmultihash',
   linkTableCarKey: 'carpath',
 
-  enableKeepAlive: enableKeepAlive !== 'false',
-  pingPeriodSecs: pingPeriodSecs ?? 10,
+  enableKeepAlive: process.env.ENABLE_KEEP_ALIVE !== 'false',
+  pingPeriodSecs: process.env.PING_PERIOD_SECONDS ?? 10,
 
-  awsClientRefreshCredentialsInterval: awsClientRefreshCredentialsInterval ?? 50 * 60e3, // 50 min
-  awsClientKeepAliveTimeout: awsClientKeepAliveTimeout ? parseInt(awsClientKeepAliveTimeout) : 60e3, // 1min
-  awsClientConnectTimeout: awsClientConnectTimeout ? parseInt(awsClientConnectTimeout) : 120e3, // 2min
-  awsClientConcurrency: awsClientConcurrency ? parseInt(awsClientConcurrency) : 128,
-  awsClientPipelining: awsClientPipelining ? parseInt(awsClientPipelining) : 8,
-  awsRoleSessionName: awsRoleSessionName ?? 'bitswap-peer',
+  awsClientRefreshCredentialsInterval: process.env.AWS_CLIENT_REFRESH_CREDENTIALS_INTERVAL ?? 10 * 60e3, // 10 min
+  awsClientKeepAliveTimeout: process.env.AWS_CLIENT_KEEP_ALIVE_TIMEOUT ? parseInt(process.env.AWS_CLIENT_KEEP_ALIVE_TIMEOUT) : 60e3, // 1min
+  awsClientConnectTimeout: process.env.AWS_CLIENT_CONNECT_TIMEOUT ? parseInt(process.env.AWS_CLIENT_CONNECT_TIMEOUT) : 120e3, // 2min
+  awsClientConcurrency: process.env.AWS_CLIENT_CONCURRENCY ? parseInt(process.env.AWS_CLIENT_CONCURRENCY) : 128,
+  awsClientPipelining: process.env.AWS_CLIENT_PIPELINING ? parseInt(process.env.AWS_CLIENT_PIPELINING) : 8,
+  awsRoleSessionName: process.env.AWS_ROLE_SESSION_NAME ?? 'bitswap-peer',
 
-  peerIdJsonFile,
-  peerIdJsonPath: join(peerIdJsonDirectory ?? '/tmp', peerIdJsonFile ?? 'peerId.json'),
-  peerIdS3Bucket,
-  peerIdS3Region: peerIdS3Region ?? process.env.AWS_REGION,
+  peerIdJsonFile: process.env.PEER_ID_FILE,
+  peerIdJsonPath: path.join(process.env.PEER_ID_DIRECTORY ?? '/tmp', process.env.PEER_ID_FILE ?? 'peerId.json'),
+  peerIdS3Bucket: process.env.PEER_ID_S3_BUCKET,
+  peerIdS3Region: process.env.PEER_ID_S3_REGION ?? process.env.AWS_REGION,
 
-  peerAnnounceAddr,
-  port: !isNaN(port) && port > 0 ? port : 3000,
-  httpPort: !isNaN(httpPort) && httpPort > 0 ? httpPort : 3001,
-  dynamoMaxRetries: dynamoMaxRetries ? parseInt(dynamoMaxRetries) : 3,
-  dynamoRetryDelay: dynamoRetryDelay ? parseInt(dynamoRetryDelay) : 100, // ms
-  s3MaxRetries: s3MaxRetries ? parseInt(s3MaxRetries) : 3,
-  s3RetryDelay: s3RetryDelay ? parseInt(s3RetryDelay) : 100, // ms
+  peerAnnounceAddr: process.env.PEER_ANNOUNCE_ADDR,
+  port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
+  httpPort: process.env.HTTP_PORT ? parseInt(process.env.PORT) : 3001,
+  dynamoMaxRetries: process.env.DYNAMO_MAX_RETRIES ? parseInt(process.env.DYNAMO_MAX_RETRIES) : 3,
+  dynamoRetryDelay: process.env.DYNAMO_RETRY_DELAY ? parseInt(process.env.DYNAMO_RETRY_DELAY) : 100, // ms
+  s3MaxRetries: process.env.S3_MAX_RETRIES ? parseInt(process.env.S3_MAX_RETRIES) : 3,
+  s3RetryDelay: process.env.S3_RETRY_DELAY ? parseInt(process.env.S3_RETRY_DELAY) : 100, // ms
 
-  allowInspection: allowInspection === 'true'
+  allowInspection: process.env.ALLOW_INSPECTION === 'true'
 }
+
+export default config

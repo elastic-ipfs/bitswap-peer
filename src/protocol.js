@@ -1,10 +1,12 @@
-'use strict'
 
-const { CID } = require('multiformats/cid')
-const { loadSync } = require('protobufjs')
-const { join } = require('path')
+import { default as protobuf } from 'protobufjs'
+import path from 'path'
 
-const definitions = loadSync(join(__dirname, '../bitswap.proto'))
+import { dirname } from '../src/util.js'
+import { logger, serializeError } from '../src/logging.js'
+import { CID } from 'multiformats/cid'
+
+const definitions = protobuf.loadSync(path.join(dirname(import.meta.url), '../bitswap.proto'))
 const RawWantlist = definitions.lookupType('Message.Wantlist')
 const RawWantType = definitions.lookupEnum('Message.WantType')
 const RawEntry = definitions.lookupType('Message.Entry')
@@ -12,8 +14,6 @@ const RawBlock = definitions.lookupType('Message.Block')
 const RawBlockPresenceType = definitions.lookupEnum('Message.BlockPresenceType')
 const RawBlockPresence = definitions.lookupType('Message.BlockPresence')
 const RawMessage = definitions.lookupType('Message')
-
-const { logger, serializeError } = require('../src/logging')
 
 const maxPriority = Math.pow(2, 31) - 1
 
@@ -50,7 +50,7 @@ const newPresenceOverhead = 1 + 1 + 1 + 1
 const EMPTY_MESSAGE_OVERHEAD_SIZE = 16 // 16 = Message.encode(BITSWAP_V_120).length + nonEmptyOverhead on empty message
 
 class Entry {
-  constructor(cid, priority, cancel, wantType, sendDontHave) {
+  constructor (cid, priority, cancel, wantType, sendDontHave) {
     this.cid = cid
     // TODO implement priority?
     this.priority = priority
@@ -76,7 +76,7 @@ class Entry {
     }
   }
 
-  static fromRaw(raw, protocol) {
+  static fromRaw (raw, protocol) {
     let wantType = raw.wantType
     let sendDontHave = raw.sendDontHave
     let cid = CID.decode(raw.block)
@@ -90,7 +90,7 @@ class Entry {
     return new Entry(cid, raw.priority, raw.cancel, wantType, sendDontHave)
   }
 
-  serialize(protocol) {
+  serialize (protocol) {
     const { cid, priority, cancel, wantType, sendDontHave } = this
 
     if (protocol === BITSWAP_V_100 || protocol === BITSWAP_V_110) {
@@ -110,38 +110,38 @@ class Entry {
     }
   }
 
-  encode(protocol) {
+  encode (protocol) {
     return RawEntry.encode(this.serialize(protocol)).finish()
   }
 }
 
 class WantList {
-  constructor(entries, full = false) {
+  constructor (entries, full = false) {
     this.entries = entries
     this.full = Boolean(full)
   }
 
-  static fromRaw(raw, protocol) {
+  static fromRaw (raw, protocol) {
     return new WantList(
       raw.entries.map(e => Entry.fromRaw(e, protocol)),
       raw.full
     )
   }
 
-  serialize(protocol) {
+  serialize (protocol) {
     return {
       entries: this.entries.map(e => e.serialize(protocol)),
       full: this.full
     }
   }
 
-  encode(protocol) {
+  encode (protocol) {
     return RawWantlist.encode(this.serialize(protocol)).finish()
   }
 }
 
 class Block {
-  constructor(prefixOrCid, data) {
+  constructor (prefixOrCid, data) {
     if (prefixOrCid instanceof CID) {
       prefixOrCid = Buffer.from([
         prefixOrCid.version,
@@ -155,7 +155,7 @@ class Block {
     this.data = data
   }
 
-  static fromRaw(raw, protocol) {
+  static fromRaw (raw, protocol) {
     if (protocol === BITSWAP_V_100) {
       return new Block(null, raw)
     }
@@ -163,20 +163,20 @@ class Block {
     return new Block(raw.prefix, raw.data)
   }
 
-  serialize(protocol) {
+  serialize (protocol) {
     return {
       prefix: this.prefix,
       data: this.data
     }
   }
 
-  encode(protocol) {
+  encode (protocol) {
     return RawBlock.encode(this.serialize(protocol)).finish()
   }
 }
 
 class BlockPresence {
-  constructor(cid, type) {
+  constructor (cid, type) {
     this.cid = cid
     this.type = type
 
@@ -186,18 +186,18 @@ class BlockPresence {
     }
   }
 
-  static fromRaw(raw, protocol) {
+  static fromRaw (raw, protocol) {
     return new BlockPresence(CID.decode(raw.cid), raw.type)
   }
 
-  serialize(protocol) {
+  serialize (protocol) {
     return {
       cid: this.cid.bytes,
       type: this.type
     }
   }
 
-  encode(protocol) {
+  encode (protocol) {
     return RawBlockPresence.encode(this.serialize(protocol)).finish()
   }
 }
@@ -205,7 +205,7 @@ class BlockPresence {
 const emptyWantList = new WantList([], true)
 
 class Message {
-  constructor(wantlist = emptyWantList, blocks = [], blockPresences = [], pendingBytes = 0) {
+  constructor (wantlist = emptyWantList, blocks = [], blockPresences = [], pendingBytes = 0) {
     this.wantlist = wantlist
     this.blocks = blocks
     this.blockPresences = blockPresences
@@ -213,11 +213,11 @@ class Message {
     this.blocksSize = this.isEmpty() ? EMPTY_MESSAGE_OVERHEAD_SIZE : this.encode(BITSWAP_V_120).length + nonEmptyOverhead
   }
 
-  isEmpty() {
+  isEmpty () {
     return this.wantlist.entries.length + this.blocks.length + this.blockPresences.length < 1
   }
 
-  static decode(encoded, protocol) {
+  static decode (encoded, protocol) {
     const decoded = RawMessage.decode(encoded)
 
     if (protocol === BITSWAP_V_100) {
@@ -237,7 +237,7 @@ class Message {
     )
   }
 
-  serialize(protocol) {
+  serialize (protocol) {
     if (protocol === BITSWAP_V_100) {
       return {
         wantlist: this.wantlist.serialize(protocol),
@@ -253,7 +253,7 @@ class Message {
     }
   }
 
-  encode(protocol) {
+  encode (protocol) {
     return RawMessage.encode(this.serialize(protocol)).finish()
   }
 
@@ -261,7 +261,7 @@ class Message {
    * push block to message, to be sent later
    * note there are no size limit, because the purpose is to send responses asap **without buffering**
    */
-  push(block, size, protocol) {
+  push (block, size, protocol) {
     if (block.cancel) { return false }
 
     const responseBlock = response[block.type](block, protocol)
@@ -276,11 +276,11 @@ class Message {
     }
   }
 
-  size() {
+  size () {
     return this.blocksSize
   }
 
-  async send(context) {
+  async send (context) {
     try {
       if (this.blocks.length > 0 || this.blockPresences.length > 0) {
         const encoded = this.encode(context.protocol)
@@ -314,7 +314,7 @@ const response = {
 Entry.WantType = RawWantType.values
 BlockPresence.Type = RawBlockPresenceType.values
 
-module.exports = {
+export {
   BITSWAP_V_100,
   BITSWAP_V_110,
   BITSWAP_V_120,

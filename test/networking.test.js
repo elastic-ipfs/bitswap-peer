@@ -6,7 +6,6 @@ import config from '../src/config.js'
 import { Connection } from '../src/networking.js'
 import { BITSWAP_V_100 as protocol } from '../src/protocol.js'
 import { startService } from '../src/service.js'
-import { sleep } from '../src/util.js'
 import * as helper from './utils/helper.js'
 import { mockAWS } from './utils/mock.js'
 

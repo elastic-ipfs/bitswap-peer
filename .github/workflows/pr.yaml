@@ -9,4 +9,5 @@ jobs:
       packages: read
     uses: elastic-ipfs/bitswap-peer/.github/workflows/shared-build.yaml@main
     with:
-      docker_push: false
+      docker_image_version_suffix_label: dev
+

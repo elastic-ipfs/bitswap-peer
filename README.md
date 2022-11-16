@@ -54,10 +54,10 @@ Also check [AWS specifics configuration](https://github.com/elastic-ipfs/elastic
 
 Because DynamoDB and/or S3 may be slow to respond, in order of seconds or even minutes, the readiness do:
 
-- the first time performs the request and wait for the response; if succeed, it assumes the service is properly connected to DynamoDB and S3, being able to perform queries - failures are mostly caused by misconfiguration
+- the first time performs the request and waits for the response; if succeeds, it assumes the service is properly connected to DynamoDB and S3, being able to perform queries - failures are mostly caused by misconfiguration
 - following times, if the response is slower than `READINESS_TIMEOUT`, assumes **it works**
 - the working state is reset every `READINESS_RESET`, so periodically it will wait for the real response time
-- if the check fails, will be wait for the real timeout, untill (if) will be working again
+- if the check fails, will wait for the real timeout, until (if) will be working again
 
 ## Issues
 

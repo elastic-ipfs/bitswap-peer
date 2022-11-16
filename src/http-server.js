@@ -20,7 +20,7 @@ class HttpServer {
           res.end()
           break
         case '/readiness': {
-          checkReadiness({ awsClient, readiness, logger })
+          checkReadiness({ resetting: config.readinessReset, timeout: config.readinessTimeout, awsClient, readiness, logger })
             .then(httpStatus => {
               res.writeHead(httpStatus)
               res.end()

@@ -40,6 +40,8 @@ t.test('config - defaults', async t => {
     dynamoRetryDelay: 50,
     s3MaxRetries: 3,
     s3RetryDelay: 50,
+    readinessReset: 600,
+    readinessTimeout: 5,
     allowInspection: false
   })
 })
@@ -81,6 +83,8 @@ t.test('config - all by env vars', async t => {
   process.env.DYNAMO_RETRY_DELAY = '500'
   process.env.S3_MAX_RETRIES = '7'
   process.env.S3_RETRY_DELAY = '600'
+  process.env.READINESS_RESET = '100'
+  process.env.READINESS_TIMEOUT = '1'
   process.env.ALLOW_INSPECTION = 'true'
 
   t.same(makeConfig(), {
@@ -120,6 +124,8 @@ t.test('config - all by env vars', async t => {
     dynamoRetryDelay: 500,
     s3MaxRetries: 7,
     s3RetryDelay: 600,
+    readinessReset: 100,
+    readinessTimeout: 1,
     allowInspection: true
   })
 })

@@ -7,9 +7,9 @@ import { telemetry } from './telemetry.js'
 import inspect from './inspect/index.js'
 import { version } from './util.js'
 
-const checkReadinessRates = [
-  config.readinessDynamoCheckRate,
-  config.readinessS3CheckRate
+const checkReadinessSampling = [
+  config.readinessDynamoCheckSampling,
+  config.readinessS3CheckSampling
 ]
 
 class HttpServer {
@@ -25,7 +25,7 @@ class HttpServer {
           res.end()
           break
         case '/readiness': {
-          checkReadiness({ rates: checkReadinessRates, awsClient, readiness, logger })
+          checkReadiness({ samplings: checkReadinessSampling, awsClient, readiness, logger })
             .then(httpStatus => {
               res.writeHead(httpStatus)
               res.end()

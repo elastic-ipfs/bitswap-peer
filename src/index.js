@@ -10,12 +10,19 @@ async function boot () {
   try {
     const awsClient = await createAwsClient(config, logger)
 
+    // get peer identity file and at the same time check s3 availablity
     const peerId = await getPeerId({
       awsClient,
       peerIdS3Region: config.peerIdS3Region,
       peerIdS3Bucket: config.peerIdS3Bucket,
       peerIdJsonFile: config.peerIdJsonFile,
       peerIdJsonPath: config.peerIdJsonPath
+    })
+    // query dynamo to check availability
+    await awsClient.dynamoQueryBySortKey({
+      table: config.linkTableV1,
+      keyName: config.linkTableBlockKey,
+      keyValue: 'readiness'
     })
 
     await httpServer.startServer({

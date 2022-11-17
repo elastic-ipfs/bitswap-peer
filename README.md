@@ -40,6 +40,8 @@ _Variables in bold are required._
 | PORT                  | `3000`        | The port number to listen on.                                            |
 | TELEMETRY_PORT        | `3001`        | The telemetry port number for the OpenTelemetry server to listen on.     |
 | ALLOW_INSPECTION      | `false`       | Allow inspection functionalities - for dev and testing only. |
+| READINESS_DYNAMO_CHECK_SAMPLING  | `100` | Readiness check sampling, will perform 1 check every 100 readiness request for DynamoDB |
+| READINESS_S3_CHECK_SAMPLING | `100` | Readiness check sampling, will perform 1 check every 100 readiness request for S3 |
 | NODE_DEBUG            |               | If it contains `aws-ipfs`, debug mode is enabled.                        |
 | LOG_LEVEL            | `info` | Logging level. |
 | LOG_PRETTY            | `false` | Enable pretty logging. |
@@ -47,6 +49,32 @@ _Variables in bold are required._
 Also check [AWS specifics configuration](https://github.com/elastic-ipfs/elastic-ipfs/blob/main/aws.md).
 
 **Note**: `DYNAMO_BLOCKS_TABLE` and `DYNAMO_CARS_TABLE` will be removed after the transition to the new database schema will be completed.
+
+### Boot
+
+On service boot, before starting the peer node, the following checks will be done:
+
+- get credentials for AWS client
+- downloading the peer id file from S3, to acquire the private and public keys to identify the service, and at the same time checking if it can access to S3 with the right method
+- query DynamoDB `cars-blocks` table, to verify the service can access to the table with the right method
+
+If one of those operations will fail, the service won't start, sending a `fatal` error.
+
+### Readiness
+
+Readiness is based on performing actual requests to the DynamoDB and S3 services.
+In order to handle slow responses, that are not an actual index of issues on such services, we add logic to perform sampling requests alternatively to them, so:
+
+- #1 `/readiness` > actual DynamoDB request
+- #2 `/readiness` > actual S3 request
+- ... requests are sampled
+- #100 `/readiness` > actual DynamoDB request
+- #101 `/readiness` > actual S3 request
+- ... requests are sampled
+- #200 `/readiness` > actual DynamoDB request
+- #201 `/readiness` > actual S3 request
+
+In case of error, the counter is reset, and it will perform actual requests
 
 ## Issues
 

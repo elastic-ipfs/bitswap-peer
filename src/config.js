@@ -51,7 +51,10 @@ export function makeConfig () {
     s3MaxRetries: process.env.S3_MAX_RETRIES ? parseInt(process.env.S3_MAX_RETRIES) : 3,
     s3RetryDelay: process.env.S3_RETRY_DELAY ? parseInt(process.env.S3_RETRY_DELAY) : 100, // ms
 
-    allowInspection: process.env.ALLOW_INSPECTION === 'true'
+    allowInspection: process.env.ALLOW_INSPECTION === 'true',
+
+    readinessDynamoCheckSampling: process.env.READINESS_DYNAMO_CHECK_SAMPLING ? parseInt(process.env.READINESS_DYNAMO_CHECK_SAMPLING) : 100,
+    readinessS3CheckSampling: process.env.READINESS_S3_CHECK_SAMPLING ? parseInt(process.env.READINESS_S3_CHECK_SAMPLING) : 100
   }
 }
 

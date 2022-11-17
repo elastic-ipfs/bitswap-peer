@@ -7,6 +7,11 @@ import { telemetry } from './telemetry.js'
 import inspect from './inspect/index.js'
 import { version } from './util.js'
 
+const checkReadinessRates = [
+  config.readinessDynamoCheckRate,
+  config.readinessS3CheckRate
+]
+
 class HttpServer {
   startServer ({ port, awsClient, readiness }) {
     if (this.server) {
@@ -20,7 +25,7 @@ class HttpServer {
           res.end()
           break
         case '/readiness': {
-          checkReadiness({ awsClient, readiness, logger })
+          checkReadiness({ rates: checkReadinessRates, awsClient, readiness, logger })
             .then(httpStatus => {
               res.writeHead(httpStatus)
               res.end()

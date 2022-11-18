@@ -40,6 +40,8 @@ t.test('service - config properly passed to libp2p createLibp2p method', async t
   t.equal(service.components.connectionManager.opts.inboundUpgradeTimeout, 987)
   t.equal(service.components.connectionManager.opts.autoDial, false)
   t.equal(service.components.connectionManager.opts.autoDialInterval, 852)
+
+  service.stop()
 })
 
 t.test('service - blocks are cached', async t => {

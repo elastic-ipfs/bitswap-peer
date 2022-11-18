@@ -28,7 +28,7 @@ export function makeConfig () {
     linkTableBlockKey: 'blockmultihash',
     linkTableCarKey: 'carpath',
 
-    enableKeepAlive: process.env.ENABLE_KEEP_ALIVE !== 'false',
+    enableKeepAlive: process.env.ENABLE_KEEP_ALIVE === 'true',
     pingPeriodSecs: process.env.PING_PERIOD_SECONDS ? parseInt(process.env.PING_PERIOD_SECONDS) : 10,
 
     awsClientRefreshCredentialsInterval: process.env.AWS_CLIENT_REFRESH_CREDENTIALS_INTERVAL ?? 10 * 60e3, // 10 min
@@ -46,6 +46,16 @@ export function makeConfig () {
     peerAnnounceAddr: process.env.PEER_ANNOUNCE_ADDR,
     port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
     httpPort: process.env.HTTP_PORT ? parseInt(process.env.PORT) : 3001,
+
+    p2pConnectionMaxConnections: process.env.P2P_CONNECTION_MAX_CONNECTIONS ? parseInt(process.env.P2P_CONNECTION_MAX_CONNECTIONS) : 10e3,
+    p2pConnectionMinConnections: process.env.P2P_CONNECTION_MIN_CONNECTIONS ? parseInt(process.env.P2P_CONNECTION_MIN_CONNECTIONS) : 0,
+    p2pConnectionPollInterval: process.env.P2P_CONNECTION_POLL_INTERVAL ? parseInt(process.env.P2P_CONNECTION_POLL_INTERVAL) : 2000, // ms
+    p2pConnectionInboundConnectionThreshold: process.env.P2P_CONNECTION_INBOUND_CONNECTION_THRESHOLD ? parseInt(process.env.P2P_CONNECTION_INBOUND_CONNECTION_THRESHOLD) : 100,
+    p2pConnectionMaxIncomingPendingConnections: process.env.P2P_CONNECTION_MAX_INCOMING_PENDING_CONNECTIONS ? parseInt(process.env.P2P_CONNECTION_MAX_INCOMING_PENDING_CONNECTIONS) : 100,
+    p2pConnectionInboundUpgradeTimeout: process.env.P2P_CONNECTION_INBOUND_UPGRADE_TIMEOUT ? parseInt(process.env.P2P_CONNECTION_INBOUND_UPGRADE_TIMEOUT) : 1000, // ms
+    p2pConnectionAutoDial: process.env.P2P_CONNECTION_AUTO_DIAL === 'true',
+    p2pConnectionAutoDialInterval: process.env.P2P_CONNECTION_AUTO_DIAL_INTERVAL ? parseInt(process.env.P2P_CONNECTION_AUTO_DIAL_INTERVAL) : 1000, // ms
+
     dynamoMaxRetries: process.env.DYNAMO_MAX_RETRIES ? parseInt(process.env.DYNAMO_MAX_RETRIES) : 3,
     dynamoRetryDelay: process.env.DYNAMO_RETRY_DELAY ? parseInt(process.env.DYNAMO_RETRY_DELAY) : 100, // ms
     s3MaxRetries: process.env.S3_MAX_RETRIES ? parseInt(process.env.S3_MAX_RETRIES) : 3,

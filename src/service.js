@@ -14,7 +14,7 @@ import { telemetry } from './telemetry.js'
 import { logger as defaultLogger, serializeError } from './logging.js'
 import inspect from './inspect/index.js'
 
-async function startService ({ peerId, port, peerAnnounceAddr, awsClient, logger = defaultLogger } = {}) {
+async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connectionConfig, logger = defaultLogger } = {}) {
   try {
     // TODO params validation
 
@@ -26,7 +26,17 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, logger
       },
       transports: [webSockets()],
       connectionEncryption: [noise({ crypto: noiseCrypto })],
-      streamMuxers: [mplex()]
+      streamMuxers: [mplex()],
+      connectionManager: {
+        maxConnections: connectionConfig.maxConnections,
+        minConnections: connectionConfig.minConnections,
+        pollInterval: connectionConfig.pollInterval,
+        inboundConnectionThreshold: connectionConfig.inboundConnectionThreshold,
+        maxIncomingPendingConnections: connectionConfig.maxIncomingPendingConnections,
+        inboundUpgradeTimeout: connectionConfig.inboundUpgradeTimeout,
+        autoDial: connectionConfig.autoDial,
+        autoDialInterval: connectionConfig.autoDialInterval
+      }
     })
 
     service.addEventListener('error', err => {

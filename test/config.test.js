@@ -21,7 +21,7 @@ t.test('config - defaults', async t => {
     carsTablePrimaryKey: 'path',
     linkTableBlockKey: 'blockmultihash',
     linkTableCarKey: 'carpath',
-    enableKeepAlive: true,
+    enableKeepAlive: false,
     pingPeriodSecs: 10,
     awsClientRefreshCredentialsInterval: 600000,
     awsClientKeepAliveTimeout: 60000,
@@ -36,6 +36,14 @@ t.test('config - defaults', async t => {
     peerAnnounceAddr: undefined,
     port: 3000,
     httpPort: 3001,
+    p2pConnectionMaxConnections: 10000,
+    p2pConnectionMinConnections: 0,
+    p2pConnectionPollInterval: 2000,
+    p2pConnectionInboundConnectionThreshold: 100,
+    p2pConnectionMaxIncomingPendingConnections: 100,
+    p2pConnectionInboundUpgradeTimeout: 1000,
+    p2pConnectionAutoDial: false,
+    p2pConnectionAutoDialInterval: 1000,
     dynamoMaxRetries: 3,
     dynamoRetryDelay: 50,
     s3MaxRetries: 3,
@@ -77,6 +85,14 @@ t.test('config - all by env vars', async t => {
   process.env.PEER_ANNOUNCE_ADDR = '/dns4/elastic-dev.dag.house/tcp/443/wss'
   process.env.PORT = '3123'
   process.env.HTTP_PORT = '3258'
+  process.env.P2P_CONNECTION_MAX_CONNECTIONS = '99999'
+  process.env.P2P_CONNECTION_MIN_CONNECTIONS = '1'
+  process.env.P2P_CONNECTION_POLL_INTERVAL = '1000'
+  process.env.P2P_CONNECTION_INBOUND_CONNECTION_THRESHOLD = '132'
+  process.env.P2P_CONNECTION_MAX_INCOMING_PENDING_CONNECTIONS = '456'
+  process.env.P2P_CONNECTION_INBOUND_UPGRADE_TIMEOUT = '147'
+  process.env.P2P_CONNECTION_AUTO_DIAL = '4224'
+  process.env.P2P_CONNECTION_AUTO_DIAL_INTERVAL = '433'
   process.env.DYNAMO_MAX_RETRIES = '6'
   process.env.DYNAMO_RETRY_DELAY = '500'
   process.env.S3_MAX_RETRIES = '7'
@@ -116,6 +132,14 @@ t.test('config - all by env vars', async t => {
     peerAnnounceAddr: '/dns4/elastic-dev.dag.house/tcp/443/wss',
     port: 3123,
     httpPort: 3123,
+    p2pConnectionMaxConnections: 99999,
+    p2pConnectionMinConnections: 1,
+    p2pConnectionPollInterval: 1000,
+    p2pConnectionInboundConnectionThreshold: 132,
+    p2pConnectionMaxIncomingPendingConnections: 456,
+    p2pConnectionInboundUpgradeTimeout: 147,
+    p2pConnectionAutoDial: false,
+    p2pConnectionAutoDialInterval: 433,
     dynamoMaxRetries: 6,
     dynamoRetryDelay: 500,
     s3MaxRetries: 7,

@@ -39,7 +39,17 @@ async function boot () {
       awsClient,
       port: config.port,
       peerId,
-      peerAnnounceAddr: config.peerAnnounceAddr
+      peerAnnounceAddr: config.peerAnnounceAddr,
+      connectionConfig: {
+        maxConnections: config.p2pConnectionMaxConnections,
+        minConnections: config.p2pConnectionMinConnections,
+        pollInterval: config.p2pConnectionPollInterval,
+        inboundConnectionThreshold: config.p2pConnectionInboundConnectionThreshold,
+        maxIncomingPendingConnections: config.p2pConnectionMaxIncomingPendingConnections,
+        inboundUpgradeTimeout: config.p2pConnectionInboundUpgradeTimeout,
+        autoDial: config.p2pConnectionAutoDial,
+        autoDialInterval: config.p2pConnectionAutoDialInterval
+      }
     }))
   } catch (err) {
     logger.fatal({ err }, 'Cannot start the service')

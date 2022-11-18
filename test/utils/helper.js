@@ -12,6 +12,7 @@ import { CID } from 'multiformats/cid'
 import { base58btc as base58 } from 'multiformats/bases/base58'
 import getPort from 'get-port'
 
+import config from '../../src/config.js'
 import { Connection } from '../../src/networking.js'
 import { noiseCrypto } from '../../src/noise-crypto.js'
 import { Message, RawMessage } from '../../src/protocol.js'
@@ -47,7 +48,18 @@ async function setup ({ protocol, awsClient }) {
   const peerId = await createEd25519PeerId()
   const port = await getFreePort()
   const logger = spyLogger()
-  const { service } = await startService({ peerId, port, awsClient, logger })
+  const connectionConfig = {
+    maxConnections: config.p2pConnectionMaxConnections,
+    minConnections: config.p2pConnectionMinConnections,
+    pollInterval: config.p2pConnectionPollInterval,
+    inboundConnectionThreshold: config.p2pConnectionInboundConnectionThreshold,
+    maxIncomingPendingConnections: config.p2pConnectionMaxIncomingPendingConnections,
+    inboundUpgradeTimeout: config.p2pConnectionInboundUpgradeTimeout,
+    autoDial: config.p2pConnectionAutoDial,
+    autoDialInterval: config.p2pConnectionAutoDialInterval
+  }
+
+  const { service } = await startService({ peerId, port, awsClient, logger, connectionConfig })
   const { stream, receiver, client } = await createClient(peerId, port, protocol)
   const connection = new Connection(stream)
 

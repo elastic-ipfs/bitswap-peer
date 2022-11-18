@@ -38,6 +38,14 @@ _Variables in bold are required._
 | ENABLE_KEEP_ALIVE   | `true`          | Enable Keep-alive for peers                       |
 | PING_PERIOD_SECONDS   | `10`          | Wait interval for ping connected peer (Keep Alive)                       |
 | PORT                  | `3000`        | The port number to listen on.                                            |
+| P2P_CONNECTION_MAX_CONNECTIONS | `10000` | p2p max connections, forwared to `libp2p` `connectionManager.maxConnections` |
+| P2P_CONNECTION_MIN_CONNECTIONS | `0` | p2p min connections, forwared to `libp2p` `connectionManager.minConnections` |
+| P2P_CONNECTION_POLL_INTERVAL | `2000` | ms, p2p poll interval, forwared to `libp2p` `connectionManager.pollInterval` |
+| P2P_CONNECTION_INBOUND_CONNECTION_THRESHOLD | `100` | p2p inbound connection threshold, forwared to `libp2p` `connectionManager.inboundConnectionThreshold` |
+| P2P_CONNECTION_MAX_INCOMING_PENDING_CONNECTIONS | `100` | p2p max incoming pending connections, forwared to `libp2p` `connectionManager.maxIncomingPendingConnections` |
+| P2P_CONNECTION_INBOUND_UPGRADE_TIMEOUT | `1000` | ms, p2p inbound upgrade timeout, forwared to `libp2p` `connectionManager.inboundUpgradeTimeout` |
+| P2P_CONNECTION_AUTO_DIAL | `false` | p2p auto dial to discovered peers, forwared to `libp2p` `connectionManager.autoDial` |
+| P2P_CONNECTION_AUTO_DIAL_INTERVAL | `1000` | ms, p2p poll interval, forwared to `libp2p` `connectionManager.autoDialInterval` |
 | TELEMETRY_PORT        | `3001`        | The telemetry port number for the OpenTelemetry server to listen on.     |
 | ALLOW_INSPECTION      | `false`       | Allow inspection functionalities - for dev and testing only. |
 | NODE_DEBUG            |               | If it contains `aws-ipfs`, debug mode is enabled.                        |
@@ -45,6 +53,14 @@ _Variables in bold are required._
 | LOG_PRETTY            | `false` | Enable pretty logging. |
 
 Also check [AWS specifics configuration](https://github.com/elastic-ipfs/elastic-ipfs/blob/main/aws.md).
+
+## p2p Connections
+
+References
+
+- https://github.com/libp2p/js-libp2p/blob/master/doc/CONNECTION_MANAGER.md
+- https://github.com/libp2p/js-libp2p/blob/master/doc/LIMITS.md
+- TODO ConnectionManagerInit code
 
 **Note**: `DYNAMO_BLOCKS_TABLE` and `DYNAMO_CARS_TABLE` will be removed after the transition to the new database schema will be completed.
 

@@ -29,7 +29,17 @@ t.test('send - after closing behavior', async t => {
 
 t.test('error handling', async t => {
   const peerId = await createEd25519PeerId()
-  const { port, service } = await startService({ peerId, port: await helper.getFreePort() })
+  const connectionConfig = {
+    maxConnections: config.p2pConnectionMaxConnections,
+    minConnections: config.p2pConnectionMinConnections,
+    pollInterval: config.p2pConnectionPollInterval,
+    inboundConnectionThreshold: config.p2pConnectionInboundConnectionThreshold,
+    maxIncomingPendingConnections: config.p2pConnectionMaxIncomingPendingConnections,
+    inboundUpgradeTimeout: config.p2pConnectionInboundUpgradeTimeout,
+    autoDial: config.p2pConnectionAutoDial,
+    autoDialInterval: config.p2pConnectionAutoDialInterval
+  }
+  const { port, service } = await startService({ peerId, port: await helper.getFreePort(), connectionConfig })
   const { stream, client } = await helper.createClient(peerId, port, protocol)
 
   stream.source[Symbol.asyncIterator] = function () {

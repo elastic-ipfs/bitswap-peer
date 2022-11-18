@@ -37,11 +37,11 @@ const checks = [
     },
     counter: 0
   }]
-const CHECKS_LENGHT = checks.length
+const CHECKS_LENGTH = checks.length
 
 let totalCounter = 0
 async function checkReadiness ({ awsClient, readiness, samplings = [], logger }) {
-  const index = totalCounter % CHECKS_LENGHT
+  const index = totalCounter % CHECKS_LENGTH
   const check = checks[index]
   const sampling = samplings[index] ?? 1
   let code

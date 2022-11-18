@@ -65,16 +65,42 @@ If one of those operations will fail, the service won't start, sending a `fatal`
 Readiness is based on performing actual requests to the DynamoDB and S3 services.
 In order to handle slow responses, that are not an actual index of issues on such services, we add logic to perform sampling requests alternatively to them, so:
 
+When requests succeed
+
 - #1 `/readiness` > actual DynamoDB request
 - #2 `/readiness` > actual S3 request
-- ... requests are sampled
+- #3 `/readiness` > skip DynamoDB request because of sampling
+- #4 `/readiness` > skip S3 request because of sampling
+- ... skip because of sampling
 - #100 `/readiness` > actual DynamoDB request
 - #101 `/readiness` > actual S3 request
-- ... requests are sampled
+- #102 `/readiness` > skip DynamoDB request because of sampling
+- #103 `/readiness` > skip S3 request because of sampling
+- ... skip because of sampling
 - #200 `/readiness` > actual DynamoDB request
 - #201 `/readiness` > actual S3 request
+- ...
 
 In case of error, the counter is reset, and it will perform actual requests
+
+On failure on DynamoDB
+
+- #1 `/readiness` > actual DynamoDB request, success
+- #2 `/readiness` > actual S3 request, success
+- #3 `/readiness` > skip DynamoDB request because of sampling
+- #4 `/readiness` > skip S3 request because of sampling
+- ... skip because of sampling
+- #100 `/readiness` > actual DynamoDB request, **error and reset counter**
+- restart from #1 because of error
+
+- #1 `/readiness` > actual DynamoDB request, success
+- #2 `/readiness` > actual S3 request, success
+- #3 `/readiness` > skip DynamoDB request because of sampling
+- #4 `/readiness` > skip S3 request because of sampling
+- ... skip because of sampling
+- #100 `/readiness` > actual DynamoDB request, success
+- #101 `/readiness` > actual S3 request, **error** and reset counter
+- restart from #1 because of error
 
 ## Issues
 

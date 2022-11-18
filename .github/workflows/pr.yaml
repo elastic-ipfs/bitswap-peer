@@ -7,6 +7,6 @@ jobs:
   build:
     permissions:
       packages: read
-    uses: elastic-ipfs/bitswap-peer/.github/workflows/shared-build.yaml@main
+    uses: elastic-ipfs/bitswap-peer/.github/workflows/shared-build.yaml@upgrade-cache-action # TODO: Rename to main
     with:
       docker_push: false

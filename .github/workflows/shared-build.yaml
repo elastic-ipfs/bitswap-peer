@@ -33,11 +33,11 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
     - name: Use Node.js Current
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v3
       with:
         node-version: 18.11
     - name: Restore cached dependencies
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: node_modules
         key: node-modules-${{ hashFiles('package.json') }}
@@ -95,5 +95,4 @@ jobs:
       run: |
         echo "::set-output name=package_version::${{ env.PACKAGE_VERSION }}"
         echo "::set-output name=build_date::${{ env.BUILD_DATE }}"
-  
   

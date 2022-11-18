@@ -41,10 +41,6 @@ jobs:
       with:
         path: node_modules
         key: node-modules-${{ hashFiles('package.json') }}
-    - name: npm auth
-      uses: jgierer12/npm-auth-gpr@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
     - name: Install dependencies
       uses: bahmutov/npm-install@v1
     - name: Set environment variables

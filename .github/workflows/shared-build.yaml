@@ -89,5 +89,5 @@ jobs:
     - name: Set output variables
       id: setOutput
       run: |
-        echo "name=package_version::${{ env.PACKAGE_VERSION }}" >> $GITHUB_OUTPUT
-        echo "name=build_date::${{ env.BUILD_DATE }}" >> $GITHUB_OUTPUT
+        echo "package_version=${{ env.PACKAGE_VERSION }}" >> $GITHUB_OUTPUT
+        echo "build_date=${{ env.BUILD_DATE }}" >> $GITHUB_OUTPUT

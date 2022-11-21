@@ -27,7 +27,7 @@
     "it-pipe": "2.0.4",
     "js-yaml": "4.1.0",
     "libp2p": "0.40.0",
-    "lru-cache": "7.14.0",
+    "lru-cache": "7.14.1",
     "mnemonist": "0.39.4",
     "pino": "8.7.0",
     "piscina": "3.2.0",

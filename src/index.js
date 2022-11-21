@@ -30,7 +30,7 @@ async function boot () {
       peerIdJsonFile: config.peerIdJsonFile,
       peerIdJsonPath: config.peerIdJsonPath
     })
-    awsClient.dynamoQueryBySortKey({
+    await awsClient.dynamoQueryBySortKey({
       table: readinessConfig.dynamo.table,
       keyName: readinessConfig.dynamo.keyName,
       keyValue: readinessConfig.dynamo.keyValue

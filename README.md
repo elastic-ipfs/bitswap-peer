@@ -13,7 +13,7 @@ _Variables in bold are required._
 | CACHE_BLOCK_INFO_SIZE | `1000`       | Max entries of the block info cache.                                     |
 | CACHE_BLOCK_DATA      | `false`       | Set to `true` to cache block data with in a in-memory LRU cache.         |
 | CACHE_BLOCK_DATA_SIZE | `1000`        | Max entries of the block data cache.                                     |
-| AWS_CLIENT_REFRESH_CREDENTIALS_INTERVAL | `50 * 60e3` | Credential rotation, in minutes. |
+| AWS_CLIENT_REFRESH_CREDENTIALS_INTERVAL | `5 * 60e3` | Credential rotation, in ms. |
 | AWS_CLIENT_CONNECT_TIMEOUT | `120000` | The timeout after the HTTP client wait for establish the connection, for AWS client. |
 | AWS_CLIENT_KEEP_ALIVE_TIMEOUT | `60000` | The timeout after which a the HTTP socket without active requests will time out, for AWS client. |
 | AWS_CLIENT_CONCURRENCY | `128` | The maximum concurrent connections to AWS |

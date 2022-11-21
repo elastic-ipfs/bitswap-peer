@@ -41,6 +41,7 @@ async function boot () {
       peerId,
       peerAnnounceAddr: config.peerAnnounceAddr,
       connectionConfig: {
+        // libp2p
         maxConnections: config.p2pConnectionMaxConnections,
         minConnections: config.p2pConnectionMinConnections,
         pollInterval: config.p2pConnectionPollInterval,
@@ -48,7 +49,11 @@ async function boot () {
         maxIncomingPendingConnections: config.p2pConnectionMaxIncomingPendingConnections,
         inboundUpgradeTimeout: config.p2pConnectionInboundUpgradeTimeout,
         autoDial: config.p2pConnectionAutoDial,
-        autoDialInterval: config.p2pConnectionAutoDialInterval
+        autoDialInterval: config.p2pConnectionAutoDialInterval,
+        // mplex
+        maxInboundStreams: config.p2pConnectionMaxInboundStreams,
+        maxOutboundStreams: config.p2pConnectionMaxOutboundStreams,
+        maxStreamBufferSize: config.p2pConnectionMaxStreamBufferSize
       }
     }))
   } catch (err) {

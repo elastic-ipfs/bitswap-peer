@@ -26,7 +26,11 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
       },
       transports: [webSockets()],
       connectionEncryption: [noise({ crypto: noiseCrypto })],
-      streamMuxers: [mplex()],
+      streamMuxers: [mplex({
+        maxInboundStreams: connectionConfig.maxInboundStreams,
+        maxOutboundStreams: connectionConfig.maxOutboundStreams,
+        maxStreamBufferSize: connectionConfig.maxStreamBufferSize
+      })],
       connectionManager: {
         maxConnections: connectionConfig.maxConnections,
         minConnections: connectionConfig.minConnections,

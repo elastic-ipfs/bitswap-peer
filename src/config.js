@@ -47,6 +47,7 @@ export function makeConfig () {
     port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
     httpPort: process.env.HTTP_PORT ? parseInt(process.env.PORT) : 3001,
 
+    // p2p
     p2pConnectionMaxConnections: process.env.P2P_CONNECTION_MAX_CONNECTIONS ? parseInt(process.env.P2P_CONNECTION_MAX_CONNECTIONS) : 10e3,
     p2pConnectionMinConnections: process.env.P2P_CONNECTION_MIN_CONNECTIONS ? parseInt(process.env.P2P_CONNECTION_MIN_CONNECTIONS) : 0,
     p2pConnectionPollInterval: process.env.P2P_CONNECTION_POLL_INTERVAL ? parseInt(process.env.P2P_CONNECTION_POLL_INTERVAL) : 2000, // ms
@@ -55,6 +56,10 @@ export function makeConfig () {
     p2pConnectionInboundUpgradeTimeout: process.env.P2P_CONNECTION_INBOUND_UPGRADE_TIMEOUT ? parseInt(process.env.P2P_CONNECTION_INBOUND_UPGRADE_TIMEOUT) : 1000, // ms
     p2pConnectionAutoDial: process.env.P2P_CONNECTION_AUTO_DIAL === 'true',
     p2pConnectionAutoDialInterval: process.env.P2P_CONNECTION_AUTO_DIAL_INTERVAL ? parseInt(process.env.P2P_CONNECTION_AUTO_DIAL_INTERVAL) : 10000, // ms
+    // mplex
+    p2pConnectionMaxInboundStreams: process.env.P2P_CONNECTION_MAX_INBOUND_STREAMS ? parseInt(process.env.P2P_CONNECTION_MAX_INBOUND_STREAMS) : 1024,
+    p2pConnectionMaxOutboundStreams: process.env.P2P_CONNECTION_MAX_OUTBOUND_STREAMS ? parseInt(process.env.P2P_CONNECTION_MAX_OUTBOUND_STREAMS) : 10000,
+    p2pConnectionMaxStreamBufferSize: process.env.P2P_CONNECTION_MAX_STREAM_BUFFER_SIZE ? parseInt(process.env.P2P_CONNECTION_MAX_STREAM_BUFFER_SIZE) : 4194304,
 
     dynamoMaxRetries: process.env.DYNAMO_MAX_RETRIES ? parseInt(process.env.DYNAMO_MAX_RETRIES) : 3,
     dynamoRetryDelay: process.env.DYNAMO_RETRY_DELAY ? parseInt(process.env.DYNAMO_RETRY_DELAY) : 100, // ms

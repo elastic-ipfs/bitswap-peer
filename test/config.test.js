@@ -44,6 +44,9 @@ t.test('config - defaults', async t => {
     p2pConnectionInboundUpgradeTimeout: 1000,
     p2pConnectionAutoDial: false,
     p2pConnectionAutoDialInterval: 10000,
+    p2pConnectionMaxInboundStreams: 1024,
+    p2pConnectionMaxOutboundStreams: 10000,
+    p2pConnectionMaxStreamBufferSize: 4194304,
     dynamoMaxRetries: 3,
     dynamoRetryDelay: 50,
     s3MaxRetries: 3,
@@ -93,6 +96,10 @@ t.test('config - all by env vars', async t => {
   process.env.P2P_CONNECTION_INBOUND_UPGRADE_TIMEOUT = '147'
   process.env.P2P_CONNECTION_AUTO_DIAL = '4224'
   process.env.P2P_CONNECTION_AUTO_DIAL_INTERVAL = '433'
+  process.env.P2P_CONNECTION_MAX_INBOUND_STREAMS = '3322'
+  process.env.P2P_CONNECTION_MAX_OUTBOUND_STREAMS = '4477'
+  process.env.P2P_CONNECTION_MAX_STREAM_BUFFER_SIZE = '852741'
+
   process.env.DYNAMO_MAX_RETRIES = '6'
   process.env.DYNAMO_RETRY_DELAY = '500'
   process.env.S3_MAX_RETRIES = '7'
@@ -140,6 +147,9 @@ t.test('config - all by env vars', async t => {
     p2pConnectionInboundUpgradeTimeout: 147,
     p2pConnectionAutoDial: false,
     p2pConnectionAutoDialInterval: 433,
+    p2pConnectionMaxInboundStreams: 3322,
+    p2pConnectionMaxOutboundStreams: 4477,
+    p2pConnectionMaxStreamBufferSize: 852741,
     dynamoMaxRetries: 6,
     dynamoRetryDelay: 500,
     s3MaxRetries: 7,

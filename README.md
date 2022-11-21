@@ -46,6 +46,9 @@ _Variables in bold are required._
 | P2P_CONNECTION_INBOUND_UPGRADE_TIMEOUT | `1000` | ms, p2p inbound upgrade timeout, forwared to `libp2p` `connectionManager.inboundUpgradeTimeout` |
 | P2P_CONNECTION_AUTO_DIAL | `false` | p2p auto dial to discovered peers, forwared to `libp2p` `connectionManager.autoDial` |
 | P2P_CONNECTION_AUTO_DIAL_INTERVAL | `10000` | ms, p2p poll interval, forwared to `libp2p` `connectionManager.autoDialInterval` |
+| P2P_CONNECTION_MAX_INBOUND_STREAMS | `1024` | p2p mplex incoming streams allowed per connection |
+| P2P_CONNECTION_MAX_OUTBOUND_STREAMS | `10000` | p2p mplex outgoing streams allowed per connection |
+| P2P_CONNECTION_MAX_STREAM_BUFFER_SIZE | `4194304` | p2p mplex message buffer size, in bytes, default `4MB` |
 | TELEMETRY_PORT        | `3001`        | The telemetry port number for the OpenTelemetry server to listen on.     |
 | ALLOW_INSPECTION      | `false`       | Allow inspection functionalities - for dev and testing only. |
 | NODE_DEBUG            |               | If it contains `aws-ipfs`, debug mode is enabled.                        |
@@ -60,6 +63,7 @@ References
 
 - https://github.com/libp2p/js-libp2p/blob/master/doc/CONNECTION_MANAGER.md
 - https://github.com/libp2p/js-libp2p/blob/master/doc/LIMITS.md
+- https://github.com/libp2p/js-libp2p-mplex#api
 - ConnectionManagerInit https://github.com/libp2p/js-libp2p/blob/master/src/connection-manager/index.ts#L41
 - DefaultOptions https://github.com/libp2p/js-libp2p/blob/master/src/connection-manager/index.ts#L25
 

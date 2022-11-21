@@ -10,7 +10,6 @@ import * as helper from './utils/helper.js'
 import { mockAWS, createMockAgent } from './utils/mock.js'
 import { startService } from '../src/service.js'
 
-// TODO config passed to connection manager
 t.test('service - config properly passed to libp2p createLibp2p method', async t => {
   const { awsClient } = await mockAWS(config)
   const peerId = await createEd25519PeerId()
@@ -28,10 +27,14 @@ t.test('service - config properly passed to libp2p createLibp2p method', async t
       maxIncomingPendingConnections: 321,
       inboundUpgradeTimeout: 987,
       autoDial: false,
-      autoDialInterval: 852
+      autoDialInterval: 852,
+      maxInboundStreams: 4123,
+      maxOutboundStreams: 5123,
+      maxStreamBufferSize: 6123
     }
   })
 
+  // p2p
   t.equal(service.components.connectionManager.opts.maxConnections, 123)
   t.equal(service.components.connectionManager.opts.minConnections, 9)
   t.equal(service.components.connectionManager.opts.pollInterval, 789)

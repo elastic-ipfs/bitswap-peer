@@ -7,15 +7,6 @@ jobs:
   build:
     permissions:
       packages: read
-    uses: elastic-ipfs/bitswap-peer/.github/workflows/shared-build.yaml@upgrade-cache-action # TODO: Rename to main
+    uses: elastic-ipfs/bitswap-peer/.github/workflows/shared-build.yaml@main
     with:
       docker_push: false
-  ## TODO: Remove this debug job
-  echo-ouputs-test:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: print package_version
-        run: echo ${{ needs.build.outputs.package_version }}
-      - name: print buid_date
-        run: echo ${{ needs.build.outputs.build_date }}

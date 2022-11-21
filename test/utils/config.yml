@@ -13,4 +13,4 @@ test-env:
   - DYNAMO_RETRY_DELAY=50
   - S3_RETRY_DELAY=50
 
-timeout: 120
+timeout: 300

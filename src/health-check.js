@@ -1,25 +1,41 @@
 
 import { serializeError } from './logging.js'
+import { getReadiness, setReadiness } from './storage.js'
 
-async function checkReadiness ({ awsClient, readiness, logger }) {
+const SUCCESS_CODE = 200
+const ERROR_CODE = 503
+
+export async function checkReadiness ({ awsClient, readinessConfig, allowReadinessTweak, logger }) {
+  const state = getReadiness()
+
+  if (state.s3 && state.dynamo) {
+    return SUCCESS_CODE
+  }
+
+  if (allowReadinessTweak) {
+    return state.s3 && state.dynamo ? SUCCESS_CODE : ERROR_CODE
+  }
+
   try {
+    logger.info('Readiness Probe Check')
     await Promise.all([
       awsClient.dynamoQueryBySortKey({
-        table: readiness.dynamo.table,
-        keyName: readiness.dynamo.keyName,
-        keyValue: readiness.dynamo.keyValue
+        table: readinessConfig.dynamo.table,
+        keyName: readinessConfig.dynamo.keyName,
+        keyValue: readinessConfig.dynamo.keyValue
       }),
       awsClient.s3Fetch({
-        region: readiness.s3.region,
-        bucket: readiness.s3.bucket,
-        key: readiness.s3.key
+        region: readinessConfig.s3.region,
+        bucket: readinessConfig.s3.bucket,
+        key: readinessConfig.s3.key
       })
     ])
-    return 200
+
+    logger.info('Readiness Probe Succeed')
+    setReadiness({ s3: true, dynamo: true })
+    return SUCCESS_CODE
   } catch (err) {
     logger.error({ err: serializeError(err) }, 'Readiness Probe Failed')
-    return 503
+    return ERROR_CODE
   }
 }
-
-export { checkReadiness }

@@ -39,6 +39,7 @@ _Variables in bold are required._
 | PING_PERIOD_SECONDS   | `10`          | Wait interval for ping connected peer (Keep Alive)                       |
 | PORT                  | `3000`        | The port number to listen on.                                            |
 | TELEMETRY_PORT        | `3001`        | The telemetry port number for the OpenTelemetry server to listen on.     |
+| ALLOW_READINESS_TWEAK | `false`       | Allow to tewak readiness state - for dev and testing only. |
 | ALLOW_INSPECTION      | `false`       | Allow inspection functionalities - for dev and testing only. |
 | NODE_DEBUG            |               | If it contains `aws-ipfs`, debug mode is enabled.                        |
 | LOG_LEVEL            | `info` | Logging level. |
@@ -47,6 +48,10 @@ _Variables in bold are required._
 Also check [AWS specifics configuration](https://github.com/elastic-ipfs/elastic-ipfs/blob/main/aws.md).
 
 **Note**: `DYNAMO_BLOCKS_TABLE` and `DYNAMO_CARS_TABLE` will be removed after the transition to the new database schema will be completed.
+
+### Readiness
+
+TODO how it works, how to test
 
 ## Issues
 

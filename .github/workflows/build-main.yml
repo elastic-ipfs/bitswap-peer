@@ -2,13 +2,11 @@
 name: Staging/Prod | Build
 on:
   push:
-    branches: [upgrade-cache-action] # TODO: main
+    branches: [main]
 env:
   REGISTRY: ghcr.io
 jobs:
   build:
     permissions:
       packages: write
-    uses: elastic-ipfs/bitswap-peer/.github/workflows/shared-build.yaml@upgrade-cache-action # TODO: main
-    with: # TODO: Remove
-      docker_image_version_suffix_label: upgrade-workflow-test
+    uses: elastic-ipfs/bitswap-peer/.github/workflows/shared-build.yaml@main

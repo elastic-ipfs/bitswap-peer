@@ -28,7 +28,7 @@
     "js-yaml": "4.1.0",
     "libp2p": "0.40.0",
     "lru-cache": "7.14.0",
-    "mnemonist": "0.39.4",
+    "mnemonist": "0.39.5",
     "pino": "8.7.0",
     "piscina": "3.2.0",
     "protobufjs": "7.1.2",

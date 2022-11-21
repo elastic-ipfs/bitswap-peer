@@ -45,7 +45,7 @@
     "eslint-plugin-import": "2.26.0",
     "eslint-plugin-node": "11.1.0",
     "eslint-plugin-promise": "6.1.1",
-    "esmock": "2.0.6",
+    "esmock": "2.0.7",
     "get-port": "6.1.2",
     "ipfs-car": "0.9.1",
     "libp2p-gossipsub": "0.13.0",

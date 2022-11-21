@@ -50,6 +50,7 @@ _Variables in bold are required._
 | P2P_CONNECTION_MAX_OUTBOUND_STREAMS | `10000` | p2p mplex outgoing streams allowed per connection |
 | P2P_CONNECTION_MAX_STREAM_BUFFER_SIZE | `4194304` | p2p mplex message buffer size, in bytes, default `4MB` |
 | TELEMETRY_PORT        | `3001`        | The telemetry port number for the OpenTelemetry server to listen on.     |
+| ALLOW_READINESS_TWEAK | `false`       | Allow to tewak readiness state - for dev and testing only. |
 | ALLOW_INSPECTION      | `false`       | Allow inspection functionalities - for dev and testing only. |
 | NODE_DEBUG            |               | If it contains `aws-ipfs`, debug mode is enabled.                        |
 | LOG_LEVEL            | `info` | Logging level. |
@@ -68,6 +69,10 @@ References
 - DefaultOptions https://github.com/libp2p/js-libp2p/blob/master/src/connection-manager/index.ts#L25
 
 **Note**: `DYNAMO_BLOCKS_TABLE` and `DYNAMO_CARS_TABLE` will be removed after the transition to the new database schema will be completed.
+
+### Readiness
+
+TODO how it works, how to test
 
 ## Issues
 

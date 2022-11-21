@@ -1,23 +1,10 @@
 
 import t from 'tap'
 import { get } from 'http'
-import esmock from 'esmock'
+import { httpServer } from '../src/http-server.js'
+import { getReadiness, setReadiness } from '../src/storage.js'
 import config from '../src/config.js'
-
-async function startServer (readinessFunction, port) {
-  // TODO fix mock
-  const httpServerModuleWithMocks = await esmock('../src/http-server.js', {
-    '../src/health-check.js': {
-      checkReadiness: readinessFunction
-    },
-    '../src/telemetry.js': {
-      telemetry: {
-        export: () => 'Works'
-      }
-    }
-  })
-  return await httpServerModuleWithMocks.httpServer.startServer({ port })
-}
+import * as helper from './utils/helper.js'
 
 function doHttpRequest (path, server) {
   return new Promise((resolve, reject) => {
@@ -40,11 +27,11 @@ function doHttpRequest (path, server) {
 t.test('httpServer', async t => {
   let server
   t.before(async () => {
-    server = await startServer(async () => 200, config.httpPort)
+    server = await httpServer.startServer({ port: config.httpPort })
   })
 
   t.teardown(async () => {
-    server.close()
+    httpServer.close()
   })
 
   t.test('should start with default http port', async t => {
@@ -52,40 +39,92 @@ t.test('httpServer', async t => {
   })
 
   t.test('should return 200 on /liveness', async t => {
-    /** @type {import('http').ServerResponse} */
+    setReadiness({ s3: true, dynamo: true })
+
     const res = await doHttpRequest('/liveness', server)
     t.equal(res.statusCode, 200)
-    // TODO fix assert content
   })
 
   t.test('should return 200 on /metrics', async t => {
-    /** @type {import('http').ServerResponse} */
     const res = await doHttpRequest('/metrics', server)
     t.equal(res.statusCode, 200)
     // TODO fix assert content
   })
 
   t.test('should return 200 on /readiness', async t => {
-    /** @type {import('http').ServerResponse} */
+    setReadiness({ s3: true, dynamo: true })
+
     const res = await doHttpRequest('/readiness', server)
     t.equal(res.statusCode, 200)
-    // TODO fix assert content
   })
 
   t.test('should not found path returns 404', async t => {
-    /** @type {import('http').ServerResponse} */
+    setReadiness({ s3: true, dynamo: true })
+
     const res = await doHttpRequest('/thisPathDoesNotExist', server)
+    t.equal(res.statusCode, 404)
+  })
+
+  t.test('should get readiness error state, returns 503', async t => {
+    setReadiness({ s3: false, dynamo: false })
+
+    const res = await doHttpRequest('/readiness', server)
+    t.equal(res.statusCode, 503)
+  })
+
+  t.test('should get not found accessing readiness tweak', async t => {
+    const res = await doHttpRequest('/readiness/tweak', server)
     t.equal(res.statusCode, 404)
   })
 })
 
-t.test('httpServer - should error in readiness returns 500', async t => {
-  const server = await startServer(async () => 503, config.httpPort)
+t.test('httpServer with readiness tweak', async t => {
+  let server
+  t.before(async () => {
+    server = await httpServer.startServer({
+      port: await helper.getFreePort(),
+      allowReadinessTweak: true
+    })
+  })
 
-  /** @type {import('http').ServerResponse} */
-  const res = await doHttpRequest('/readiness', server)
-  t.equal(res.statusCode, 503)
-  // TODO fix assert content
+  t.teardown(async () => {
+    httpServer.close()
+  })
 
-  server.close()
+  t.test('should access to /readiness/tweak', async t => {
+    const res = await doHttpRequest('/readiness/tweak', server)
+    t.equal(res.statusCode, 200)
+  })
+
+  t.test('should access to /readiness/tweak setting dynamo', async t => {
+    setReadiness({ s3: true, dynamo: true })
+
+    const res = await doHttpRequest('/readiness/tweak?dynamo=false', server)
+
+    t.equal(res.statusCode, 200)
+    t.same(getReadiness(), { dynamo: false, s3: true })
+  })
+
+  t.test('should access to /readiness/tweak setting dynamo and s3', async t => {
+    setReadiness({ s3: true, dynamo: true })
+
+    const res = await doHttpRequest('/readiness/tweak?dynamo=false&s3=false', server)
+
+    t.equal(res.statusCode, 200)
+    t.same(getReadiness(), { dynamo: false, s3: false })
+  })
+
+  t.test('should set state on /readiness/tweak and get it from /readiness (ok)', async t => {
+    await doHttpRequest('/readiness/tweak?dynamo=true&s3=true', server)
+
+    const res = await doHttpRequest('/readiness', server)
+    t.equal(res.statusCode, 200)
+  })
+
+  t.test('should set state on /readiness/tweak and get it from /readiness (error)', async t => {
+    await doHttpRequest('/readiness/tweak?dynamo=false&s3=false', server)
+
+    const res = await doHttpRequest('/readiness', server)
+    t.equal(res.statusCode, 503)
+  })
 })

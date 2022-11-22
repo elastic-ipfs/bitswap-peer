@@ -20,17 +20,28 @@ t.test('service - config properly passed to libp2p createLibp2p method', async t
     port,
     peerId,
     connectionConfig: {
-      maxConnections: 123,
-      minConnections: 9,
-      pollInterval: 789,
-      inboundConnectionThreshold: 654,
-      maxIncomingPendingConnections: 321,
-      inboundUpgradeTimeout: 987,
-      autoDial: false,
-      autoDialInterval: 852,
-      maxInboundStreams: 4123,
-      maxOutboundStreams: 5123,
-      maxStreamBufferSize: 6123
+      p2p: {
+        maxConnections: 123,
+        minConnections: 9,
+        pollInterval: 789,
+        inboundConnectionThreshold: 654,
+        maxIncomingPendingConnections: 321,
+        inboundUpgradeTimeout: 987,
+        autoDial: false,
+        autoDialInterval: 852,
+        maxInboundStreams: 4123,
+        maxOutboundStreams: 5123,
+        maxStreamBufferSize: 6123
+      },
+      mplex: {
+        maxInboundStreams: 9,
+        maxOutboundStreams: 8,
+        maxStreamBufferSize: 7
+      },
+      handler: {
+        maxInboundStreams: 3,
+        maxOutboundStreams: 4
+      }
     }
   })
 

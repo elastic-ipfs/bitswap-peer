@@ -5,6 +5,7 @@ import { startService } from './service.js'
 import { createAwsClient } from './aws-client/index.js'
 import { httpServer } from './http-server.js'
 import { getPeerId } from './peer-id.js'
+import { createConnectionConfig } from './util.js'
 
 async function boot () {
   const readinessConfig = {
@@ -48,21 +49,7 @@ async function boot () {
       port: config.port,
       peerId,
       peerAnnounceAddr: config.peerAnnounceAddr,
-      connectionConfig: {
-        // libp2p
-        maxConnections: config.p2pConnectionMaxConnections,
-        minConnections: config.p2pConnectionMinConnections,
-        pollInterval: config.p2pConnectionPollInterval,
-        inboundConnectionThreshold: config.p2pConnectionInboundConnectionThreshold,
-        maxIncomingPendingConnections: config.p2pConnectionMaxIncomingPendingConnections,
-        inboundUpgradeTimeout: config.p2pConnectionInboundUpgradeTimeout,
-        autoDial: config.p2pConnectionAutoDial,
-        autoDialInterval: config.p2pConnectionAutoDialInterval,
-        // mplex
-        maxInboundStreams: config.p2pConnectionMaxInboundStreams,
-        maxOutboundStreams: config.p2pConnectionMaxOutboundStreams,
-        maxStreamBufferSize: config.p2pConnectionMaxStreamBufferSize
-      }
+      connectionConfig: createConnectionConfig(config)
     }))
   } catch (err) {
     logger.fatal({ err }, 'Cannot start the service')

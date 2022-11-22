@@ -8,6 +8,7 @@ import { BITSWAP_V_100 as protocol } from '../src/protocol.js'
 import { startService } from '../src/service.js'
 import * as helper from './utils/helper.js'
 import { mockAWS } from './utils/mock.js'
+import { createConnectionConfig } from '../src/util.js'
 
 t.test('send - after closing behavior', async t => {
   const { awsClient } = await mockAWS(config)
@@ -29,16 +30,7 @@ t.test('send - after closing behavior', async t => {
 
 t.test('error handling', async t => {
   const peerId = await createEd25519PeerId()
-  const connectionConfig = {
-    maxConnections: config.p2pConnectionMaxConnections,
-    minConnections: config.p2pConnectionMinConnections,
-    pollInterval: config.p2pConnectionPollInterval,
-    inboundConnectionThreshold: config.p2pConnectionInboundConnectionThreshold,
-    maxIncomingPendingConnections: config.p2pConnectionMaxIncomingPendingConnections,
-    inboundUpgradeTimeout: config.p2pConnectionInboundUpgradeTimeout,
-    autoDial: config.p2pConnectionAutoDial,
-    autoDialInterval: config.p2pConnectionAutoDialInterval
-  }
+  const connectionConfig = createConnectionConfig(config)
   const { port, service } = await startService({ peerId, port: await helper.getFreePort(), connectionConfig })
   const { stream, client } = await helper.createClient(peerId, port, protocol)
 

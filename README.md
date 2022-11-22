@@ -49,6 +49,8 @@ _Variables in bold are required._
 | P2P_CONNECTION_MAX_INBOUND_STREAMS | `1024` | p2p mplex incoming streams allowed per connection |
 | P2P_CONNECTION_MAX_OUTBOUND_STREAMS | `10000` | p2p mplex outgoing streams allowed per connection |
 | P2P_CONNECTION_MAX_STREAM_BUFFER_SIZE | `4194304` | p2p mplex message buffer size, in bytes, default `4MB` |
+| P2P_CONNECTION_HANDLER_MAX_INBOUND_STREAMS | `1024` | p2p handler max incoming streams limit at the same time on each connection |
+| P2P_CONNECTION_HANDLER_MAX_OUTBOUND_STREAMS | `1024` | p2p handler max outgoing streams limit at the same time on each connection |
 | TELEMETRY_PORT        | `3001`        | The telemetry port number for the OpenTelemetry server to listen on.     |
 | ALLOW_READINESS_TWEAK | `false`       | Allow to tewak readiness state - for dev and testing only. |
 | ALLOW_INSPECTION      | `false`       | Allow inspection functionalities - for dev and testing only. |
@@ -65,6 +67,7 @@ References
 - https://github.com/libp2p/js-libp2p/blob/master/doc/CONNECTION_MANAGER.md
 - https://github.com/libp2p/js-libp2p/blob/master/doc/LIMITS.md
 - https://github.com/libp2p/js-libp2p-mplex#api
+
 - ConnectionManagerInit https://github.com/libp2p/js-libp2p/blob/master/src/connection-manager/index.ts#L41
 - DefaultOptions https://github.com/libp2p/js-libp2p/blob/master/src/connection-manager/index.ts#L25
 

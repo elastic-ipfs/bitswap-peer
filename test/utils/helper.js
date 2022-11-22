@@ -17,6 +17,7 @@ import { Connection } from '../../src/networking.js'
 import { noiseCrypto } from '../../src/noise-crypto.js'
 import { Message, RawMessage } from '../../src/protocol.js'
 import { startService } from '../../src/service.js'
+import { createConnectionConfig } from '../../src/util.js'
 
 async function createClient (peerId, port, protocol) {
   const client = await createLibp2p({
@@ -35,7 +36,7 @@ async function createClient (peerId, port, protocol) {
     connection.on('data', data => {
       receiver.emit('message', data)
     })
-  })
+  }, { maxInboundStreams: Infinity, maxOutboundStreams: Infinity })
 
   return { stream, receiver, client }
 }
@@ -48,17 +49,7 @@ async function setup ({ protocol, awsClient }) {
   const peerId = await createEd25519PeerId()
   const port = await getFreePort()
   const logger = spyLogger()
-  const connectionConfig = {
-    maxConnections: config.p2pConnectionMaxConnections,
-    minConnections: config.p2pConnectionMinConnections,
-    pollInterval: config.p2pConnectionPollInterval,
-    inboundConnectionThreshold: config.p2pConnectionInboundConnectionThreshold,
-    maxIncomingPendingConnections: config.p2pConnectionMaxIncomingPendingConnections,
-    inboundUpgradeTimeout: config.p2pConnectionInboundUpgradeTimeout,
-    autoDial: config.p2pConnectionAutoDial,
-    autoDialInterval: config.p2pConnectionAutoDialInterval
-  }
-
+  const connectionConfig = createConnectionConfig(config)
   const { service } = await startService({ peerId, port, awsClient, logger, connectionConfig })
   const { stream, receiver, client } = await createClient(peerId, port, protocol)
   const connection = new Connection(stream)

@@ -27,21 +27,26 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
       transports: [webSockets()],
       connectionEncryption: [noise({ crypto: noiseCrypto })],
       streamMuxers: [mplex({
-        maxInboundStreams: connectionConfig.maxInboundStreams,
-        maxOutboundStreams: connectionConfig.maxOutboundStreams,
-        maxStreamBufferSize: connectionConfig.maxStreamBufferSize
+        maxInboundStreams: connectionConfig.mplex.maxInboundStreams,
+        maxOutboundStreams: connectionConfig.mplex.maxOutboundStreams,
+        maxStreamBufferSize: connectionConfig.mplex.maxStreamBufferSize
       })],
       connectionManager: {
-        maxConnections: connectionConfig.maxConnections,
-        minConnections: connectionConfig.minConnections,
-        pollInterval: connectionConfig.pollInterval,
-        inboundConnectionThreshold: connectionConfig.inboundConnectionThreshold,
-        maxIncomingPendingConnections: connectionConfig.maxIncomingPendingConnections,
-        inboundUpgradeTimeout: connectionConfig.inboundUpgradeTimeout,
-        autoDial: connectionConfig.autoDial,
-        autoDialInterval: connectionConfig.autoDialInterval
+        maxConnections: connectionConfig.p2p.maxConnections,
+        minConnections: connectionConfig.p2p.minConnections,
+        pollInterval: connectionConfig.p2p.pollInterval,
+        inboundConnectionThreshold: connectionConfig.p2p.inboundConnectionThreshold,
+        maxIncomingPendingConnections: connectionConfig.p2p.maxIncomingPendingConnections,
+        inboundUpgradeTimeout: connectionConfig.p2p.inboundUpgradeTimeout,
+        autoDial: connectionConfig.p2p.autoDial,
+        autoDialInterval: connectionConfig.p2p.autoDialInterval
       }
     })
+
+    const handlerOptions = {
+      maxInboundStreams: connectionConfig.handler.maxInboundStreams,
+      maxOutboundStreams: connectionConfig.handler.maxOutboundStreams
+    }
 
     service.addEventListener('error', err => {
       logger.warn({ err }, `libp2p error: ${serializeError(err)}`)
@@ -82,7 +87,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
         } catch (err) {
           logger.error({ err: serializeError(err), dial, stream, protocol }, 'Error while creating connection')
         }
-      })
+      }, handlerOptions)
     }
 
     // TODO move to networking

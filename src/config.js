@@ -57,9 +57,12 @@ export function makeConfig () {
     p2pConnectionAutoDial: process.env.P2P_CONNECTION_AUTO_DIAL === 'true',
     p2pConnectionAutoDialInterval: process.env.P2P_CONNECTION_AUTO_DIAL_INTERVAL ? parseInt(process.env.P2P_CONNECTION_AUTO_DIAL_INTERVAL) : 10000, // ms
     // mplex
-    p2pConnectionMaxInboundStreams: process.env.P2P_CONNECTION_MAX_INBOUND_STREAMS ? parseInt(process.env.P2P_CONNECTION_MAX_INBOUND_STREAMS) : 1024,
-    p2pConnectionMaxOutboundStreams: process.env.P2P_CONNECTION_MAX_OUTBOUND_STREAMS ? parseInt(process.env.P2P_CONNECTION_MAX_OUTBOUND_STREAMS) : 10000,
-    p2pConnectionMaxStreamBufferSize: process.env.P2P_CONNECTION_MAX_STREAM_BUFFER_SIZE ? parseInt(process.env.P2P_CONNECTION_MAX_STREAM_BUFFER_SIZE) : 4194304,
+    p2pConnectionMplexMaxInboundStreams: process.env.P2P_CONNECTION_MPLEX_MAX_INBOUND_STREAMS ? parseInt(process.env.P2P_CONNECTION_MPLEX_MAX_INBOUND_STREAMS) : 1024,
+    p2pConnectionMplexMaxOutboundStreams: process.env.P2P_CONNECTION_MPLEX_MAX_OUTBOUND_STREAMS ? parseInt(process.env.P2P_CONNECTION_MPLEX_MAX_OUTBOUND_STREAMS) : 10000,
+    p2pConnectionMplexMaxStreamBufferSize: process.env.P2P_CONNECTION_MPLEX_MAX_STREAM_BUFFER_SIZE ? parseInt(process.env.P2P_CONNECTION_MPLEX_MAX_STREAM_BUFFER_SIZE) : 4194304,
+    // handler
+    p2pConnectionHandlerMaxInboundStreams: process.env.P2P_CONNECTION_HANDLER_MAX_INBOUND_STREAMS ? parseInt(process.env.P2P_CONNECTION_HANDLER_MAX_INBOUND_STREAMS) : 1024,
+    p2pConnectionHandlerMaxOutboundStreams: process.env.P2P_CONNECTION_HANDLER_MAX_OUTBOUND_STREAMS ? parseInt(process.env.P2P_CONNECTION_HANDLER_MAX_OUTBOUND_STREAMS) : 1024,
 
     dynamoMaxRetries: process.env.DYNAMO_MAX_RETRIES ? parseInt(process.env.DYNAMO_MAX_RETRIES) : 3,
     dynamoRetryDelay: process.env.DYNAMO_RETRY_DELAY ? parseInt(process.env.DYNAMO_RETRY_DELAY) : 100, // ms

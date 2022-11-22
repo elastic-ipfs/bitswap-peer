@@ -60,6 +60,8 @@ _Variables in bold are required._
 
 Also check [AWS specifics configuration](https://github.com/elastic-ipfs/elastic-ipfs/blob/main/aws.md).
 
+**Note**: `DYNAMO_BLOCKS_TABLE` and `DYNAMO_CARS_TABLE` will be removed after the transition to the new database schema will be completed.
+
 ## p2p Connections
 
 References
@@ -71,11 +73,25 @@ References
 - ConnectionManagerInit https://github.com/libp2p/js-libp2p/blob/master/src/connection-manager/index.ts#L41
 - DefaultOptions https://github.com/libp2p/js-libp2p/blob/master/src/connection-manager/index.ts#L25
 
-**Note**: `DYNAMO_BLOCKS_TABLE` and `DYNAMO_CARS_TABLE` will be removed after the transition to the new database schema will be completed.
-
 ### Readiness
 
-TODO how it works, how to test
+The `/readiness` endpoint on the http server is used by the load balancer to determine if the service is healthy or not.
+The readiness state is set by the last , and it's served instantly when called.
+In case of state of error, the `/readiness` will perform calls to the DynamoDB and S3 services and will return the result state.
+
+For testing purpose only, it's possible to set the readiness state enabling `ALLOW_READINESS_TWEAK` and calling the `/readiness/twek` enpoing passing the readiness state, for example
+
+```bash
+ALLOW_READINESS_TWEAK=true node src/index.js
+```
+
+so the state can be set calling
+
+```bash
+curl http://localhost:3001/readiness/tweak?dynamo=false&s3=true
+```
+
+will set the state of DynamoDB to error, and the following call to `/readiness` will return the error state
 
 ## Issues
 

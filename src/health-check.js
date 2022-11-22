@@ -13,7 +13,8 @@ export async function checkReadiness ({ awsClient, readinessConfig, allowReadine
   }
 
   if (allowReadinessTweak) {
-    return state.s3 && state.dynamo ? SUCCESS_CODE : ERROR_CODE
+    // note success is already returned above, with or without allowReadinessTweak
+    return ERROR_CODE
   }
 
   try {

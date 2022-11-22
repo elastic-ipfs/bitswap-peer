@@ -105,6 +105,4 @@ t.test('checkReadiness', async t => {
     t.equal(dynamoCalls, 2)
     t.equal(s3Calls, 2)
   })
-
-  // TODO allowReadinessTweak
 })

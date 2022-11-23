@@ -89,6 +89,8 @@ class Client {
   }
 
   async refreshCredentials () {
+    this.logger.info('AwsClient.refreshCredentials')
+
     const url = new URL('https://sts.amazonaws.com')
 
     url.searchParams.append('Version', '2011-06-15')

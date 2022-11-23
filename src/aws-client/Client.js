@@ -70,12 +70,18 @@ class Client {
       return
     }
 
+    const credentials = await this.refreshCredentials()
+
     // Every N minutes we rotate the keys using STS
     this.credentialRefreshTimer = setInterval(() => {
-      this.refreshCredentials()
+      try {
+        this.refreshCredentials()
+      } catch (err) {
+        this.logger.fatal({ err }, 'AwsClient.refreshCredentials failed')
+      }
     }, this.refreshCredentialsInterval).unref()
 
-    return this.refreshCredentials()
+    return credentials
   }
 
   close () {

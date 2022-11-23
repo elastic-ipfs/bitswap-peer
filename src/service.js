@@ -14,7 +14,7 @@ import { telemetry } from './telemetry.js'
 import { logger as defaultLogger, serializeError } from './logging.js'
 import inspect from './inspect/index.js'
 
-async function startService ({ peerId, port, peerAnnounceAddr, awsClient, logger = defaultLogger } = {}) {
+async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connectionConfig, logger = defaultLogger } = {}) {
   try {
     // TODO params validation
 
@@ -26,8 +26,27 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, logger
       },
       transports: [webSockets()],
       connectionEncryption: [noise({ crypto: noiseCrypto })],
-      streamMuxers: [mplex()]
+      streamMuxers: [mplex({
+        maxInboundStreams: connectionConfig.mplex.maxInboundStreams,
+        maxOutboundStreams: connectionConfig.mplex.maxOutboundStreams,
+        maxStreamBufferSize: connectionConfig.mplex.maxStreamBufferSize
+      })],
+      connectionManager: {
+        maxConnections: connectionConfig.p2p.maxConnections,
+        minConnections: connectionConfig.p2p.minConnections,
+        pollInterval: connectionConfig.p2p.pollInterval,
+        inboundConnectionThreshold: connectionConfig.p2p.inboundConnectionThreshold,
+        maxIncomingPendingConnections: connectionConfig.p2p.maxIncomingPendingConnections,
+        inboundUpgradeTimeout: connectionConfig.p2p.inboundUpgradeTimeout,
+        autoDial: connectionConfig.p2p.autoDial,
+        autoDialInterval: connectionConfig.p2p.autoDialInterval
+      }
     })
+
+    const handlerOptions = {
+      maxInboundStreams: connectionConfig.handler.maxInboundStreams,
+      maxOutboundStreams: connectionConfig.handler.maxOutboundStreams
+    }
 
     service.addEventListener('error', err => {
       logger.warn({ err }, `libp2p error: ${serializeError(err)}`)
@@ -68,7 +87,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, logger
         } catch (err) {
           logger.error({ err: serializeError(err), dial, stream, protocol }, 'Error while creating connection')
         }
-      })
+      }, handlerOptions)
     }
 
     // TODO move to networking

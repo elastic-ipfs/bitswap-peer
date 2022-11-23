@@ -5,8 +5,22 @@ import { startService } from './service.js'
 import { createAwsClient } from './aws-client/index.js'
 import { httpServer } from './http-server.js'
 import { getPeerId } from './peer-id.js'
+import { createConnectionConfig } from './util.js'
 
 async function boot () {
+  const readinessConfig = {
+    dynamo: {
+      table: config.linkTableV1,
+      keyName: config.linkTableBlockKey,
+      keyValue: 'readiness'
+    },
+    s3: {
+      region: config.peerIdS3Region,
+      bucket: config.peerIdS3Bucket,
+      key: config.peerIdJsonFile
+    }
+  }
+
   try {
     const awsClient = await createAwsClient(config, logger)
 
@@ -17,29 +31,25 @@ async function boot () {
       peerIdJsonFile: config.peerIdJsonFile,
       peerIdJsonPath: config.peerIdJsonPath
     })
+    await awsClient.dynamoQueryBySortKey({
+      table: readinessConfig.dynamo.table,
+      keyName: readinessConfig.dynamo.keyName,
+      keyValue: readinessConfig.dynamo.keyValue
+    })
 
     await httpServer.startServer({
       port: config.httpPort,
       awsClient,
-      readiness: {
-        dynamo: {
-          table: config.linkTableV1,
-          keyName: config.linkTableBlockKey,
-          keyValue: 'readiness'
-        },
-        s3: {
-          region: config.peerIdS3Region,
-          bucket: config.peerIdS3Bucket,
-          key: config.peerIdJsonFile
-        }
-      }
+      readinessConfig,
+      allowReadinessTweak: config.allowReadinessTweak
     })
 
     process.nextTick(() => startService({
       awsClient,
       port: config.port,
       peerId,
-      peerAnnounceAddr: config.peerAnnounceAddr
+      peerAnnounceAddr: config.peerAnnounceAddr,
+      connectionConfig: createConnectionConfig(config)
     }))
   } catch (err) {
     logger.fatal({ err }, 'Cannot start the service')

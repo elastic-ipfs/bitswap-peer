@@ -70,12 +70,18 @@ class Client {
       return
     }
 
+    const credentials = await this.refreshCredentials()
+
     // Every N minutes we rotate the keys using STS
     this.credentialRefreshTimer = setInterval(() => {
-      this.refreshCredentials()
+      try {
+        this.refreshCredentials()
+      } catch (err) {
+        this.logger.fatal({ err }, 'AwsClient.refreshCredentials failed')
+      }
     }, this.refreshCredentialsInterval).unref()
 
-    return this.refreshCredentials()
+    return credentials
   }
 
   close () {
@@ -83,6 +89,8 @@ class Client {
   }
 
   async refreshCredentials () {
+    this.logger.info('AwsClient.refreshCredentials')
+
     const url = new URL('https://sts.amazonaws.com')
 
     url.searchParams.append('Version', '2011-06-15')
@@ -202,7 +210,12 @@ class Client {
       throw new Error('NOT_FOUND')
     }
     if (statusCode >= 400) {
-      throw new Error(`S3 request error - Status: ${statusCode} Body: ${buffer.slice().toString('utf-8')} `)
+      const content = buffer.slice().toString('utf-8')
+      // hotfix TODO port to core-lib
+      if (content.includes('ExpiredTokenException')) {
+        await this.refreshCredentials()
+      }
+      throw new Error(`S3 request error - Status: ${statusCode} Body: ${content} `)
     }
 
     return buffer.slice()
@@ -357,6 +370,10 @@ class Client {
     const content = buffer.slice().toString('utf-8')
 
     if (statusCode >= 400) {
+      // hotfix TODO port to core-lib
+      if (content.includes('ExpiredTokenException')) {
+        await this.refreshCredentials()
+      }
       throw new Error(`Dynamo request error - Status: ${statusCode} Body: ${content} `)
     }
 

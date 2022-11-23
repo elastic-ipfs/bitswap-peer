@@ -12,10 +12,12 @@ import { CID } from 'multiformats/cid'
 import { base58btc as base58 } from 'multiformats/bases/base58'
 import getPort from 'get-port'
 
+import config from '../../src/config.js'
 import { Connection } from '../../src/networking.js'
 import { noiseCrypto } from '../../src/noise-crypto.js'
 import { Message, RawMessage } from '../../src/protocol.js'
 import { startService } from '../../src/service.js'
+import { createConnectionConfig } from '../../src/util.js'
 
 async function createClient (peerId, port, protocol) {
   const client = await createLibp2p({
@@ -34,7 +36,7 @@ async function createClient (peerId, port, protocol) {
     connection.on('data', data => {
       receiver.emit('message', data)
     })
-  })
+  }, { maxInboundStreams: Infinity, maxOutboundStreams: Infinity })
 
   return { stream, receiver, client }
 }
@@ -47,7 +49,8 @@ async function setup ({ protocol, awsClient }) {
   const peerId = await createEd25519PeerId()
   const port = await getFreePort()
   const logger = spyLogger()
-  const { service } = await startService({ peerId, port, awsClient, logger })
+  const connectionConfig = createConnectionConfig(config)
+  const { service } = await startService({ peerId, port, awsClient, logger, connectionConfig })
   const { stream, receiver, client } = await createClient(peerId, port, protocol)
   const connection = new Connection(stream)
 

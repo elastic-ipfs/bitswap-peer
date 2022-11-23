@@ -1,11 +1,62 @@
 
 import t from 'tap'
 
+import { createEd25519PeerId } from '@libp2p/peer-id-factory'
+import getPort from 'get-port'
 import config from '../src/config.js'
 import { BITSWAP_V_100 as protocol, Entry, Message, WantList } from '../src/protocol.js'
 import { cid1, cid1Content, cid2 } from './fixtures/cids.js'
 import * as helper from './utils/helper.js'
 import { mockAWS, createMockAgent } from './utils/mock.js'
+import { startService } from '../src/service.js'
+
+t.test('service - config properly passed to libp2p createLibp2p method', async t => {
+  const { awsClient } = await mockAWS(config)
+  const peerId = await createEd25519PeerId()
+  const port = await getPort()
+
+  const { service } = await startService({
+    awsClient,
+    port,
+    peerId,
+    connectionConfig: {
+      p2p: {
+        maxConnections: 123,
+        minConnections: 9,
+        pollInterval: 789,
+        inboundConnectionThreshold: 654,
+        maxIncomingPendingConnections: 321,
+        inboundUpgradeTimeout: 987,
+        autoDial: false,
+        autoDialInterval: 852,
+        maxInboundStreams: 4123,
+        maxOutboundStreams: 5123,
+        maxStreamBufferSize: 6123
+      },
+      mplex: {
+        maxInboundStreams: 9,
+        maxOutboundStreams: 8,
+        maxStreamBufferSize: 7
+      },
+      handler: {
+        maxInboundStreams: 3,
+        maxOutboundStreams: 4
+      }
+    }
+  })
+
+  // p2p
+  t.equal(service.components.connectionManager.opts.maxConnections, 123)
+  t.equal(service.components.connectionManager.opts.minConnections, 9)
+  t.equal(service.components.connectionManager.opts.pollInterval, 789)
+  t.equal(service.components.connectionManager.opts.inboundConnectionThreshold, 654)
+  t.equal(service.components.connectionManager.opts.maxIncomingPendingConnections, 321)
+  t.equal(service.components.connectionManager.opts.inboundUpgradeTimeout, 987)
+  t.equal(service.components.connectionManager.opts.autoDial, false)
+  t.equal(service.components.connectionManager.opts.autoDialInterval, 852)
+
+  service.stop()
+})
 
 t.test('service - blocks are cached', async t => {
   // TODO fix, is not asserting cache, only responses

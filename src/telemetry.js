@@ -2,7 +2,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { load } from 'js-yaml'
-import { build as buildHistogram } from 'hdr-histogram-js'
+import * as hdr from 'hdr-histogram-js'
 
 import { logger } from './logging.js'
 
@@ -22,7 +22,8 @@ class Aggregator {
     }
 
     this.sum = 0
-    this.histogram = buildHistogram({
+    hdr.initWebAssemblySync()
+    this.histogram = hdr.build({
       lowestDiscernibleValue: 1,
       highestTrackableValue: 1e9,
       numberOfSignificantValueDigits: 5,

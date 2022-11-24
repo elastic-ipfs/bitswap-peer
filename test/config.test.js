@@ -21,8 +21,6 @@ t.test('config - defaults', async t => {
     carsTablePrimaryKey: 'path',
     linkTableBlockKey: 'blockmultihash',
     linkTableCarKey: 'carpath',
-    enableKeepAlive: false,
-    pingPeriodSecs: 10,
     awsClientRefreshCredentialsInterval: 300000,
     awsClientKeepAliveTimeout: 60000,
     awsClientConnectTimeout: 120000,
@@ -72,8 +70,6 @@ t.test('config - all by env vars', async t => {
   process.env.DYNAMO_BLOCKS_TABLE_V1 = 'dev-ep-v1-blocks'
   process.env.DYNAMO_CARS_TABLE_V1 = 'dev-ep-v1-cars'
   process.env.DYNAMO_LINK_TABLE_V1 = 'dev-ep-v1-blocks-cars-position'
-  process.env.ENABLE_KEEP_ALIVE = 'false'
-  process.env.PING_PERIOD_SECONDS = '3'
   process.env.AWS_CLIENT_REFRESH_CREDENTIALS_INTERVAL = '7777'
   process.env.AWS_CLIENT_KEEP_ALIVE_TIMEOUT = '8888'
   process.env.AWS_CLIENT_CONNECT_TIMEOUT = '9999'
@@ -129,8 +125,6 @@ t.test('config - all by env vars', async t => {
     carsTablePrimaryKey: 'path',
     linkTableBlockKey: 'blockmultihash',
     linkTableCarKey: 'carpath',
-    enableKeepAlive: false,
-    pingPeriodSecs: 3,
     awsClientRefreshCredentialsInterval: '7777',
     awsClientKeepAliveTimeout: 8888,
     awsClientConnectTimeout: 9999,

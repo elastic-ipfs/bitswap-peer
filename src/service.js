@@ -5,10 +5,8 @@ import { noise } from '@chainsafe/libp2p-noise'
 import { mplex } from '@libp2p/mplex'
 
 import { noiseCrypto } from './noise-crypto.js'
-import config from './config.js'
 import { Message, protocols } from './protocol.js'
 import { Connection } from './networking.js'
-import { startKeepAlive, stopKeepAlive } from './p2p-keep-alive.js'
 import { handle, createContext } from './handler.js'
 import { telemetry } from './telemetry.js'
 import { logger as defaultLogger, serializeError } from './logging.js'
@@ -93,7 +91,6 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
     // TODO move to networking
     service.connectionManager.addEventListener('peer:connect', connection => {
       try {
-        if (config.enableKeepAlive) { startKeepAlive(connection.remotePeer, service) }
         telemetry.increaseCount('bitswap-total-connections')
         inspect.metrics.increase('connections')
       } catch (err) {
@@ -104,7 +101,6 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
     // TODO move to networking
     service.connectionManager.addEventListener('peer:disconnect', connection => {
       try {
-        if (config.enableKeepAlive) { stopKeepAlive(connection.remotePeer) }
         telemetry.decreaseCount('bitswap-total-connections')
         inspect.metrics.decrease('connections')
       } catch (err) {

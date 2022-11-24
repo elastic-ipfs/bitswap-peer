@@ -35,8 +35,6 @@ _Variables in bold are required._
 | PEER_ID_S3_REGION     | `$AWS_REGION` | The S3 region to download the BitSwap PeerID. |
 | PEER_ID_S3_BUCKET     |               | The S3 bucket to download the BitSwap PeerID. |
 | PEER_ANNOUNCE_ADDR    |               | Swarm multiaddr to announce to the network (excluding peer ID).          |
-| ENABLE_KEEP_ALIVE   | `true`          | Enable Keep-alive for peers                       |
-| PING_PERIOD_SECONDS   | `10`          | Wait interval for ping connected peer (Keep Alive)                       |
 | PORT                  | `3000`        | The port number to listen on.                                            |
 | P2P_CONNECTION_MAX_CONNECTIONS | `10000` | p2p max connections, forwared to `libp2p` `connectionManager.maxConnections` |
 | P2P_CONNECTION_MIN_CONNECTIONS | `0` | p2p min connections, forwared to `libp2p` `connectionManager.minConnections` |

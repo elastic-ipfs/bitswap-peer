@@ -28,9 +28,6 @@ export function makeConfig () {
     linkTableBlockKey: 'blockmultihash',
     linkTableCarKey: 'carpath',
 
-    enableKeepAlive: process.env.ENABLE_KEEP_ALIVE === 'true',
-    pingPeriodSecs: process.env.PING_PERIOD_SECONDS ? parseInt(process.env.PING_PERIOD_SECONDS) : 10,
-
     awsClientRefreshCredentialsInterval: process.env.AWS_CLIENT_REFRESH_CREDENTIALS_INTERVAL ?? 5 * 60e3, // 5 min
     awsClientKeepAliveTimeout: process.env.AWS_CLIENT_KEEP_ALIVE_TIMEOUT ? parseInt(process.env.AWS_CLIENT_KEEP_ALIVE_TIMEOUT) : 60e3, // 1min
     awsClientConnectTimeout: process.env.AWS_CLIENT_CONNECT_TIMEOUT ? parseInt(process.env.AWS_CLIENT_CONNECT_TIMEOUT) : 120e3, // 2min

@@ -14,9 +14,7 @@ class Aggregator {
     this.description = `${description} (${metric})`
     this.exportName = this.tag.replaceAll('-', '_')
 
-    if (category.match(/active|pending/)) {
-      this.type = 'gauge'
-    } else if (metric === 'durations') {
+    if (metric === 'durations') {
       this.type = 'histogram'
     } else {
       this.type = 'counter'
@@ -27,7 +25,8 @@ class Aggregator {
     this.histogram = buildHistogram({
       lowestDiscernibleValue: 1,
       highestTrackableValue: 1e9,
-      numberOfSignificantValueDigits: 5
+      numberOfSignificantValueDigits: 5,
+      useWebAssembly: true
     })
   }
 
@@ -86,10 +85,7 @@ class Telemetry {
     this.metrics = new Map()
     for (const [category, description] of Object.entries(metrics)) {
       this.createMetric(category, description, 'count')
-
-      if (!category.match(/active|pending/)) {
-        this.createMetric(category, description, 'durations')
-      }
+      this.createMetric(category, description, 'durations')
     }
   }
 

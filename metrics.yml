@@ -2,8 +2,8 @@
 component: bitswap-peer
 metrics:
   bitswap-total-connections: BitSwap Total Connections
-  bitswap-total-entries: BitSwap Total Entries served
-  bitswap-pending-entries: BitSwap Pending Entries to serve
+  bitswap-total-entries: BitSwap Total Blocks requested
+  bitswap-pending-entries: BitSwap Pending Blocks to serve
   bitswap-block-error: Block error (on parsing)
   bitswap-block-data-error: Data Block error
   bitswap-block-info-error: Info Block error
@@ -22,4 +22,4 @@ metrics:
   cache-block-info-hits: LRU cache hits for Info block
   cache-block-info-misses: LRU cache misses for Info block
 version: 0.1.0
-buildDate: "20220307.1423"
+buildDate: "20221124.1506"

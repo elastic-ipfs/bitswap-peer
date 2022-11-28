@@ -17,7 +17,7 @@
     "@aws-sdk/util-dynamodb": "3.215.0",
     "@chainsafe/libp2p-noise": "^10.1.0",
     "@dnlup/doc": "4.0.1",
-    "@libp2p/mplex": "7.0.1",
+    "@libp2p/mplex": "7.1.0",
     "@libp2p/peer-id-factory": "1.0.19",
     "@libp2p/websockets": "5.0.0",
     "bl": "6.0.0",

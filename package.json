@@ -12,7 +12,7 @@
     "lint": "eslint src test utils"
   },
   "dependencies": {
-    "@aws-sdk/client-sqs": "3.215.0",
+    "@aws-sdk/client-sqs": "3.218.0",
     "@aws-sdk/node-http-handler": "3.215.0",
     "@aws-sdk/util-dynamodb": "3.215.0",
     "@chainsafe/libp2p-noise": "^10.1.0",

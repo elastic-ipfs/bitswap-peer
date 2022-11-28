@@ -14,7 +14,7 @@
   "dependencies": {
     "@aws-sdk/client-sqs": "3.215.0",
     "@aws-sdk/node-http-handler": "3.215.0",
-    "@aws-sdk/util-dynamodb": "3.215.0",
+    "@aws-sdk/util-dynamodb": "3.218.0",
     "@chainsafe/libp2p-noise": "^10.1.0",
     "@dnlup/doc": "4.0.1",
     "@libp2p/mplex": "7.0.1",

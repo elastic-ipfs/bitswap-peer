@@ -2,8 +2,8 @@
 import path from 'path'
 import fs from 'fs/promises'
 import doc from '@dnlup/doc'
+import { dirname } from 'e-ipfs-core-lib'
 import config from '../config.js'
-import { dirname } from '../util.js'
 
 const MB = 1024 * 1024
 

@@ -1,7 +1,7 @@
 
 import fs from 'fs'
 import path from 'path'
-import url from 'url'
+import { dirname } from 'e-ipfs-core-lib'
 
 /**
  * @param {{ car: string, offset: number, length: number }} - blockInfo
@@ -12,10 +12,6 @@ function sizeofBlockInfo (blockInfo) {
 
 function sleep (ms) {
   return new Promise(resolve => { setTimeout(resolve, ms) })
-}
-
-function dirname (importMetaUrl) {
-  return path.dirname(url.fileURLToPath(importMetaUrl))
 }
 
 function createConnectionConfig (config) {
@@ -45,4 +41,4 @@ function createConnectionConfig (config) {
 const packageJson = JSON.parse(fs.readFileSync(path.join(dirname(import.meta.url), '../package.json'), 'utf8'))
 const version = packageJson.version
 
-export { sizeofBlockInfo, sleep, dirname, createConnectionConfig, version }
+export { sizeofBlockInfo, sleep, createConnectionConfig, version }

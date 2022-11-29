@@ -6,8 +6,9 @@ import { Agent, request } from 'undici'
 import { xml2js } from 'xml-js'
 import { BufferList } from 'bl'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
+import { dirname } from 'e-ipfs-core-lib'
 import { serializeError } from '../logging.js'
-import { sleep, dirname } from '../util.js'
+import { sleep } from '../util.js'
 
 const signerWorker = new Piscina({
   filename: path.resolve(dirname(import.meta.url), './signer-worker.cjs'),

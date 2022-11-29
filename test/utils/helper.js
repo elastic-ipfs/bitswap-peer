@@ -15,7 +15,7 @@ import getPort from 'get-port'
 import config from '../../src/config.js'
 import { Connection } from '../../src/networking.js'
 import { noiseCrypto } from '../../src/noise-crypto.js'
-import { Message, RawMessage } from '../../src/protocol.js'
+import { Message, RawMessage } from 'e-ipfs-core-lib'
 import { startService } from '../../src/service.js'
 import { createConnectionConfig } from '../../src/util.js'
 

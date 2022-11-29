@@ -4,7 +4,7 @@ import sinon from 'sinon'
 import { CID } from 'multiformats/cid'
 
 import config from '../src/config.js'
-import { BITSWAP_V_120, Entry, BlockPresence, WantList } from '../src/protocol.js'
+import { BITSWAP_V_120, Entry, BlockPresence, WantList } from 'e-ipfs-core-lib'
 
 import { handle, createContext } from '../src/handler.js'
 import { cidToKey } from '../src/util.js'

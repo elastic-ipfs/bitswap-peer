@@ -6,7 +6,7 @@ import { mplex } from '@libp2p/mplex'
 
 import { noiseCrypto } from './noise-crypto.js'
 import config from './config.js'
-import { Message, protocols } from './protocol.js'
+import { Message, protocols } from 'e-ipfs-core-lib'
 import { Connection } from './networking.js'
 import { startKeepAlive, stopKeepAlive } from './p2p-keep-alive.js'
 import { handle, createContext } from './handler.js'

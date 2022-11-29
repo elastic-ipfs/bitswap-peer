@@ -1,7 +1,7 @@
 
 import config from './config.js'
 import { serializeError } from './logging.js'
-import { Entry, BITSWAP_V_120, BLOCK_TYPE_INFO, BLOCK_TYPE_DATA, Message } from './protocol.js'
+import { Entry, BITSWAP_V_120, BLOCK_TYPE_INFO, BLOCK_TYPE_DATA, Message } from 'e-ipfs-core-lib'
 import { fetchBlocksData, fetchBlocksInfo } from './storage.js'
 import { telemetry } from './telemetry.js'
 import { connectPeer } from './networking.js'

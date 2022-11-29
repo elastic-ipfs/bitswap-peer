@@ -36,7 +36,7 @@ t.test('checkReadiness', async t => {
 
     t.equal(await checkReadiness({ awsClient, readinessConfig, logger }), 503)
     t.equal(logger.messages.error.length, 1)
-    t.match(logger.messages.error[0][0].err, 'ERROR_ON_S3')
+    t.match(logger.messages.error[0][0].err.message, 'ERROR_ON_S3')
     t.equal(logger.messages.error[0][1], 'Readiness Probe Failed')
   })
 
@@ -50,7 +50,7 @@ t.test('checkReadiness', async t => {
 
     t.equal(await checkReadiness({ awsClient, readinessConfig, logger }), 503)
     t.equal(logger.messages.error.length, 1)
-    t.match(logger.messages.error[0][0].err, 'ERROR_ON_DYNAMO')
+    t.match(logger.messages.error[0][0].err.message, 'ERROR_ON_DYNAMO')
     t.equal(logger.messages.error[0][1], 'Readiness Probe Failed')
   })
 
@@ -67,7 +67,7 @@ t.test('checkReadiness', async t => {
     t.equal(await checkReadiness({ awsClient, readinessConfig, logger }), 503)
     t.equal(logger.messages.info.length, 1)
     t.equal(logger.messages.info[0][0], 'Readiness Probe Check')
-    t.match(logger.messages.error[0][0].err, 'ERROR_ON_DYNAMO')
+    t.match(logger.messages.error[0][0].err.message, 'ERROR_ON_DYNAMO')
     t.equal(logger.messages.error.length, 1)
     t.equal(logger.messages.error[0][1], 'Readiness Probe Failed')
     t.equal(dynamoCalls, 1)

@@ -2,7 +2,7 @@
 import { Agent as HttpsAgent } from 'https'
 import LRUCache from 'mnemonist/lru-cache.js'
 import config from './config.js'
-import { logger, serializeError } from './logging.js'
+import { logger } from './logging.js'
 import { telemetry } from './telemetry.js'
 
 // TODO when the v0 tables will not be used anymore, following dependencies will be removed
@@ -230,8 +230,8 @@ async function recoverV0Tables (car, queue = 'indexer-topic') {
     await sqsClient.send(new SendMessageCommand({ QueueUrl: queue, MessageBody: car }))
 
     recovering.set(car, 1)
-  } catch (error) {
-    logger.error({ car, err: serializeError(error) }, 'unable to recover the car')
+  } catch (err) {
+    logger.error({ car, err }, 'unable to recover the car')
   }
 }
 

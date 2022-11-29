@@ -11,7 +11,7 @@ import { Connection } from './networking.js'
 import { startKeepAlive, stopKeepAlive } from './p2p-keep-alive.js'
 import { handle, createContext } from './handler.js'
 import { telemetry } from './telemetry.js'
-import { logger as defaultLogger, serializeError } from './logging.js'
+import { logger as defaultLogger } from './logging.js'
 import inspect from './inspect/index.js'
 
 async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connectionConfig, logger = defaultLogger } = {}) {
@@ -49,7 +49,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
     }
 
     service.addEventListener('error', err => {
-      logger.warn({ err }, `libp2p error: ${serializeError(err)}`)
+      logger.warn({ err }, 'libp2p')
     })
 
     for (const protocol of protocols) {
@@ -64,7 +64,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
             try {
               message = Message.decode(data, protocol)
             } catch (err) {
-              logger.warn({ err: serializeError(err) }, 'Cannot decode received data')
+              logger.warn({ err }, 'Cannot decode received data')
               return
             }
 
@@ -72,7 +72,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
               const context = createContext({ service, peerId: dial.remotePeer, protocol, wantlist: message.wantlist, awsClient })
               process.nextTick(handle, { context, logger })
             } catch (err) {
-              logger.error({ err: serializeError(err) }, 'Error creating context')
+              logger.error({ err }, 'Error creating context')
             }
           })
 
@@ -82,10 +82,10 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
           connection.on('end:receive', () => connection.close())
 
           connection.on('error', err => {
-            logger.error({ err: serializeError(err), dial, stream, protocol }, 'Connection error')
+            logger.error({ err, dial, stream, protocol }, 'Connection error')
           })
         } catch (err) {
-          logger.error({ err: serializeError(err), dial, stream, protocol }, 'Error while creating connection')
+          logger.error({ err, dial, stream, protocol }, 'Error while creating connection')
         }
       }, handlerOptions)
     }
@@ -97,7 +97,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
         telemetry.increaseCount('bitswap-total-connections')
         inspect.metrics.increase('connections')
       } catch (err) {
-        logger.warn({ err, remotePeer: connection.remotePeer }, `Error while peer connecting: ${serializeError(err)}`)
+        logger.warn({ err, remotePeer: connection.remotePeer }, 'Error while peer connecting')
       }
     })
 
@@ -108,13 +108,13 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
         telemetry.decreaseCount('bitswap-total-connections')
         inspect.metrics.decrease('connections')
       } catch (err) {
-        logger.warn({ err, remotePeer: connection.remotePeer }, `Error while peer disconnecting: ${serializeError(err)}`)
+        logger.warn({ err, remotePeer: connection.remotePeer }, 'Error while peer disconnecting')
       }
     })
 
     // TODO move to networking
     service.connectionManager.addEventListener('error', err => {
-      logger.error({ err }, `libp2p connectionManager.error: ${serializeError(err)}`)
+      logger.error({ err }, 'libp2p connectionManager.error')
     })
 
     await service.start()
@@ -135,7 +135,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
 
     return { service, port, peerId }
   } catch (err) {
-    logger.error({ err: serializeError(err) }, 'error on start service')
+    logger.error({ err }, 'error on start service')
     throw err
   }
 }

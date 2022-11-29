@@ -93,7 +93,7 @@ t.test('service - handles connection error', async t => {
 
   await helper.receiveMessages(receiver, protocol)
 
-  t.match(logger.messages.warn[0][0].err, '[RangeError] index out of range: 4 + 3 > 4\nRangeError: index out of range: 4 + 3 > 4\n')
+  t.match(logger.messages.warn[0][0].err.message, 'index out of range: 4 + 3 > 4')
   t.equal(logger.messages.warn[0][1], 'Cannot decode received data')
 
   await helper.teardown(client, service, connection)

@@ -1,6 +1,6 @@
 
 import { EventEmitter } from 'events'
-import { logger, serializeError } from './logging.js'
+import { logger } from './logging.js'
 import * as lp from 'it-length-prefixed'
 import { pipe } from 'it-pipe'
 
@@ -34,7 +34,7 @@ class Connection extends EventEmitter {
         .catch(err => {
           this.emit('error', err)
           this.emit('error:receive', err)
-          logger.debug({ err: serializeError(err) }, 'Cannot receive data')
+          logger.debug({ err }, 'Cannot receive data')
         })
 
       // Prepare for sending
@@ -45,14 +45,14 @@ class Connection extends EventEmitter {
         .catch(err => {
           this.emit('error', err)
           this.emit('error:send', err)
-          logger.debug({ err: serializeError(err) }, 'Cannot send data')
+          logger.debug({ err }, 'Cannot send data')
         })
     } catch (err) {
       // TODO introduce async "init" method
       // the connection is ready after init, the constructor cant be async
       // this is a temp solution to prevent unhandled rejections
       // see connectPeer function
-      logger.error({ err: serializeError(err) }, 'connection stream pipe')
+      logger.error({ err }, 'connection stream pipe')
       this.emit('error:pipe', err)
     }
   }
@@ -90,8 +90,8 @@ class Connection extends EventEmitter {
         this.stream.close()
         this.emit('close')
       }
-    } catch (error) {
-      logger.error({ error: serializeError(error) }, 'error on connection.close')
+    } catch (err) {
+      logger.error({ err }, 'error on connection.close')
     }
   }
 
@@ -137,7 +137,7 @@ async function connectPeer ({ context, logger }) {
     const connection = new Connection(stream)
 
     connection.on('error', err => {
-      logger.warn({ err: serializeError(err) }, 'outgoing connection error')
+      logger.warn({ err }, 'outgoing connection error')
       context.state = 'error'
     })
 
@@ -151,7 +151,7 @@ async function connectPeer ({ context, logger }) {
     return connection
   } catch (err) {
     context.state = 'error'
-    logger.error({ err: serializeError(err), peerId: context.peerId?.toString() }, 'outgoing connection error, unable to connect to peer')
+    logger.error({ err, peerId: context.peerId?.toString() }, 'outgoing connection error, unable to connect to peer')
     throw err
   }
 }

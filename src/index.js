@@ -1,6 +1,6 @@
 
 import { createAwsClient } from 'e-ipfs-core-lib'
-import { logger, serializeError } from './logging.js'
+import { logger } from './logging.js'
 import config from './config.js'
 import { startService } from './service.js'
 import { httpServer } from './http-server.js'
@@ -57,11 +57,11 @@ async function boot () {
 }
 
 process.on('uncaughtExceptionMonitor', (err, origin) => {
-  logger.fatal({ err: serializeError(err), origin }, 'uncaught exception')
+  logger.fatal({ err, origin }, 'uncaught exception')
 })
 
 process.on('unhandledRejection', (err, promise) => {
-  logger.fatal({ err: serializeError(err), promise }, 'unhandled rejection')
+  logger.fatal({ err, promise }, 'unhandled rejection')
 })
 
 boot()

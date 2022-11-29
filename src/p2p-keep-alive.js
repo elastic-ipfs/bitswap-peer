@@ -11,7 +11,7 @@ This was written based on:
 https://github.com/status-im/js-waku/issues/185
 */
 
-import { logger, serializeError } from './logging.js'
+import { logger } from './logging.js'
 import config from './config.js'
 
 const pingKeepAliveTimers = {}
@@ -27,7 +27,7 @@ function startKeepAlive (peerId, currentNode) {
     pingKeepAliveTimers[peerIdStr] = setInterval(() => {
       currentNode.ping(peerId).catch(err => {
         if (err.code !== 'ERR_MPLEX_STREAM_RESET' && err.code !== 'ERR_UNSUPPORTED_PROTOCOL') {
-          logger.debug({ err }, `Ping failed - peerId: ${peerIdStr} Error: ${serializeError(err)}`)
+          logger.debug({ err, peerIdStr }, 'Ping failed')
         }
         stopKeepAlive(peerId)
       })

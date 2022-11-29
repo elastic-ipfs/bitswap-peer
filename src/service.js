@@ -49,7 +49,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
     }
 
     service.addEventListener('error', err => {
-      logger.warn({ err }, 'libp2p')
+      logger.warn({ err }, 'libp2p error event')
     })
 
     for (const protocol of protocols) {

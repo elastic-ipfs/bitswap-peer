@@ -5,7 +5,7 @@ import { MockAgent } from 'undici'
 
 import config from '../../src/config.js'
 import { Client as AwsClient, awsClientOptions } from '../../src/aws-client/index.js'
-import { cidToKey } from '../../src/util.js'
+import { cidToKey } from 'e-ipfs-core-lib'
 import * as helper from './helper.js'
 
 import { cid1, cid2, cid3, cid4, cid5, cid6, cid7, cid8, cid9 } from '../fixtures/cids.js'

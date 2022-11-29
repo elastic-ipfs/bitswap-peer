@@ -2,15 +2,6 @@
 import fs from 'fs'
 import path from 'path'
 import url from 'url'
-import { base58btc as base58 } from 'multiformats/bases/base58'
-
-function cidToKey (cid) {
-  try {
-    return base58.encode(cid.multihash.bytes)
-  } catch (error) {
-    return false
-  }
-}
 
 /**
  * @param {{ car: string, offset: number, length: number }} - blockInfo
@@ -54,4 +45,4 @@ function createConnectionConfig (config) {
 const packageJson = JSON.parse(fs.readFileSync(path.join(dirname(import.meta.url), '../package.json'), 'utf8'))
 const version = packageJson.version
 
-export { cidToKey, sizeofBlockInfo, sleep, dirname, createConnectionConfig, version }
+export { sizeofBlockInfo, sleep, dirname, createConnectionConfig, version }

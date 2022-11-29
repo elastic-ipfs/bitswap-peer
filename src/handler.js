@@ -1,12 +1,12 @@
 
 import config from './config.js'
 import { serializeError } from './logging.js'
-import { Entry, BITSWAP_V_120, BLOCK_TYPE_INFO, BLOCK_TYPE_DATA, Message } from 'e-ipfs-core-lib'
+import { cidToKey, Entry, BITSWAP_V_120, BLOCK_TYPE_INFO, BLOCK_TYPE_DATA, Message } from 'e-ipfs-core-lib'
 import { fetchBlocksData, fetchBlocksInfo } from './storage.js'
 import { telemetry } from './telemetry.js'
 import { connectPeer } from './networking.js'
 import inspect from './inspect/index.js'
-import { cidToKey, sizeofBlockInfo } from './util.js'
+import { sizeofBlockInfo } from './util.js'
 
 function createContext ({ service, peerId, protocol, wantlist, awsClient, connection }) {
   const context = {

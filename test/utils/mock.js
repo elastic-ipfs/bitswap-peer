@@ -4,8 +4,7 @@ import { resolve } from 'path'
 import { MockAgent } from 'undici'
 
 import config from '../../src/config.js'
-import { Client as AwsClient, awsClientOptions } from '../../src/aws-client/index.js'
-import { cidToKey } from 'e-ipfs-core-lib'
+import { cidToKey, Client as AwsClient, awsClientOptions } from 'e-ipfs-core-lib'
 import * as helper from './helper.js'
 
 import { cid1, cid2, cid3, cid4, cid5, cid6, cid7, cid8, cid9 } from '../fixtures/cids.js'
@@ -103,8 +102,7 @@ function createMockAgent () {
 
 async function mockAwsClient (config) {
   const logger = helper.spyLogger()
-  const options = awsClientOptions(config, logger)
-  options.agent = createMockAgent()
+  const options = awsClientOptions({ ...config, agent: createMockAgent(), awsClientRefreshCredentialsInterval: null }, logger)
   const awsClient = new AwsClient(options)
   await awsClient.init()
   return { awsClient, logger }
@@ -117,6 +115,7 @@ async function mockAWS (config) {
     region: 'region-test',
     bucket: 'bucket-test'
   }
+
   const dynamoInterceptor = awsClient.agent.get(awsClient.dynamoUrl)
   const s3Interceptor = awsClient.agent.get(awsClient.s3Url(s3.region, s3.bucket))
 

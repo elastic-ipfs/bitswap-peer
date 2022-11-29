@@ -1,8 +1,8 @@
 
+import { createAwsClient } from 'e-ipfs-core-lib'
 import { logger, serializeError } from './logging.js'
 import config from './config.js'
 import { startService } from './service.js'
-import { createAwsClient } from './aws-client/index.js'
 import { httpServer } from './http-server.js'
 import { getPeerId } from './peer-id.js'
 import { createConnectionConfig } from './util.js'

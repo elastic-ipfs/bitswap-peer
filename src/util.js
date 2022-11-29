@@ -1,7 +1,6 @@
 
-import fs from 'fs'
 import path from 'path'
-import { dirname } from 'e-ipfs-core-lib'
+import { dirname, version as getVersion } from 'e-ipfs-core-lib'
 
 /**
  * @param {{ car: string, offset: number, length: number }} - blockInfo
@@ -38,7 +37,6 @@ function createConnectionConfig (config) {
   }
 }
 
-const packageJson = JSON.parse(fs.readFileSync(path.join(dirname(import.meta.url), '../package.json'), 'utf8'))
-const version = packageJson.version
+const version = getVersion(path.join(dirname(import.meta.url), '../package.json'))
 
 export { sizeofBlockInfo, sleep, createConnectionConfig, version }

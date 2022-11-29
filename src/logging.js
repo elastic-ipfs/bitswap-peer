@@ -10,10 +10,7 @@ if (process.env.LOG_LEVEL) {
   level = 'debug'
 }
 
-let pretty = false
-if (process.env.LOG_PRETTY) {
-  pretty = true
-}
+const pretty = Boolean(process.env.LOG_PRETTY === 'true')
 const logger = createLogger({ version, level, pretty })
 
 export {

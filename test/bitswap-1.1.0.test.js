@@ -2,7 +2,7 @@
 import t from 'tap'
 
 import config from '../src/config.js'
-import { BITSWAP_V_110 as protocol, Entry, Message, WantList } from '../src/protocol.js'
+import { BITSWAP_V_110 as protocol, Entry, Message, WantList } from 'e-ipfs-core-lib'
 import { cid1, cid1Content, cid2, cid2Link, cid3, cid4, cid5, cid6, cid7, cid8 } from './fixtures/cids.js'
 import {
   hasSingleBlockWithHash,

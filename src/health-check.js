@@ -1,5 +1,4 @@
 
-import { serializeError } from './logging.js'
 import { getReadiness, setReadiness } from './storage.js'
 
 const SUCCESS_CODE = 200
@@ -36,7 +35,7 @@ export async function checkReadiness ({ awsClient, readinessConfig, allowReadine
     setReadiness({ s3: true, dynamo: true })
     return SUCCESS_CODE
   } catch (err) {
-    logger.error({ err: serializeError(err) }, 'Readiness Probe Failed')
+    logger.error({ err }, 'Readiness Probe Failed')
     return ERROR_CODE
   }
 }

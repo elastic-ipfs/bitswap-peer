@@ -1,13 +1,13 @@
 {
   "name": "bitswap-peer",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Elastic IPFS BitSwap Peer",
   "homepage": "https://github.com/elastic-ipfs/bitswap-peer",
   "license": "(Apache-2.0 AND MIT)",
   "private": true,
   "scripts": {
-    "test": "NODE_NO_WARNINGS=1 c8 --reporter=text --reporter=html tap --rcfile=test/utils/config.yml",
-    "test:ci": "npm run lint && NODE_NO_WARNINGS=1 c8 --reporter=text --reporter=json --check-coverage --branches 90 --functions 90 --lines 90 --statements 90 tap --rcfile=test/utils/config.yml",
+    "test": "NODE_NO_WARNINGS=1 c8 --reporter=text --reporter=html tap --jobs=1 --rcfile=test/utils/config.yml",
+    "test:ci": "npm run lint && NODE_NO_WARNINGS=1 c8 --reporter=text --reporter=json --check-coverage --branches 90 --functions 90 --lines 90 --statements 90 tap --jobs=1 --rcfile=test/utils/config.yml",
     "format": "eslint src test utils --fix",
     "lint": "eslint src test utils"
   },
@@ -22,6 +22,7 @@
     "@libp2p/websockets": "5.0.0",
     "bl": "6.0.0",
     "dotenv": "16.0.3",
+    "e-ipfs-core-lib": "0.2.2",
     "hdr-histogram-js": "3.0.0",
     "it-length-prefixed": "8.0.3",
     "it-pipe": "2.0.4",

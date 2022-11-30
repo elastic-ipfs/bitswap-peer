@@ -4,7 +4,7 @@ import t from 'tap'
 import { createEd25519PeerId } from '@libp2p/peer-id-factory'
 import getPort from 'get-port'
 import config from '../src/config.js'
-import { BITSWAP_V_100 as protocol, Entry, Message, WantList } from '../src/protocol.js'
+import { BITSWAP_V_100 as protocol, Entry, Message, WantList } from 'e-ipfs-core-lib'
 import { cid1, cid1Content, cid2 } from './fixtures/cids.js'
 import * as helper from './utils/helper.js'
 import { mockAWS, createMockAgent } from './utils/mock.js'
@@ -93,7 +93,7 @@ t.test('service - handles connection error', async t => {
 
   await helper.receiveMessages(receiver, protocol)
 
-  t.match(logger.messages.warn[0][0].err, '[RangeError] index out of range: 4 + 3 > 4\nRangeError: index out of range: 4 + 3 > 4\n')
+  t.match(logger.messages.warn[0][0].err.message, 'index out of range: 4 + 3 > 4')
   t.equal(logger.messages.warn[0][1], 'Cannot decode received data')
 
   await helper.teardown(client, service, connection)

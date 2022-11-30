@@ -4,10 +4,9 @@ import sinon from 'sinon'
 import { CID } from 'multiformats/cid'
 
 import config from '../src/config.js'
-import { BITSWAP_V_120, Entry, BlockPresence, WantList } from '../src/protocol.js'
+import { cidToKey, BITSWAP_V_120, Entry, BlockPresence, WantList } from 'e-ipfs-core-lib'
 
 import { handle, createContext } from '../src/handler.js'
-import { cidToKey } from '../src/util.js'
 
 import { cid1, cid2, cid3, cid4, cid5, cid6, cid7, cid8, cid9 } from './fixtures/cids.js'
 import * as helper from './utils/helper.js'

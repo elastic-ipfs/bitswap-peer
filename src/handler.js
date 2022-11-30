@@ -1,12 +1,11 @@
 
 import config from './config.js'
-import { serializeError } from './logging.js'
-import { Entry, BITSWAP_V_120, BLOCK_TYPE_INFO, BLOCK_TYPE_DATA, Message } from './protocol.js'
+import { cidToKey, Entry, BITSWAP_V_120, BLOCK_TYPE_INFO, BLOCK_TYPE_DATA, Message } from 'e-ipfs-core-lib'
 import { fetchBlocksData, fetchBlocksInfo } from './storage.js'
 import { telemetry } from './telemetry.js'
 import { connectPeer } from './networking.js'
 import inspect from './inspect/index.js'
-import { cidToKey, sizeofBlockInfo } from './util.js'
+import { sizeofBlockInfo } from './util.js'
 
 function createContext ({ service, peerId, protocol, wantlist, awsClient, connection }) {
   const context = {
@@ -62,7 +61,7 @@ function handle ({ context, logger, batchSize = config.blocksBatchSize }) {
           }
         } catch (err) {
           // TODO remove? probably not needed
-          logger.error({ err: serializeError(err) }, 'error on handler#nextTick batch op')
+          logger.error({ err }, 'error on handler#nextTick batch op')
         }
 
         try {
@@ -73,7 +72,7 @@ function handle ({ context, logger, batchSize = config.blocksBatchSize }) {
           }
         } catch (err) {
           // TODO remove? probably not needed
-          logger.error({ err: serializeError(err) }, 'error on handler#nextTick end response')
+          logger.error({ err }, 'error on handler#nextTick end response')
         }
       })
     } while (blocksLength === batchSize)
@@ -119,8 +118,8 @@ async function batchFetch (blocks, context, logger) {
       fetchBlocksData({ blocks: dataBlocks, logger, awsClient: context.awsClient })
     ])
     return [...infoBlocks, ...dataBlocks]
-  } catch (error) {
-    logger.error({ error: serializeError(error) }, 'error on handler#batchFetch')
+  } catch (err) {
+    logger.error({ err }, 'error on handler#batchFetch')
   }
 }
 
@@ -158,8 +157,8 @@ async function batchResponse ({ blocks, context, logger }) {
 
     await message.send(context)
     context.done += blocks.length
-  } catch (error) {
-    logger.error({ error: serializeError(error) }, 'error on handler#batchResponse')
+  } catch (err) {
+    logger.error({ err }, 'error on handler#batchResponse')
   }
 }
 
@@ -173,8 +172,8 @@ async function endResponse ({ context, logger }) {
     try {
       await context.connection.close()
       context.connection.removeAllListeners()
-    } catch (error) {
-      logger.error({ error: serializeError(error) }, 'error on close connection handler#endResponse')
+    } catch (err) {
+      logger.error({ err }, 'error on close connection handler#endResponse')
     }
   }
 

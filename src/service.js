@@ -3,6 +3,7 @@ import { createLibp2p } from 'libp2p'
 import { webSockets } from '@libp2p/websockets'
 import { noise } from '@chainsafe/libp2p-noise'
 import { mplex } from '@libp2p/mplex'
+import { v4 } from 'uuid'
 
 import { noiseCrypto } from './noise-crypto.js'
 import { Message, protocols } from 'e-ipfs-core-lib'
@@ -106,6 +107,8 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
         try {
           const connection = new Connection(stream)
 
+          console.log(connection)
+          const connectionId = v4()
           // Open a send connection to the peer
           connection.on('data', data => {
             let message
@@ -118,7 +121,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
             }
 
             try {
-              const context = createContext({ service, peerId: dial.remotePeer, protocol, wantlist: message.wantlist, awsClient })
+              const context = createContext({ service, peerId: dial.remotePeer, protocol, wantlist: message.wantlist, awsClient, connectionId })
               process.nextTick(handle, { context, logger })
             } catch (err) {
               logger.error({ err }, 'Error creating context')

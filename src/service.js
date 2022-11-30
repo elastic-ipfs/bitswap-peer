@@ -5,19 +5,53 @@ import { noise } from '@chainsafe/libp2p-noise'
 import { mplex } from '@libp2p/mplex'
 
 import { noiseCrypto } from './noise-crypto.js'
-import config from './config.js'
 import { Message, protocols } from 'e-ipfs-core-lib'
 import { Connection } from './networking.js'
-import { startKeepAlive, stopKeepAlive } from './p2p-keep-alive.js'
 import { handle, createContext } from './handler.js'
 import { telemetry } from './telemetry.js'
 import { logger as defaultLogger } from './logging.js'
+import { createPeerIdFromMultihash } from './peer-id.js'
 import inspect from './inspect/index.js'
 
-async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connectionConfig, logger = defaultLogger } = {}) {
-  try {
-    // TODO params validation
+// TODO validate all the params
+function validateParams ({ taggedPeers, logger }) {
+  if (!taggedPeers) {
+    return {}
+  }
 
+  if (!Array.isArray(taggedPeers)) {
+    logger.error({ taggedPeers }, 'invalid taggedPeers for libp2p')
+    throw new Error('SERVICE_INVALID_TAGGED_PEERS')
+  }
+
+  let error
+  const peers = []
+  for (const taggedPeer of taggedPeers) {
+    if (!taggedPeer?.name || !taggedPeer?.peer) {
+      logger.error({ taggedPeer }, 'invalid taggedPeer, missing peer name or value')
+      error = true
+      continue
+    }
+
+    try {
+      const peerId = createPeerIdFromMultihash(taggedPeer.peer)
+      peers.push({ name: taggedPeer.name, peerId })
+    } catch (err) {
+      logger.error({ taggedPeer, err }, 'invalid taggedPeer, unable to create peer for taggedPeer')
+      error = true
+    }
+  }
+
+  if (error) {
+    throw new Error('SERVICE_INVALID_TAGGED_PEERS')
+  }
+
+  return { taggedPeers: peers }
+}
+
+async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connectionConfig, logger = defaultLogger, taggedPeers } = {}) {
+  try {
+    const validatedParams = validateParams({ taggedPeers, logger })
     const service = await createLibp2p({
       peerId,
       addresses: {
@@ -46,6 +80,19 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
     const handlerOptions = {
       maxInboundStreams: connectionConfig.handler.maxInboundStreams,
       maxOutboundStreams: connectionConfig.handler.maxOutboundStreams
+    }
+
+    // prevent closing connection from gateway
+    // @see https://github.com/libp2p/js-libp2p/blob/master/doc/LIMITS.md#closing-connections
+    if (validatedParams.taggedPeers) {
+      for (const taggedPeer of validatedParams.taggedPeers) {
+        const { name, peerId } = taggedPeer
+        // TODO move to logger.debug
+        logger.info({ name, peerId: peerId.toString() }, 'service add tagPeer to peerStore')
+        await service.peerStore.tagPeer(taggedPeer.peerId, name, {
+          value: connectionConfig.taggedPeers.value
+        })
+      }
     }
 
     service.addEventListener('error', err => {
@@ -93,7 +140,6 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
     // TODO move to networking
     service.connectionManager.addEventListener('peer:connect', connection => {
       try {
-        if (config.enableKeepAlive) { startKeepAlive(connection.remotePeer, service) }
         telemetry.increaseCount('bitswap-total-connections')
         inspect.metrics.increase('connections')
       } catch (err) {
@@ -104,7 +150,6 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
     // TODO move to networking
     service.connectionManager.addEventListener('peer:disconnect', connection => {
       try {
-        if (config.enableKeepAlive) { stopKeepAlive(connection.remotePeer) }
         telemetry.decreaseCount('bitswap-total-connections')
         inspect.metrics.decrease('connections')
       } catch (err) {

@@ -1,6 +1,8 @@
 
 import { readFile, writeFile } from 'fs/promises'
 import { createFromJSON, createEd25519PeerId } from '@libp2p/peer-id-factory'
+import { peerIdFromBytes } from '@libp2p/peer-id'
+import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string'
 import { logger } from './logging.js'
 
 async function downloadPeerIdFile ({ awsClient, peerIdS3Region, peerIdS3Bucket, peerIdJsonFile, peerIdJsonPath }) {
@@ -10,6 +12,10 @@ async function downloadPeerIdFile ({ awsClient, peerIdS3Region, peerIdS3Bucket, 
     key: peerIdJsonFile
   })
   return writeFile(peerIdJsonPath, contents)
+}
+
+function createPeerIdFromMultihash (multihash) {
+  return peerIdFromBytes(uint8ArrayFromString(multihash, 'base58btc'))
 }
 
 async function getPeerId ({ awsClient, peerIdS3Region, peerIdS3Bucket, peerIdJsonFile, peerIdJsonPath }) {
@@ -33,4 +39,4 @@ async function getPeerId ({ awsClient, peerIdS3Region, peerIdS3Bucket, peerIdJso
   }
 }
 
-export { getPeerId }
+export { getPeerId, createPeerIdFromMultihash }

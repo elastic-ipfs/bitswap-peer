@@ -13,16 +13,17 @@ t.test('config - defaults', async t => {
     cacheBlockData: false,
     cacheBlockDataSize: 1000,
     dynamoRegion: 'region-test',
+    configTable: 'config',
     carsTable: 'cars',
     blocksTableV1: 'v1-blocks',
     carsTableV1: 'v1-cars',
     linkTableV1: 'v1-blocks-cars-position',
+    dynamoConfigTableKey: 'key',
+    dynamoConfigTableTaggedPeersKey: 'tagged-peers',
     blocksTablePrimaryKey: 'multihash',
     carsTablePrimaryKey: 'path',
     linkTableBlockKey: 'blockmultihash',
     linkTableCarKey: 'carpath',
-    enableKeepAlive: false,
-    pingPeriodSecs: 10,
     awsClientRefreshCredentialsInterval: 300000,
     awsClientKeepAliveTimeout: 60000,
     awsClientConnectTimeout: 120000,
@@ -44,11 +45,13 @@ t.test('config - defaults', async t => {
     p2pConnectionInboundUpgradeTimeout: 1000,
     p2pConnectionAutoDial: false,
     p2pConnectionAutoDialInterval: 10000,
+    p2pConnectionAllow: undefined,
     p2pConnectionMplexMaxInboundStreams: 1024,
     p2pConnectionMplexMaxOutboundStreams: 10000,
     p2pConnectionMplexMaxStreamBufferSize: 4194304,
     p2pConnectionHandlerMaxInboundStreams: 1024,
     p2pConnectionHandlerMaxOutboundStreams: 1024,
+    p2pConnectionTaggedPeersValue: 100,
     dynamoMaxRetries: 3,
     dynamoRetryDelay: 50,
     s3MaxRetries: 3,
@@ -72,8 +75,6 @@ t.test('config - all by env vars', async t => {
   process.env.DYNAMO_BLOCKS_TABLE_V1 = 'dev-ep-v1-blocks'
   process.env.DYNAMO_CARS_TABLE_V1 = 'dev-ep-v1-cars'
   process.env.DYNAMO_LINK_TABLE_V1 = 'dev-ep-v1-blocks-cars-position'
-  process.env.ENABLE_KEEP_ALIVE = 'false'
-  process.env.PING_PERIOD_SECONDS = '3'
   process.env.AWS_CLIENT_REFRESH_CREDENTIALS_INTERVAL = '7777'
   process.env.AWS_CLIENT_KEEP_ALIVE_TIMEOUT = '8888'
   process.env.AWS_CLIENT_CONNECT_TIMEOUT = '9999'
@@ -99,6 +100,7 @@ t.test('config - all by env vars', async t => {
   process.env.P2P_CONNECTION_INBOUND_UPGRADE_TIMEOUT = '147'
   process.env.P2P_CONNECTION_AUTO_DIAL = '4224'
   process.env.P2P_CONNECTION_AUTO_DIAL_INTERVAL = '433'
+  process.env.P2P_CONNECTION_ALLOW = '/ip4/43.123.5.23/tcp/3984,/ip4/234.243.64.2,/ip4/52.55'
   process.env.P2P_CONNECTION_MPLEX_MAX_INBOUND_STREAMS = '3322'
   process.env.P2P_CONNECTION_MPLEX_MAX_OUTBOUND_STREAMS = '4477'
   process.env.P2P_CONNECTION_MPLEX_MAX_STREAM_BUFFER_SIZE = '852741'
@@ -120,17 +122,18 @@ t.test('config - all by env vars', async t => {
     cacheBlockData: false,
     cacheBlockDataSize: 852,
     dynamoRegion: 'dynamo-region',
+    configTable: 'config',
     blocksTable: 'dev-ep-blocks',
     carsTable: 'dev-ep-cars',
     blocksTableV1: 'dev-ep-v1-blocks',
     carsTableV1: 'dev-ep-v1-cars',
     linkTableV1: 'dev-ep-v1-blocks-cars-position',
+    dynamoConfigTableKey: 'key',
+    dynamoConfigTableTaggedPeersKey: 'tagged-peers',
     blocksTablePrimaryKey: 'multihash',
     carsTablePrimaryKey: 'path',
     linkTableBlockKey: 'blockmultihash',
     linkTableCarKey: 'carpath',
-    enableKeepAlive: false,
-    pingPeriodSecs: 3,
     awsClientRefreshCredentialsInterval: '7777',
     awsClientKeepAliveTimeout: 8888,
     awsClientConnectTimeout: 9999,
@@ -152,11 +155,13 @@ t.test('config - all by env vars', async t => {
     p2pConnectionInboundUpgradeTimeout: 147,
     p2pConnectionAutoDial: false,
     p2pConnectionAutoDialInterval: 433,
+    p2pConnectionAllow: ['/ip4/43.123.5.23/tcp/3984', '/ip4/234.243.64.2', '/ip4/52.55'],
     p2pConnectionMplexMaxInboundStreams: 3322,
     p2pConnectionMplexMaxOutboundStreams: 4477,
     p2pConnectionMplexMaxStreamBufferSize: 852741,
     p2pConnectionHandlerMaxInboundStreams: 456987,
     p2pConnectionHandlerMaxOutboundStreams: 987321,
+    p2pConnectionTaggedPeersValue: 100,
     dynamoMaxRetries: 6,
     dynamoRetryDelay: 500,
     s3MaxRetries: 7,

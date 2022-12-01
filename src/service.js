@@ -16,6 +16,8 @@ import inspect from './inspect/index.js'
 // TODO validate all the params
 function validateParams ({ taggedPeers, logger }) {
   if (!taggedPeers) {
+    // TODO move to debug
+    logger.info('taggedPeers are empty')
     return {}
   }
 

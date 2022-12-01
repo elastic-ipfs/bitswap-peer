@@ -26,7 +26,7 @@ function createContext ({ service, peerId, protocol, wantlist, awsClient, connec
 }
 
 function handle ({ context, logger, batchSize = config.blocksBatchSize }) {
-  return telemetry.trackDuration('response-time',
+  return telemetry.trackDuration('bitswap-request-duration',
     new Promise(resolve => {
       if (context.blocks.length < 1) {
         resolve()
@@ -41,12 +41,17 @@ function handle ({ context, logger, batchSize = config.blocksBatchSize }) {
 
       let blocksLength
       context.batchesTodo = Math.ceil(context.todo / batchSize)
+      const hrTime = process.hrtime()
+      const requestId = hrTime[0] * 1000000000 + hrTime[1]
+      telemetry.increaseCountWithKey('bitswap-request-size', `{id="${requestId}"}`, context.todo)
+
       do {
         const blocks = context.blocks.splice(0, batchSize)
 
         if (blocks.length === 0) {
           break
         }
+
 
         blocksLength = blocks.length
         process.nextTick(async () => {
@@ -99,13 +104,13 @@ async function batchFetch (blocks, context, logger) {
       block.key = key
 
       if (block.wantType === Entry.WantType.Block) {
-        telemetry.increaseCount('bitswap-request-data')
+        telemetry.increaseCountWithKey('bitswap-request', `{type:"data",id="${context.connectionId}"}`)
         block.type = BLOCK_TYPE_DATA
         dataBlocks.push(block)
         continue
       }
       if (block.wantType === Entry.WantType.Have && context.protocol === BITSWAP_V_120) {
-        telemetry.increaseCount('bitswap-request-info')
+        telemetry.increaseCountWithKey('bitswap-request', `{type:"info",id="${context.connectionId}"}`)
         block.type = BLOCK_TYPE_INFO
         infoBlocks.push(block)
         continue

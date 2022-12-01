@@ -17,7 +17,7 @@ export function makeConfig () {
     cacheBlockDataSize: process.env.CACHE_BLOCK_DATA_SIZE ? parseInt(process.env.CACHE_BLOCK_DATA_SIZE) : 1e3,
 
     dynamoRegion: process.env.DYNAMO_REGION ?? process.env.AWS_REGION,
-    configTable: process.env.DYNAMO_CONFIG_TABLE ?? 'config',
+    dynamoConfigTable: process.env.DYNAMO_CONFIG_TABLE ?? 'config',
     blocksTable: process.env.DYNAMO_BLOCKS_TABLE ?? 'blocks',
     carsTable: process.env.DYNAMO_CARS_TABLE ?? 'cars',
     blocksTableV1: process.env.DYNAMO_BLOCKS_TABLE_V1 ?? 'v1-blocks',

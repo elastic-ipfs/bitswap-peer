@@ -25,6 +25,7 @@ _Variables in bold are required._
 | DYNAMO_BLOCKS_TABLE_V1| `v1-blocks`   | The DynamoDB table where store CIDs informations to.                     |
 | DYNAMO_CARS_TABLE_V1  | `v1-cars`     | The DynamoDB table where store CAR files informations to.                |
 | DYNAMO_LINK_TABLE_V1  | `v1-blocks-cars-position` | The DynamoDB table with CARs-blocks links.                   |
+| DYNAMO_CONFIG_TABLE  | `config` | The DynamoDB table with configurations, see [tagged peers](#tagged-peers). |
 | DYNAMO_MAX_RETRIES    | 3             | DynamoDB max attempts in case of query failure.                          |
 | DYNAMO_RETRY_DELAY    | 500           | DynamoDB delay between attempts in case of failure, in milliseconds.     |
 | S3_MAX_RETRIES        | 3             | S3 max attempts in case of failure.                                      |
@@ -35,8 +36,6 @@ _Variables in bold are required._
 | PEER_ID_S3_REGION     | `$AWS_REGION` | The S3 region to download the BitSwap PeerID. |
 | PEER_ID_S3_BUCKET     |               | The S3 bucket to download the BitSwap PeerID. |
 | PEER_ANNOUNCE_ADDR    |               | Swarm multiaddr to announce to the network (excluding peer ID).          |
-| ENABLE_KEEP_ALIVE   | `true`          | Enable Keep-alive for peers                       |
-| PING_PERIOD_SECONDS   | `10`          | Wait interval for ping connected peer (Keep Alive)                       |
 | PORT                  | `3000`        | The port number to listen on.                                            |
 | P2P_CONNECTION_MAX_CONNECTIONS | `10000` | p2p max connections, forwared to `libp2p` `connectionManager.maxConnections` |
 | P2P_CONNECTION_MIN_CONNECTIONS | `0` | p2p min connections, forwared to `libp2p` `connectionManager.minConnections` |
@@ -46,11 +45,13 @@ _Variables in bold are required._
 | P2P_CONNECTION_INBOUND_UPGRADE_TIMEOUT | `1000` | ms, p2p inbound upgrade timeout, forwared to `libp2p` `connectionManager.inboundUpgradeTimeout` |
 | P2P_CONNECTION_AUTO_DIAL | `false` | p2p auto dial to discovered peers, forwared to `libp2p` `connectionManager.autoDial` |
 | P2P_CONNECTION_AUTO_DIAL_INTERVAL | `10000` | ms, p2p poll interval, forwared to `libp2p` `connectionManager.autoDialInterval` |
+| P2P_CONNECTION_ALLOW | | comma separated list of allow peer to bypass the connection limits, forwared to `libp2p` `connectionManager.allow` |
 | P2P_CONNECTION_MAX_INBOUND_STREAMS | `1024` | p2p mplex incoming streams allowed per connection |
 | P2P_CONNECTION_MAX_OUTBOUND_STREAMS | `10000` | p2p mplex outgoing streams allowed per connection |
 | P2P_CONNECTION_MAX_STREAM_BUFFER_SIZE | `4194304` | p2p mplex message buffer size, in bytes, default `4MB` |
 | P2P_CONNECTION_HANDLER_MAX_INBOUND_STREAMS | `1024` | p2p handler max incoming streams limit at the same time on each connection |
 | P2P_CONNECTION_HANDLER_MAX_OUTBOUND_STREAMS | `1024` | p2p handler max outgoing streams limit at the same time on each connection |
+| P2P_CONNECTION_TAGGED_PEERS_VALUE | `100` | p2p tagged peers default value, see [tagged peers](#tagged-peers). |
 | TELEMETRY_PORT        | `3001`        | The telemetry port number for the OpenTelemetry server to listen on.     |
 | ALLOW_READINESS_TWEAK | `false`       | Allow to tewak readiness state - for dev and testing only. |
 | ALLOW_INSPECTION      | `false`       | Allow inspection functionalities - for dev and testing only. |
@@ -72,6 +73,40 @@ References
 
 - ConnectionManagerInit https://github.com/libp2p/js-libp2p/blob/master/src/connection-manager/index.ts#L41
 - DefaultOptions https://github.com/libp2p/js-libp2p/blob/master/src/connection-manager/index.ts#L25
+
+## Tagged Peers
+
+**Tagged Peers** is the way for `libp2p` to set priorities on peer connections closing, see [the libp2p doc](https://github.com/libp2p/js-libp2p/blob/master/doc/LIMITS.md#closing-connections); so we identify peers to exclude them from the automatic connection closing.
+
+The list of tagged peers is in the `DYNAMO_CONFIG_TABLE` at row `key:tagged-peers`, the JSON format is
+
+```json
+[
+    {
+      "name": "ipfs-bank1-sv15", // simple label
+      "peer": "12D3KooWGW4U4iN6tcvFKcQD3Ay2i6LDdEAEJgZgdHUNasGGq8bb", // valid peerId multihash
+      "value": 100 // optional, number between 0-100, default is P2P_CONNECTION_TAGGED_PEERS_VALUE
+    }
+]
+```
+
+For example
+
+```json
+[
+    {
+      "name": "ipfs-bank1-sv15",
+      "peer": "12D3KooWGW4U4iN6tcvFKcQD3Ay2i6LDdEAEJgZgdHUNasGGq8bb",
+      "value": 99
+    },
+    {
+      "name": "ipfs-bank10-dc13",
+      "peer": "12D3KooWB9veWuW6rJ5YeTSYt5NSdTtJj6KzzriWwWPLv9SNnvph"
+    }
+]
+```
+
+The list is accepted as `all-or-nothing`, to avoid runtime issues; so if a single entry is invalid, the service won't start.
 
 ### Readiness
 

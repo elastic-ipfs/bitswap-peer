@@ -1,6 +1,6 @@
 {
   "name": "bitswap-peer",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Elastic IPFS BitSwap Peer",
   "homepage": "https://github.com/elastic-ipfs/bitswap-peer",
   "license": "(Apache-2.0 AND MIT)",
@@ -12,34 +12,26 @@
     "lint": "eslint src test utils"
   },
   "dependencies": {
-    "@aws-sdk/client-sqs": "3.215.0",
+    "@aws-sdk/client-sqs": "3.218.0",
     "@aws-sdk/node-http-handler": "3.215.0",
-    "@aws-sdk/util-dynamodb": "3.215.0",
-    "@chainsafe/libp2p-noise": "^10.1.0",
+    "@chainsafe/libp2p-noise": "10.2.0",
     "@dnlup/doc": "4.0.1",
-    "@libp2p/mplex": "7.0.1",
+    "@libp2p/mplex": "7.1.0",
+    "@libp2p/peer-id": "^1.1.16",
     "@libp2p/peer-id-factory": "1.0.19",
     "@libp2p/websockets": "5.0.0",
-    "bl": "6.0.0",
     "dotenv": "16.0.3",
     "e-ipfs-core-lib": "0.2.2",
-    "hdr-histogram-js": "3.0.0",
     "it-length-prefixed": "8.0.3",
     "it-pipe": "2.0.4",
-    "js-yaml": "4.1.0",
     "libp2p": "0.40.0",
     "lru-cache": "7.14.1",
     "mnemonist": "0.39.5",
-    "pino": "8.7.0",
-    "piscina": "3.2.0",
-    "protobufjs": "7.1.2",
-    "sodium-native": "3.4.1",
-    "undici": "5.12.0",
-    "xml-js": "1.6.11"
+    "sodium-native": "3.4.1"
   },
   "devDependencies": {
     "@ipld/car": "5.0.1",
-    "@ipld/dag-pb": "3.0.0",
+    "@ipld/dag-pb": "3.0.1",
     "c8": "7.12.0",
     "eslint": "8.28.0",
     "eslint-config-standard": "17.0.0",
@@ -50,12 +42,12 @@
     "ipfs-car": "0.9.1",
     "libp2p-gossipsub": "0.13.0",
     "libp2p-tcp": "0.17.2",
-    "pino-pretty": "9.1.1",
-    "sinon": "14.0.2",
-    "tap": "16.3.2"
+    "sinon": "15.0.0",
+    "tap": "16.3.2",
+    "undici": "5.13.0"
   },
   "engines": {
-    "node": "18.12.0"
+    "node": "18.12"
   },
   "type": "module",
   "exports": "./src/index.js"

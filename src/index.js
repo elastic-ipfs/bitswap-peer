@@ -36,6 +36,11 @@ async function boot () {
       keyName: readinessConfig.dynamo.keyName,
       keyValue: readinessConfig.dynamo.keyValue
     })
+    const taggedPeers = await awsClient.dynamoGetItem({
+      table: config.dynamoConfigTable,
+      keyName: config.dynamoConfigTableKey,
+      keyValue: config.dynamoConfigTableTaggedPeersKey
+    })
 
     await httpServer.startServer({
       port: config.httpPort,
@@ -49,7 +54,8 @@ async function boot () {
       port: config.port,
       peerId,
       peerAnnounceAddr: config.peerAnnounceAddr,
-      connectionConfig: createConnectionConfig(config)
+      connectionConfig: createConnectionConfig(config),
+      taggedPeers
     }))
   } catch (err) {
     logger.fatal({ err }, 'Cannot start the service')

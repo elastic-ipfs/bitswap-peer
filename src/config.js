@@ -17,19 +17,20 @@ export function makeConfig () {
     cacheBlockDataSize: process.env.CACHE_BLOCK_DATA_SIZE ? parseInt(process.env.CACHE_BLOCK_DATA_SIZE) : 1e3,
 
     dynamoRegion: process.env.DYNAMO_REGION ?? process.env.AWS_REGION,
+    configTable: process.env.DYNAMO_CONFIG_TABLE ?? 'config',
     blocksTable: process.env.DYNAMO_BLOCKS_TABLE ?? 'blocks',
     carsTable: process.env.DYNAMO_CARS_TABLE ?? 'cars',
     blocksTableV1: process.env.DYNAMO_BLOCKS_TABLE_V1 ?? 'v1-blocks',
     carsTableV1: process.env.DYNAMO_CARS_TABLE_V1 ?? 'v1-cars',
     linkTableV1: process.env.DYNAMO_LINK_TABLE_V1 ?? 'v1-blocks-cars-position',
 
+    dynamoConfigTableKey: 'key',
+    dynamoConfigTableTaggedPeersKey: 'tagged-peers',
+
     blocksTablePrimaryKey: 'multihash',
     carsTablePrimaryKey: 'path',
     linkTableBlockKey: 'blockmultihash',
     linkTableCarKey: 'carpath',
-
-    enableKeepAlive: process.env.ENABLE_KEEP_ALIVE === 'true',
-    pingPeriodSecs: process.env.PING_PERIOD_SECONDS ? parseInt(process.env.PING_PERIOD_SECONDS) : 10,
 
     awsClientRefreshCredentialsInterval: process.env.AWS_CLIENT_REFRESH_CREDENTIALS_INTERVAL ?? 5 * 60e3, // 5 min
     awsClientKeepAliveTimeout: process.env.AWS_CLIENT_KEEP_ALIVE_TIMEOUT ? parseInt(process.env.AWS_CLIENT_KEEP_ALIVE_TIMEOUT) : 60e3, // 1min
@@ -56,6 +57,7 @@ export function makeConfig () {
     p2pConnectionInboundUpgradeTimeout: process.env.P2P_CONNECTION_INBOUND_UPGRADE_TIMEOUT ? parseInt(process.env.P2P_CONNECTION_INBOUND_UPGRADE_TIMEOUT) : 1000, // ms
     p2pConnectionAutoDial: process.env.P2P_CONNECTION_AUTO_DIAL === 'true',
     p2pConnectionAutoDialInterval: process.env.P2P_CONNECTION_AUTO_DIAL_INTERVAL ? parseInt(process.env.P2P_CONNECTION_AUTO_DIAL_INTERVAL) : 10000, // ms
+    p2pConnectionAllow: process.env.P2P_CONNECTION_ALLOW ? process.env.P2P_CONNECTION_ALLOW.split(',').map(a => a.trim()) : undefined,
     // mplex
     p2pConnectionMplexMaxInboundStreams: process.env.P2P_CONNECTION_MPLEX_MAX_INBOUND_STREAMS ? parseInt(process.env.P2P_CONNECTION_MPLEX_MAX_INBOUND_STREAMS) : 1024,
     p2pConnectionMplexMaxOutboundStreams: process.env.P2P_CONNECTION_MPLEX_MAX_OUTBOUND_STREAMS ? parseInt(process.env.P2P_CONNECTION_MPLEX_MAX_OUTBOUND_STREAMS) : 10000,
@@ -63,6 +65,8 @@ export function makeConfig () {
     // handler
     p2pConnectionHandlerMaxInboundStreams: process.env.P2P_CONNECTION_HANDLER_MAX_INBOUND_STREAMS ? parseInt(process.env.P2P_CONNECTION_HANDLER_MAX_INBOUND_STREAMS) : 1024,
     p2pConnectionHandlerMaxOutboundStreams: process.env.P2P_CONNECTION_HANDLER_MAX_OUTBOUND_STREAMS ? parseInt(process.env.P2P_CONNECTION_HANDLER_MAX_OUTBOUND_STREAMS) : 1024,
+    // tagged peers
+    p2pConnectionTaggedPeersValue: process.env.P2P_CONNECTION_TAGGED_PEERS_VALUE ? parseInt(process.env.P2P_CONNECTION_TAGGED_PEERS_VALUE) : 100,
 
     dynamoMaxRetries: process.env.DYNAMO_MAX_RETRIES ? parseInt(process.env.DYNAMO_MAX_RETRIES) : 3,
     dynamoRetryDelay: process.env.DYNAMO_RETRY_DELAY ? parseInt(process.env.DYNAMO_RETRY_DELAY) : 100, // ms

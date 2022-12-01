@@ -23,7 +23,8 @@ function createConnectionConfig (config) {
       maxIncomingPendingConnections: config.p2pConnectionMaxIncomingPendingConnections,
       inboundUpgradeTimeout: config.p2pConnectionInboundUpgradeTimeout,
       autoDial: config.p2pConnectionAutoDial,
-      autoDialInterval: config.p2pConnectionAutoDialInterval
+      autoDialInterval: config.p2pConnectionAutoDialInterval,
+      allow: config.p2pConnectionAllow
     },
     mplex: {
       maxInboundStreams: config.p2pConnectionMplexMaxInboundStreams,
@@ -33,6 +34,9 @@ function createConnectionConfig (config) {
     handler: {
       maxInboundStreams: config.p2pConnectionHandlerMaxInboundStreams,
       maxOutboundStreams: config.p2pConnectionHandlerMaxOutboundStreams
+    },
+    taggedPeers: {
+      value: config.p2pConnectionTaggedPeersValue
     }
   }
 }

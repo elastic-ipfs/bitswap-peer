@@ -6,6 +6,7 @@
   "license": "(Apache-2.0 AND MIT)",
   "private": true,
   "scripts": {
+    "start": "node src/index.js",
     "test": "NODE_NO_WARNINGS=1 c8 --reporter=text --reporter=html tap --jobs=1 --rcfile=test/utils/config.yml",
     "test:ci": "npm run lint && NODE_NO_WARNINGS=1 c8 --reporter=text --reporter=json --check-coverage --branches 90 --functions 90 --lines 90 --statements 90 tap --jobs=1 --rcfile=test/utils/config.yml",
     "format": "eslint src test utils --fix",

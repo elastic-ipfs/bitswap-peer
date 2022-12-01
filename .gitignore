@@ -1,5 +1,6 @@
 peerId.json
 .env*
+!.env.sample
 ./*.car
 *.list
 coverage

@@ -55,7 +55,7 @@ async function boot () {
       peerId,
       peerAnnounceAddr: config.peerAnnounceAddr,
       connectionConfig: createConnectionConfig(config),
-      taggedPeers
+      taggedPeers: JSON.parse(taggedPeers.value)
     }))
   } catch (err) {
     logger.fatal({ err }, 'Cannot start the service')

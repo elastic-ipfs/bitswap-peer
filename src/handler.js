@@ -52,7 +52,6 @@ function handle ({ context, logger, batchSize = config.blocksBatchSize }) {
           break
         }
 
-
         blocksLength = blocks.length
         process.nextTick(async () => {
           // catch async error in libp2p connection

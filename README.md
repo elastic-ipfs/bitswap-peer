@@ -85,7 +85,7 @@ The list of tagged peers is in the `DYNAMO_CONFIG_TABLE` at row `key:tagged-peer
     {
       "name": "ipfs-bank1-sv15", // simple label
       "peer": "12D3KooWGW4U4iN6tcvFKcQD3Ay2i6LDdEAEJgZgdHUNasGGq8bb", // valid peerId multihash
-      "value": 100 // optional, number between 0-100
+      "value": 100 // optional, number between 0-100, default is P2P_CONNECTION_TAGGED_PEERS_VALUE
     }
 ]
 ```

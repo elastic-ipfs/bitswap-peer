@@ -1,9 +1,9 @@
 ---
 component: bitswap-peer
 metrics:
-  response-time: TODO
-  bitswap-request-data: Request data
-  bitswap-request-info: Request info
+  bitswap-request-size: Block total size for a request
+  bitswap-request-duration: Execution time for a request
+  bitswap-request: Total requests, by type and connectionId
   bitswap-total-connections: BitSwap Total Connections
   bitswap-total-entries: BitSwap Total Entries served
   bitswap-pending-entries: BitSwap Pending Entries to serve

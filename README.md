@@ -78,9 +78,7 @@ References
 
 **Tagged Peers** is the way for `libp2p` to set priorities on peer connections closing, see [the libp2p doc](https://github.com/libp2p/js-libp2p/blob/master/doc/LIMITS.md#closing-connections); so we identify peers to exclude them from the automatic connection closing.
 
-The list of tagged peers is in the `DYNAMO_CONFIG_TABLE` at row `key:tagged-peers`; it contains a JSON format like
-
-The JSON format is
+The list of tagged peers is in the `DYNAMO_CONFIG_TABLE` at row `key:tagged-peers`, the JSON format is
 
 ```json
 [
@@ -109,7 +107,6 @@ For example
 ```
 
 The list is accepted as `all-or-nothing`, to avoid runtime issues; so if a single entry is invalid, the service won't start.
-
 
 ### Readiness
 

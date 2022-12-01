@@ -66,7 +66,7 @@ export function makeConfig () {
     p2pConnectionHandlerMaxInboundStreams: process.env.P2P_CONNECTION_HANDLER_MAX_INBOUND_STREAMS ? parseInt(process.env.P2P_CONNECTION_HANDLER_MAX_INBOUND_STREAMS) : 1024,
     p2pConnectionHandlerMaxOutboundStreams: process.env.P2P_CONNECTION_HANDLER_MAX_OUTBOUND_STREAMS ? parseInt(process.env.P2P_CONNECTION_HANDLER_MAX_OUTBOUND_STREAMS) : 1024,
     // tagged peers
-    p2pConnectionTaggedPeersValue: 100,
+    p2pConnectionTaggedPeersValue: process.env.P2P_CONNECTION_TAGGED_PEERS_VALUE ? parseInt(process.env.P2P_CONNECTION_TAGGED_PEERS_VALUE) : 100,
 
     dynamoMaxRetries: process.env.DYNAMO_MAX_RETRIES ? parseInt(process.env.DYNAMO_MAX_RETRIES) : 3,
     dynamoRetryDelay: process.env.DYNAMO_RETRY_DELAY ? parseInt(process.env.DYNAMO_RETRY_DELAY) : 100, // ms

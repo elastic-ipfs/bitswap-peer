@@ -51,6 +51,7 @@ _Variables in bold are required._
 | P2P_CONNECTION_MAX_STREAM_BUFFER_SIZE | `4194304` | p2p mplex message buffer size, in bytes, default `4MB` |
 | P2P_CONNECTION_HANDLER_MAX_INBOUND_STREAMS | `1024` | p2p handler max incoming streams limit at the same time on each connection |
 | P2P_CONNECTION_HANDLER_MAX_OUTBOUND_STREAMS | `1024` | p2p handler max outgoing streams limit at the same time on each connection |
+| P2P_CONNECTION_TAGGED_PEERS_VALUE | `100` | p2p tagged peers default value, see [tagged peers](#tagged-peers). |
 | TELEMETRY_PORT        | `3001`        | The telemetry port number for the OpenTelemetry server to listen on.     |
 | ALLOW_READINESS_TWEAK | `false`       | Allow to tewak readiness state - for dev and testing only. |
 | ALLOW_INSPECTION      | `false`       | Allow inspection functionalities - for dev and testing only. |
@@ -75,10 +76,40 @@ References
 
 ## Tagged Peers
 
-TODO
+**Tagged Peers** is the way for `libp2p` to set priorities on peer connections closing, see [the libp2p doc](https://github.com/libp2p/js-libp2p/blob/master/doc/LIMITS.md#closing-connections); so we identify peers to exclude them from the automatic connection closing.
 
-in dynamo
-all-or-nothing to avoid runtime issues
+The list of tagged peers is in the `DYNAMO_CONFIG_TABLE` at row `key:tagged-peers`; it contains a JSON format like
+
+The JSON format is
+
+```json
+[
+    {
+      "name": "ipfs-bank1-sv15", // simple label
+      "peer": "12D3KooWGW4U4iN6tcvFKcQD3Ay2i6LDdEAEJgZgdHUNasGGq8bb", // valid peerId multihash
+      "value": 100 // optional, number between 0-100
+    }
+]
+```
+
+For example
+
+```json
+[
+    {
+      "name": "ipfs-bank1-sv15",
+      "peer": "12D3KooWGW4U4iN6tcvFKcQD3Ay2i6LDdEAEJgZgdHUNasGGq8bb",
+      "value": 99
+    },
+    {
+      "name": "ipfs-bank10-dc13",
+      "peer": "12D3KooWB9veWuW6rJ5YeTSYt5NSdTtJj6KzzriWwWPLv9SNnvph"
+    }
+]
+```
+
+The list is accepted as `all-or-nothing`, to avoid runtime issues; so if a single entry is invalid, the service won't start.
+
 
 ### Readiness
 

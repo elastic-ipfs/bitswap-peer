@@ -35,7 +35,7 @@ function validateParams ({ taggedPeers, logger }) {
 
     try {
       const peerId = createPeerIdFromMultihash(taggedPeer.peer)
-      peers.push({ name: taggedPeer.name, peerId })
+      peers.push({ name: taggedPeer.name, value: taggedPeer.value, peerId })
     } catch (err) {
       logger.error({ taggedPeer, err }, 'invalid taggedPeer, unable to create peer for taggedPeer')
       error = true
@@ -90,7 +90,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
         // TODO move to logger.debug
         logger.info({ name, peerId: peerId.toString() }, 'service add tagPeer to peerStore')
         await service.peerStore.tagPeer(taggedPeer.peerId, name, {
-          value: connectionConfig.taggedPeers.value
+          value: taggedPeer.value ?? connectionConfig.taggedPeers.value
         })
       }
     }

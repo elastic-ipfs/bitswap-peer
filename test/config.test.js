@@ -106,6 +106,7 @@ t.test('config - all by env vars', async t => {
   process.env.P2P_CONNECTION_MPLEX_MAX_STREAM_BUFFER_SIZE = '852741'
   process.env.P2P_CONNECTION_HANDLER_MAX_INBOUND_STREAMS = '456987'
   process.env.P2P_CONNECTION_HANDLER_MAX_OUTBOUND_STREAMS = '987321'
+  process.env.P2P_CONNECTION_TAGGED_PEERS_VALUE = '51'
   process.env.DYNAMO_MAX_RETRIES = '6'
   process.env.DYNAMO_RETRY_DELAY = '500'
   process.env.S3_MAX_RETRIES = '7'
@@ -161,7 +162,7 @@ t.test('config - all by env vars', async t => {
     p2pConnectionMplexMaxStreamBufferSize: 852741,
     p2pConnectionHandlerMaxInboundStreams: 456987,
     p2pConnectionHandlerMaxOutboundStreams: 987321,
-    p2pConnectionTaggedPeersValue: 100,
+    p2pConnectionTaggedPeersValue: 51,
     dynamoMaxRetries: 6,
     dynamoRetryDelay: 500,
     s3MaxRetries: 7,

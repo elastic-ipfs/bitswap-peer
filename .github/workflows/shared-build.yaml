@@ -53,7 +53,7 @@ jobs:
     - name: Lint code
       run: npm run lint
     - name: Test
-      run: npm test:ci
+      run: npm run test:ci
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
     - name: Log in to GitHub Docker Registry

@@ -8,6 +8,7 @@ import { getPeerId } from './peer-id.js'
 import { createConnectionConfig } from './util.js'
 
 async function boot () {
+  logger.info('Application boot')
   const readinessConfig = {
     dynamo: {
       table: config.linkTableV1,
@@ -22,8 +23,10 @@ async function boot () {
   }
 
   try {
+    logger.info('Create AWS client')
     const awsClient = await createAwsClient(config, logger)
 
+    logger.info('Load peers')
     const peerId = await getPeerId({
       awsClient,
       peerIdS3Region: config.peerIdS3Region,
@@ -31,17 +34,22 @@ async function boot () {
       peerIdJsonFile: config.peerIdJsonFile,
       peerIdJsonPath: config.peerIdJsonPath
     })
+
+    logger.info('Check readyness')
     await awsClient.dynamoQueryBySortKey({
       table: readinessConfig.dynamo.table,
       keyName: readinessConfig.dynamo.keyName,
       keyValue: readinessConfig.dynamo.keyValue
     })
+
+    logger.info('Get tagged peers')
     const taggedPeers = await awsClient.dynamoGetItem({
       table: config.dynamoConfigTable,
       keyName: config.dynamoConfigTableKey,
       keyValue: config.dynamoConfigTableTaggedPeersKey
     })
 
+    logger.info('Start server')
     await httpServer.startServer({
       port: config.httpPort,
       awsClient,
@@ -49,6 +57,7 @@ async function boot () {
       allowReadinessTweak: config.allowReadinessTweak
     })
 
+    logger.info('Start service')
     process.nextTick(() => startService({
       awsClient,
       port: config.port,

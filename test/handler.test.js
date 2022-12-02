@@ -62,6 +62,7 @@ function responseContainsData (response, block) {
 
 t.test('handle', async t => {
   t.test('should handle a request successfully', async t => {
+    t.plan(5)
     const cid = CID.parse('bafkreifiqpnpysanizxoatqnnwuynply5mp52ily2bdjg4r5uoupsxkcxy')
     const key = cidToKey(cid)
 
@@ -92,6 +93,7 @@ t.test('handle', async t => {
   })
 
   t.test('should handle a request containing an invalid cid', async t => {
+    t.plan(7)
     const invalidCid = 'not-a-cid'
     const cid = CID.parse('bafkreifiqpnpysanizxoatqnnwuynply5mp52ily2bdjg4r5uoupsxkcxy')
     const key = cidToKey(cid)
@@ -123,6 +125,7 @@ t.test('handle', async t => {
   })
 
   t.test('should handle a request containing only invalid blocks', async t => {
+    t.plan(4)
     const invalidCid = 'not-a-cid'
 
     const contextSpy = await spyContext({
@@ -143,6 +146,7 @@ t.test('handle', async t => {
   })
 
   t.test('should handle a request in multiple batches concurretly', async t => {
+    t.plan(4)
     const cid = CID.parse('bafkreifiqpnpysanizxoatqnnwuynply5mp52ily2bdjg4r5uoupsxkcxy')
     const key = 'zQmZgTpJUbrss357x1D14Uo43JATwd7LhkZNbreqXVGFMmD'
 
@@ -173,6 +177,7 @@ t.test('handle', async t => {
   })
 
   t.test('should handle multiple requests at the same time on the same peer', async t => {
+    t.plan(27)
     const contextsSpy = [
       await spyContext({
         blocks: [
@@ -296,6 +301,7 @@ t.test('handle', async t => {
   })
 
   t.test('should handle and empty request', async t => {
+    t.plan(3)
     const contextSpy = await spyContext({ blocks: [] })
     const loggerSpy = helper.spyLogger()
     const connectionSpy = contextSpy.connection
@@ -309,6 +315,7 @@ t.test('handle', async t => {
   })
 
   t.test('should get log error on connection closing error', async t => {
+    t.plan(5)
     const contextSpy = await spyContext({ blocks: [new Entry('not-a-cid', 1, false, Entry.WantType.Have, true)] })
     const loggerSpy = helper.spyLogger()
     const connectionSpy = contextSpy.connection
@@ -324,6 +331,7 @@ t.test('handle', async t => {
   })
 
   t.test('should not send a response without connecting to the peer and handle the error - cant acquire stream', async t => {
+    t.plan(8)
     const cid = CID.parse('bafkreifiqpnpysanizxoatqnnwuynply5mp52ily2bdjg4r5uoupsxkcxy')
 
     const contextSpy = await spyContext({
@@ -350,6 +358,7 @@ t.test('handle', async t => {
   })
 
   t.test('should not send a response without connecting to the peer and handle the error - error on stream connection', async t => {
+    t.plan(5)
     const cid = CID.parse('bafkreifiqpnpysanizxoatqnnwuynply5mp52ily2bdjg4r5uoupsxkcxy')
 
     const contextSpy = await spyContext({

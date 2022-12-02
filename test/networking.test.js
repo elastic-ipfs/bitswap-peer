@@ -31,8 +31,8 @@ t.test('send - after closing behavior', async t => {
 t.test('error handling', async t => {
   const peerId = await createEd25519PeerId()
   const connectionConfig = createConnectionConfig(config)
-  const { port, service } = await startService({ peerId, port: await helper.getFreePort(), connectionConfig })
-  const { stream, client } = await helper.createClient(peerId, port, protocol)
+  const { service } = await startService({ peerId, port: await helper.getFreePort(), connectionConfig })
+  const { stream, client } = await helper.createClient(service, protocol)
 
   stream.source[Symbol.asyncIterator] = function () {
     return {

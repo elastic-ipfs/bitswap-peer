@@ -12,19 +12,19 @@
     "lint": "eslint src test utils"
   },
   "dependencies": {
-    "@aws-sdk/client-sqs": "3.218.0",
-    "@aws-sdk/node-http-handler": "3.215.0",
+    "@aws-sdk/client-sqs": "3.222.0",
+    "@aws-sdk/node-http-handler": "3.222.0",
     "@chainsafe/libp2p-noise": "10.2.0",
     "@dnlup/doc": "4.0.1",
     "@libp2p/mplex": "7.1.0",
-    "@libp2p/peer-id": "^1.1.16",
+    "@libp2p/peer-id": "1.1.16",
     "@libp2p/peer-id-factory": "1.0.19",
     "@libp2p/websockets": "5.0.0",
     "dotenv": "16.0.3",
     "e-ipfs-core-lib": "0.2.2",
     "it-length-prefixed": "8.0.3",
     "it-pipe": "2.0.4",
-    "libp2p": "0.40.0",
+    "libp2p": "0.40.0-5a62f4f",
     "lru-cache": "7.14.1",
     "mnemonist": "0.39.5",
     "sodium-native": "3.4.1"

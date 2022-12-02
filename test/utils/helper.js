@@ -19,14 +19,15 @@ import { Message, RawMessage } from 'e-ipfs-core-lib'
 import { startService } from '../../src/service.js'
 import { createConnectionConfig } from '../../src/util.js'
 
-async function createClient (peerId, port, protocol) {
+async function createClient (service, protocol) {
   const client = await createLibp2p({
     transports: [webSockets()],
     connectionEncryption: [noise({ crypto: noiseCrypto })],
     streamMuxers: [mplex()]
   })
 
-  const target = await client.dial(`/ip4/127.0.0.1/tcp/${port}/ws/p2p/${peerId}`)
+  await client.peerStore.addressBook.set(service.peerId, service.getMultiaddrs())
+  const target = await client.dial(service.peerId)
   const stream = await target.newStream(protocol)
   const receiver = new EventEmitter()
 
@@ -51,7 +52,7 @@ async function setup ({ protocol, awsClient }) {
   const logger = spyLogger()
   const connectionConfig = createConnectionConfig(config)
   const { service } = await startService({ peerId, port, awsClient, logger, connectionConfig })
-  const { stream, receiver, client } = await createClient(peerId, port, protocol)
+  const { stream, receiver, client } = await createClient(service, protocol)
   const connection = new Connection(stream)
 
   return { service, client, connection, receiver, logger }

@@ -387,13 +387,7 @@ t.test(`${protocol} - closes streams properly`, async t => {
   await sleep(50)
 
   const peerConnections = Array.from(service.connectionManager.connections.entries())
-  t.equal(peerConnections.length, 1, 'Service has only 1 peer with connections')
-
-  const [, connnections] = peerConnections[0]
-  t.equal(connnections.length, 1, 'Service has 1 connection to client')
-
-  const streams = connnections[0].streams
-  t.equal(streams.length, 0, 'Service has 0 open streams to client')
+  t.equal(peerConnections.length, 0)
 
   await teardown(client, service, connection)
 })

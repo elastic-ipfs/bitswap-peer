@@ -6,7 +6,7 @@ t.test('config - defaults', async t => {
   t.same(config, {
     maxBlockDataSize: 2097152,
     maxMessageSize: 4194304,
-    blocksBatchSize: 256,
+    blocksBatchSize: 16,
     blocksTable: 'blocks',
     cacheBlockInfo: false,
     cacheBlockInfoSize: 1000,

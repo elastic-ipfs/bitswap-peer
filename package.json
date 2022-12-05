@@ -24,7 +24,7 @@
     "e-ipfs-core-lib": "0.2.2",
     "it-length-prefixed": "8.0.3",
     "it-pipe": "2.0.4",
-    "libp2p": "0.40.0-5a62f4f",
+    "libp2p": "0.40.0",
     "lru-cache": "7.14.1",
     "mnemonist": "0.39.5",
     "sodium-native": "3.4.1"

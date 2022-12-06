@@ -8,7 +8,7 @@ export function makeConfig () {
   return {
     maxBlockDataSize: process.env.MAX_BLOCK_DATA_SIZE ? parseInt(process.env.MAX_BLOCK_DATA_SIZE) : 2 * 1024 * 1024, // 2 MB
     maxMessageSize: process.env.MAX_MESSAGE_SIZE ? parseInt(process.env.MAX_MESSAGE_SIZE) : 4 * 1024 * 1024, // 4 MB
-    blocksBatchSize: process.env.BLOCKS_BATCH_SIZE ? parseInt(process.env.BLOCKS_BATCH_SIZE) : 16,
+    blocksBatchSize: process.env.BLOCKS_BATCH_SIZE ? parseInt(process.env.BLOCKS_BATCH_SIZE) : 512,
 
     cacheBlockInfo: process.env.CACHE_BLOCK_INFO === 'true',
     cacheBlockInfoSize: process.env.CACHE_BLOCK_INFO_SIZE ? parseInt(process.env.CACHE_BLOCK_INFO_SIZE) : 1e3,

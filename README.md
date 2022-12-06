@@ -8,7 +8,7 @@ _Variables in bold are required._
 | --------------------- | ------------- | ------------------------------------------------------------------------ |
 | MAX_BLOCK_DATA_SIZE | `2 MB` | Maximum size for data block |
 | MAX_MESSAGE_SIZE | `4 MB` | Maximum size response message, must be larger than a single block info/data |
-| BLOCKS_BATCH_SIZE | `16` | Batch size of handling blocks - how many requested blocks are being processed in a batch |
+| BLOCKS_BATCH_SIZE | `512` | Batch size of handling blocks - how many requested blocks are being processed in a batch |
 | CACHE_BLOCK_INFO     | `false`       | Set to `true` to cache block informations with in a in-memory LRU cache. |
 | CACHE_BLOCK_INFO_SIZE | `1000`       | Max entries of the block info cache.                                     |
 | CACHE_BLOCK_DATA      | `false`       | Set to `true` to cache block data with in a in-memory LRU cache.         |

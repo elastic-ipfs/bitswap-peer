@@ -52,7 +52,11 @@ class HttpServer {
             connection: 'close',
             'content-type': 'text/plain'
           })
-          res.end(telemetry.export())
+          telemetry.export().then(result => {
+            res.end(result)
+            telemetry.resetCounters()
+          }
+          )
           break
         }
         case '/inspect/start': {

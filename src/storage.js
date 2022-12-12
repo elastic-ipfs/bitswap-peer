@@ -4,6 +4,7 @@ import LRUCache from 'mnemonist/lru-cache.js'
 import config from './config.js'
 import { logger } from './logging.js'
 import { telemetry } from './telemetry.js'
+import { TELEMETRY_TYPE_DATA, TELEMETRY_TYPE_INFO, TELEMETRY_RESULT_CANCELED, TELEMETRY_RESULT_ERROR, TELEMETRY_RESULT_HITS, TELEMETRY_RESULT_MISSES } from './constants.js'
 
 // TODO when the v0 tables will not be used anymore, following dependencies will be removed
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs'
@@ -42,7 +43,7 @@ async function searchCarInDynamoV1 ({
   retries,
   retryDelay
 }) {
-  const blocks = await telemetry.trackDuration('dynamo-request',
+  const blocks = await telemetry.trackDuration('dynamo-request-durations-sum',
     awsClient.dynamoQueryBySortKey({ table, keyName, keyValue: blockKey, retries, retryDelay }))
 
   if (blocks.length > 0) {
@@ -76,7 +77,7 @@ async function searchCarInDynamoV0 ({
   retries,
   retryDelay
 }) {
-  const block = await telemetry.trackDuration('dynamo-request',
+  const block = await telemetry.trackDuration('dynamo-request-durations-sum',
     awsClient.dynamoGetItem({ table, keyName, keyValue: blockKey, retries, retryDelay }))
   if (!block?.cars[0]) {
     return
@@ -105,25 +106,25 @@ async function fetchBlocksData ({ blocks, logger, awsClient }) {
 
 async function fetchBlockData ({ block, logger, awsClient }) {
   if (block.cancel) {
-    telemetry.increaseCount('bitswap-block-data-canceled')
+    telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_DATA, TELEMETRY_RESULT_CANCELED])
     return
   }
 
   if (!block.key) {
     logger.error({ block }, 'invalid block, missing key')
-    telemetry.increaseCount('bitswap-block-data-error')
+    telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_DATA, TELEMETRY_RESULT_ERROR])
     return
   }
 
   if (!block.info?.car) {
     block.data = { notFound: true }
-    telemetry.increaseCount('bitswap-block-data-misses')
+    telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_DATA, TELEMETRY_RESULT_MISSES])
     return
   }
 
   if (block.info.length > config.maxBlockDataSize) {
     logger.error({ block }, 'invalid block, length is greater than max allowed')
-    telemetry.increaseCount('bitswap-block-data-error')
+    telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_DATA, TELEMETRY_RESULT_ERROR])
     // TODO should send error?
     block.data = { notFound: true }
     return
@@ -134,30 +135,30 @@ async function fetchBlockData ({ block, logger, awsClient }) {
     cacheKey = block.key + '-' + block.info.offset + '-' + block.info.length
     const cached = blockDataCache.get(cacheKey)
     if (cached) {
-      telemetry.increaseCount('cache-block-data-hits')
-      telemetry.increaseCount('bitswap-block-data-hits')
+      telemetry.increaseLabelCount('cache-block', [TELEMETRY_TYPE_DATA, TELEMETRY_RESULT_HITS])
+      telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_DATA, TELEMETRY_RESULT_HITS])
       block.data = { content: cached, found: true }
       return
     }
-    telemetry.increaseCount('cache-block-data-misses')
+    telemetry.increaseLabelCount('cache-block', [TELEMETRY_TYPE_DATA, TELEMETRY_RESULT_MISSES])
   }
 
   try {
     const [, region, bucket, key] = block.info.car.match(/([^/]+)\/([^/]+)\/(.+)/)
-    const content = await telemetry.trackDuration('s3-request',
+    const content = await telemetry.trackDuration('s3-request-durations-sum',
       awsClient.s3Fetch({ region, bucket, key, offset: block.info.offset, length: block.info.length }))
     block.data = { content, found: true }
-    telemetry.increaseCount('bitswap-block-data-hits')
+    telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_DATA, TELEMETRY_RESULT_HITS])
     config.cacheBlockData && blockDataCache.set(cacheKey, content)
     readinessState.s3 = true
     return
   } catch (error) {
-    telemetry.increaseCount('bitswap-block-data-error')
+    telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_DATA, TELEMETRY_RESULT_ERROR])
     readinessState.s3 = false
   }
 
   block.data = { notFound: true }
-  telemetry.increaseCount('bitswap-block-data-misses')
+  telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_DATA, TELEMETRY_RESULT_MISSES])
 }
 
 /**
@@ -170,43 +171,43 @@ async function fetchBlocksInfo ({ blocks, logger, awsClient }) {
 
 async function fetchBlockInfo ({ block, logger, awsClient }) {
   if (block.cancel) {
-    telemetry.increaseCount('bitswap-block-info-canceled')
+    telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_INFO, TELEMETRY_RESULT_CANCELED])
     return
   }
 
   if (!block.key) {
     logger.error({ block }, 'invalid block, missing key')
-    telemetry.increaseCount('bitswap-block-info-error')
+    telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_INFO, TELEMETRY_RESULT_ERROR])
     return
   }
 
   if (config.cacheBlockInfo) {
     const cached = blockInfoCache.get(block.key)
     if (cached) {
-      telemetry.increaseCount('cache-block-info-hits')
-      telemetry.increaseCount('bitswap-block-info-hits')
+      telemetry.increaseLabelCount('cache-block', [TELEMETRY_TYPE_INFO, TELEMETRY_RESULT_HITS])
+      telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_INFO, TELEMETRY_RESULT_HITS])
       block.info = { ...cached, found: true }
       return
     }
-    telemetry.increaseCount('cache-block-info-misses')
+    telemetry.increaseLabelCount('cache-block', [TELEMETRY_TYPE_INFO, TELEMETRY_RESULT_MISSES])
   }
 
   try {
     const info = await searchCarInDynamoV1({ blockKey: block.key, logger, awsClient })
     if (info) {
       block.info = { ...info, found: true }
-      telemetry.increaseCount('bitswap-block-info-hits')
+      telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_INFO, TELEMETRY_RESULT_HITS])
       config.cacheBlockInfo && blockInfoCache.set(block.key, info)
       return
     }
     readinessState.dynamo = true
   } catch (error) {
-    telemetry.increaseCount('bitswap-block-info-error')
+    telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_INFO, TELEMETRY_RESULT_ERROR])
     readinessState.dynamo = false
   }
 
   block.info = { notFound: true }
-  telemetry.increaseCount('bitswap-block-info-misses')
+  telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_INFO, TELEMETRY_RESULT_MISSES])
 }
 
 const recovering = new LRU({

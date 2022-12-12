@@ -5,6 +5,7 @@ import { telemetry } from './telemetry.js'
 import { connectPeer } from './networking.js'
 import inspect from './inspect/index.js'
 import { sizeofBlockInfo } from './util.js'
+import { TELEMETRY_TYPE_DATA, TELEMETRY_TYPE_INFO } from './constants.js'
 
 function createContext ({ service, peerId, protocol, wantlist, awsClient, connection, connectionId }) {
   const context = {
@@ -34,8 +35,8 @@ function handle ({ context, logger, batchSize = config.blocksBatchSize }) {
       }
 
       context.todo = context.blocks.length
-      telemetry.increaseCount('bitswap-total-entries', context.todo)
-      telemetry.increaseCount('bitswap-pending-entries', context.todo)
+      telemetry.increaseCount('bitswap-total-entries-count-total', context.todo)
+      telemetry.increaseGauge('bitswap-pending-entries', context.todo)
       inspect.metrics.increase('blocks', context.todo)
       inspect.metrics.increase('requests')
 
@@ -43,7 +44,7 @@ function handle ({ context, logger, batchSize = config.blocksBatchSize }) {
       context.batchesTodo = Math.ceil(context.todo / batchSize)
       const hrTime = process.hrtime()
       const requestId = hrTime[0] * 1000000000 + hrTime[1]
-      telemetry.increaseCountWithKey('bitswap-request-size', `{id="${requestId}"}`, context.todo)
+      telemetry.increaseLabelCount('bitswap-request-size', [requestId], context.todo)
 
       do {
         const blocks = context.blocks.splice(0, batchSize)
@@ -97,19 +98,19 @@ async function batchFetch (blocks, context, logger) {
       const key = cidToKey(block.cid)
       if (!key) {
         logger.error({ block }, 'invalid block cid')
-        telemetry.increaseCount('bitswap-block-error')
+        telemetry.increaseCount('bitswap-block-error-count-total')
         continue
       }
       block.key = key
 
       if (block.wantType === Entry.WantType.Block) {
-        telemetry.increaseCountWithKey('bitswap-request', `{type:"data",id="${context.connectionId}"}`)
+        telemetry.increaseLabelCount('bitswap-request', [context.connectionId, TELEMETRY_TYPE_DATA])
         block.type = BLOCK_TYPE_DATA
         dataBlocks.push(block)
         continue
       }
       if (block.wantType === Entry.WantType.Have && context.protocol === BITSWAP_V_120) {
-        telemetry.increaseCountWithKey('bitswap-request', `{type:"info",id="${context.connectionId}"}`)
+        telemetry.increaseLabelCount('bitswap-request', [context.connectionId, TELEMETRY_TYPE_INFO])
         block.type = BLOCK_TYPE_INFO
         infoBlocks.push(block)
         continue
@@ -117,7 +118,7 @@ async function batchFetch (blocks, context, logger) {
 
       // other blocks are stripped and not fetched - and not responded
       logger.error({ block }, 'unsupported block type')
-      telemetry.increaseCount('bitswap-block-error')
+      telemetry.increaseCount('bitswap-block-error-count-total')
     }
 
     await Promise.all([
@@ -190,7 +191,7 @@ async function endResponse ({ context, logger }) {
     }
   }
 
-  telemetry.decreaseCount('bitswap-pending-entries', context.todo)
+  telemetry.decreaseGauge('bitswap-pending-entries', context.todo)
   inspect.metrics.decrease('requests')
   inspect.metrics.decrease('blocks', context.todo)
 }
@@ -203,10 +204,10 @@ const messageSize = {
 // not accurate, not considering fixed overhead
 const sentMetrics = {
   [BLOCK_TYPE_DATA]: (block, size) => {
-    block.data?.found && telemetry.increaseCount('bitswap-sent-data', size)
+    block.data?.found && telemetry.increaseLabelCount('bitswap-sent', [TELEMETRY_TYPE_DATA], size)
   },
   [BLOCK_TYPE_INFO]: (block, size) => {
-    block.info?.found && telemetry.increaseCount('bitswap-sent-info', size)
+    block.info?.found && telemetry.increaseLabelCount('bitswap-sent', [TELEMETRY_TYPE_INFO], size)
   }
 }
 

@@ -43,7 +43,7 @@ async function searchCarInDynamoV1 ({
   retries,
   retryDelay
 }) {
-  const blocks = await telemetry.trackDuration('dynamo-request-durations-sum',
+  const blocks = await telemetry.trackDuration('dynamo-request-durations',
     awsClient.dynamoQueryBySortKey({ table, keyName, keyValue: blockKey, retries, retryDelay }))
 
   if (blocks.length > 0) {
@@ -77,7 +77,7 @@ async function searchCarInDynamoV0 ({
   retries,
   retryDelay
 }) {
-  const block = await telemetry.trackDuration('dynamo-request-durations-sum',
+  const block = await telemetry.trackDuration('dynamo-request-durations',
     awsClient.dynamoGetItem({ table, keyName, keyValue: blockKey, retries, retryDelay }))
   if (!block?.cars[0]) {
     return
@@ -145,7 +145,7 @@ async function fetchBlockData ({ block, logger, awsClient }) {
 
   try {
     const [, region, bucket, key] = block.info.car.match(/([^/]+)\/([^/]+)\/(.+)/)
-    const content = await telemetry.trackDuration('s3-request-durations-sum',
+    const content = await telemetry.trackDuration('s3-request-durations',
       awsClient.s3Fetch({ region, bucket, key, offset: block.info.offset, length: block.info.length }))
     block.data = { content, found: true }
     telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_DATA, TELEMETRY_RESULT_HITS])

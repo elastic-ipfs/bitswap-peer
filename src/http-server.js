@@ -55,6 +55,7 @@ class HttpServer {
           telemetry.export().then(result => {
             res.end(result)
             telemetry.resetCounters()
+            telemetry.resetDurations()
           }
           )
           break

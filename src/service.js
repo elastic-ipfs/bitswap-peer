@@ -145,7 +145,8 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
     // TODO move to networking
     service.connectionManager.addEventListener('peer:connect', connection => {
       try {
-        telemetry.increaseGauge('bitswap-total-connections')
+        telemetry.increaseCount('bitswap-connections')
+        telemetry.increaseGauge('bitswap-active-connections')
         inspect.metrics.increase('connections')
       } catch (err) {
         logger.warn({ err, remotePeer: connection.remotePeer }, 'Error while peer connecting')
@@ -155,7 +156,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
     // TODO move to networking
     service.connectionManager.addEventListener('peer:disconnect', connection => {
       try {
-        telemetry.decreaseGauge('bitswap-total-connections')
+        telemetry.decreaseGauge('bitswap-active-connections')
         inspect.metrics.decrease('connections')
       } catch (err) {
         logger.warn({ err, remotePeer: connection.remotePeer }, 'Error while peer disconnecting')

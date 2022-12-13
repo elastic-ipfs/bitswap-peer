@@ -35,7 +35,7 @@ function handle ({ context, logger, batchSize = config.blocksBatchSize }) {
       }
 
       context.todo = context.blocks.length
-      telemetry.increaseCount('bitswap-total-entries-count-total', context.todo)
+      telemetry.increaseCount('bitswap-total-entries', context.todo)
       telemetry.increaseGauge('bitswap-pending-entries', context.todo)
       inspect.metrics.increase('blocks', context.todo)
       inspect.metrics.increase('requests')
@@ -99,7 +99,7 @@ async function batchFetch (blocks, context, logger) {
       const key = cidToKey(block.cid)
       if (!key) {
         logger.error({ block }, 'invalid block cid')
-        telemetry.increaseCount('bitswap-block-error-count-total')
+        telemetry.increaseCount('bitswap-block-error')
         continue
       }
       block.key = key
@@ -119,7 +119,7 @@ async function batchFetch (blocks, context, logger) {
 
       // other blocks are stripped and not fetched - and not responded
       logger.error({ block }, 'unsupported block type')
-      telemetry.increaseCount('bitswap-block-error-count-total')
+      telemetry.increaseCount('bitswap-block-error')
     }
 
     await Promise.all([

@@ -2,8 +2,8 @@
 component: bitswap-peer
 metrics:
   gauge:
-    bitswap-total-connections:
-      description: BitSwap Total Connections
+    bitswap-active-connections:
+      description: BitSwap Active Connections
     bitswap-pending-entries:
       description: BitSwap Pending Entries to serve
   labelCount:
@@ -34,14 +34,16 @@ metrics:
   durations:
     bitswap-request-duration:
       description: Execution time for a request
-    s3-request-durations-sum:
+    s3-request-durations:
       description: AWS S3 requests
-    dynamo-request-durations-sum:
+    dynamo-request-durations:
       description: AWS DynamoDB requests
   count:
-    bitswap-total-entries-count-total:
+    bitswap-connections:
+      description: Bitswap connections
+    bitswap-total-entries:
       description: BitSwap Total Entries served
-    bitswap-block-error-count-total:
+    bitswap-block-error:
       description: Block error (on parsing)
 version: 0.1.0
 buildDate: "20220307.1423"

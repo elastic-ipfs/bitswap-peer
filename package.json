@@ -1,6 +1,6 @@
 {
   "name": "bitswap-peer",
-  "version": "0.11.1",
+  "version": "0.11.2",
   "description": "Elastic IPFS BitSwap Peer",
   "homepage": "https://github.com/elastic-ipfs/bitswap-peer",
   "license": "(Apache-2.0 AND MIT)",
@@ -22,7 +22,7 @@
     "@libp2p/peer-id-factory": "1.0.19",
     "@libp2p/websockets": "5.0.0",
     "dotenv": "16.0.3",
-    "e-ipfs-core-lib": "0.4.0-beta-01",
+    "e-ipfs-core-lib": "0.4.0",
     "it-length-prefixed": "8.0.3",
     "it-pipe": "2.0.4",
     "libp2p": "0.40.0-5a62f4f",

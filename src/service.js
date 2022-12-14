@@ -106,6 +106,9 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
         try {
           const connection = new Connection(stream)
 
+          const hrTime = process.hrtime()
+          const connectionId = hrTime[0] * 1000000000 + hrTime[1]
+
           // Open a send connection to the peer
           connection.on('data', data => {
             let message
@@ -118,7 +121,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
             }
 
             try {
-              const context = createContext({ service, peerId: dial.remotePeer, protocol, wantlist: message.wantlist, awsClient })
+              const context = createContext({ service, peerId: dial.remotePeer, protocol, wantlist: message.wantlist, awsClient, connectionId })
               process.nextTick(handle, { context, logger })
             } catch (err) {
               logger.error({ err }, 'Error creating context')
@@ -142,7 +145,8 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
     // TODO move to networking
     service.connectionManager.addEventListener('peer:connect', connection => {
       try {
-        telemetry.increaseCount('bitswap-total-connections')
+        telemetry.increaseCount('bitswap-connections')
+        telemetry.increaseGauge('bitswap-active-connections')
         inspect.metrics.increase('connections')
       } catch (err) {
         logger.warn({ err, remotePeer: connection.remotePeer }, 'Error while peer connecting')
@@ -152,7 +156,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
     // TODO move to networking
     service.connectionManager.addEventListener('peer:disconnect', connection => {
       try {
-        telemetry.decreaseCount('bitswap-total-connections')
+        telemetry.decreaseGauge('bitswap-active-connections')
         inspect.metrics.decrease('connections')
       } catch (err) {
         logger.warn({ err, remotePeer: connection.remotePeer }, 'Error while peer disconnecting')

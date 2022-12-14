@@ -1,4 +1,3 @@
-
 import config from './config.js'
 import { cidToKey, Entry, BITSWAP_V_120, BLOCK_TYPE_INFO, BLOCK_TYPE_DATA, Message } from 'e-ipfs-core-lib'
 import { fetchBlocksData, fetchBlocksInfo } from './storage.js'
@@ -6,8 +5,9 @@ import { telemetry } from './telemetry.js'
 import { connectPeer } from './networking.js'
 import inspect from './inspect/index.js'
 import { sizeofBlockInfo } from './util.js'
+import { TELEMETRY_TYPE_DATA, TELEMETRY_TYPE_INFO } from './constants.js'
 
-function createContext ({ service, peerId, protocol, wantlist, awsClient, connection }) {
+function createContext ({ service, peerId, protocol, wantlist, awsClient, connection, connectionId }) {
   const context = {
     state: 'ok',
     connection,
@@ -20,63 +20,70 @@ function createContext ({ service, peerId, protocol, wantlist, awsClient, connec
     done: 0,
     todo: 0,
     batchesTodo: 0,
-    batchesDone: 0
+    batchesDone: 0,
+    connectionId
   }
   return context
 }
 
 function handle ({ context, logger, batchSize = config.blocksBatchSize }) {
-  return new Promise(resolve => {
-    if (context.blocks.length < 1) {
-      resolve()
-      return
-    }
-
-    context.todo = context.blocks.length
-    telemetry.increaseCount('bitswap-total-entries', context.todo)
-    telemetry.increaseCount('bitswap-pending-entries', context.todo)
-    inspect.metrics.increase('blocks', context.todo)
-    inspect.metrics.increase('requests')
-
-    let blocksLength
-    context.batchesTodo = Math.ceil(context.todo / batchSize)
-    do {
-      const blocks = context.blocks.splice(0, batchSize)
-
-      if (blocks.length === 0) {
-        break
+  return telemetry.trackDuration('bitswap-request-duration',
+    new Promise(resolve => {
+      if (context.blocks.length < 1) {
+        resolve()
+        return
       }
 
-      blocksLength = blocks.length
-      process.nextTick(async () => {
-        // catch asyn error in libp2p connection
-        try {
-          // state can be 'error' or 'end'
-          // in those cases skip fetching and response, iterate pending batches and close
-          if (context.state === 'ok') {
-            // append content to its block
-            const fetched = await batchFetch(blocks, context, logger)
-            // close connection on last batch
-            await batchResponse({ blocks: fetched, context, logger })
-          }
-        } catch (err) {
-          // TODO remove? probably not needed
-          logger.error({ err }, 'error on handler#nextTick batch op')
+      context.todo = context.blocks.length
+      telemetry.increaseCount('bitswap-total-entries', context.todo)
+      telemetry.increaseGauge('bitswap-pending-entries', context.todo)
+      inspect.metrics.increase('blocks', context.todo)
+      inspect.metrics.increase('requests')
+
+      let blocksLength
+      context.batchesTodo = Math.ceil(context.todo / batchSize)
+      const hrTime = process.hrtime()
+      const requestId = hrTime[0] * 1000000000 + hrTime[1]
+
+      telemetry.increaseLabelCount('bitswap-request-size', [context.connectionId, requestId], context.todo)
+
+      do {
+        const blocks = context.blocks.splice(0, batchSize)
+
+        if (blocks.length === 0) {
+          break
         }
 
-        try {
-          context.batchesDone++
-          if (context.batchesDone === context.batchesTodo) {
-            endResponse({ context, logger })
-            resolve()
+        blocksLength = blocks.length
+        process.nextTick(async () => {
+          // catch async error in libp2p connection
+          try {
+            // state can be 'error' or 'end'
+            // in those cases skip fetching and response, iterate pending batches and close
+            if (context.state === 'ok') {
+              // append content to its block
+              const fetched = await batchFetch(blocks, context, logger)
+              // close connection on last batch
+              await batchResponse({ blocks: fetched, context, logger })
+            }
+          } catch (err) {
+            // TODO remove? probably not needed
+            logger.error({ err }, 'error on handler#nextTick end response')
           }
-        } catch (err) {
-          // TODO remove? probably not needed
-          logger.error({ err }, 'error on handler#nextTick end response')
-        }
-      })
-    } while (blocksLength === batchSize)
-  })
+
+          try {
+            context.batchesDone++
+            if (context.batchesDone === context.batchesTodo) {
+              endResponse({ context, logger })
+              resolve()
+            }
+          } catch (err) {
+            // TODO remove? probably not needed
+            logger.error({ err }, 'error on handler#nextTick end response')
+          }
+        })
+      } while (blocksLength === batchSize)
+    }))
 }
 
 /**
@@ -98,11 +105,13 @@ async function batchFetch (blocks, context, logger) {
       block.key = key
 
       if (block.wantType === Entry.WantType.Block) {
+        telemetry.increaseLabelCount('bitswap-request', [context.connectionId, TELEMETRY_TYPE_DATA])
         block.type = BLOCK_TYPE_DATA
         dataBlocks.push(block)
         continue
       }
       if (block.wantType === Entry.WantType.Have && context.protocol === BITSWAP_V_120) {
+        telemetry.increaseLabelCount('bitswap-request', [context.connectionId, TELEMETRY_TYPE_INFO])
         block.type = BLOCK_TYPE_INFO
         infoBlocks.push(block)
         continue
@@ -124,13 +133,17 @@ async function batchFetch (blocks, context, logger) {
 }
 
 async function batchResponse ({ blocks, context, logger }) {
-  if (!blocks) { return }
+  if (!blocks) {
+    return
+  }
 
   try {
     if (!context.connection && !context.connecting) {
       context.connecting = connectPeer({ context, logger })
       context.connection = await context.connecting
-      context.connection.on('close', () => { endResponse({ context, logger }) })
+      context.connection.on('close', () => {
+        endResponse({ context, logger })
+      })
     }
     await context.connecting
   } catch (error) {
@@ -164,7 +177,9 @@ async function batchResponse ({ blocks, context, logger }) {
 
 // end response, close connection
 async function endResponse ({ context, logger }) {
-  if (context.state === 'end') { return }
+  if (context.state === 'end') {
+    return
+  }
 
   context.state = 'end'
 
@@ -177,7 +192,7 @@ async function endResponse ({ context, logger }) {
     }
   }
 
-  telemetry.decreaseCount('bitswap-pending-entries', context.todo)
+  telemetry.decreaseGauge('bitswap-pending-entries', context.todo)
   inspect.metrics.decrease('requests')
   inspect.metrics.decrease('blocks', context.todo)
 }
@@ -190,10 +205,10 @@ const messageSize = {
 // not accurate, not considering fixed overhead
 const sentMetrics = {
   [BLOCK_TYPE_DATA]: (block, size) => {
-    block.data?.found && telemetry.increaseCount('bitswap-sent-data', size)
+    block.data?.found && telemetry.increaseLabelCount('bitswap-sent', [TELEMETRY_TYPE_DATA], size)
   },
   [BLOCK_TYPE_INFO]: (block, size) => {
-    block.info?.found && telemetry.increaseCount('bitswap-sent-info', size)
+    block.info?.found && telemetry.increaseLabelCount('bitswap-sent', [TELEMETRY_TYPE_INFO], size)
   }
 }
 

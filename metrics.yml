@@ -1,25 +1,49 @@
 ---
 component: bitswap-peer
 metrics:
-  bitswap-total-connections: BitSwap Total Connections
-  bitswap-total-entries: BitSwap Total Entries served
-  bitswap-pending-entries: BitSwap Pending Entries to serve
-  bitswap-block-error: Block error (on parsing)
-  bitswap-block-data-error: Data Block error
-  bitswap-block-info-error: Info Block error
-  bitswap-block-data-canceled: Data Block canceled
-  bitswap-block-info-canceled: Info Block canceled
-  bitswap-block-data-hits: Data Block served
-  bitswap-block-info-hits: Info block served
-  bitswap-block-data-misses: Data Block not found
-  bitswap-block-info-misses: Info block not found
-  bitswap-sent-data: Amount of data sent for data blocks, in bytes
-  bitswap-sent-info: Amount of data sent for info blocks, in bytes
-  s3-request: AWS S3 requests
-  dynamo-request: AWS DynamoDB requests
-  cache-block-data-hits: LRU cache hits for Data Block
-  cache-block-data-misses: LRU cache misses for Data Block
-  cache-block-info-hits: LRU cache hits for Info block
-  cache-block-info-misses: LRU cache misses for Info block
+  gauge:
+    bitswap-active-connections:
+      description: BitSwap Active Connections
+    bitswap-pending-entries:
+      description: BitSwap Pending Entries to serve
+  labelCount:
+    bitswap-request-size:
+      description: Block total size for a request
+      labels:
+        - connection
+        - request
+    bitswap-request:
+      description: Total requests, by type and connection
+      labels:
+        - connection
+        - type
+    bitswap-block:
+      description: Block request, by type (info, data) and result (hits, canceled, error, misses)
+      labels:
+        - type
+        - result
+    cache-block:
+      description: LRU cache hits, by type (info, data) and result (hits, misses)
+      labels:
+        - type
+        - result
+    bitswap-sent:
+      description: Amount of data sent, by type (info, data), in bytes
+      labels:
+        - type
+  durations:
+    bitswap-request-duration:
+      description: Execution time for a request
+    s3-request-durations:
+      description: AWS S3 requests
+    dynamo-request-durations:
+      description: AWS DynamoDB requests
+  count:
+    bitswap-connections:
+      description: Bitswap connections
+    bitswap-total-entries:
+      description: BitSwap Total Entries served
+    bitswap-block-error:
+      description: Block error (on parsing)
 version: 0.1.0
 buildDate: "20220307.1423"

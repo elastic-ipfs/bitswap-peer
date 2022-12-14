@@ -42,10 +42,10 @@ function handle ({ context, logger, batchSize = config.blocksBatchSize }) {
 
       let blocksLength
       context.batchesTodo = Math.ceil(context.todo / batchSize)
-      const hrTime = process.hrtime()
-      const requestId = hrTime[0] * 1000000000 + hrTime[1]
+      // const hrTime = process.hrtime()
+      // const requestId = hrTime[0] * 1000000000 + hrTime[1]
 
-      telemetry.increaseLabelCount('bitswap-request-size', [context.connectionId, requestId], context.todo)
+      // telemetry.increaseLabelCount('bitswap-request-size', [context.connectionId, requestId], context.todo)
 
       do {
         const blocks = context.blocks.splice(0, batchSize)

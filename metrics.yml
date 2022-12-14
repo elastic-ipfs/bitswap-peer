@@ -7,11 +7,11 @@ metrics:
     bitswap-pending-entries:
       description: BitSwap Pending Entries to serve
   labelCount:
-    bitswap-request-size:
-      description: Block total size for a request
-      labels:
-        - connection
-        - request
+#    bitswap-request-size:
+#      description: Block total size for a request
+#      labels:
+#        - connection
+#        - request
     bitswap-request:
       description: Total requests, by type and connection
       labels:

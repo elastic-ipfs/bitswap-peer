@@ -102,13 +102,13 @@ async function batchFetch (blocks, context, logger) {
       block.key = key
 
       if (block.wantType === Entry.WantType.Block) {
-        telemetry.increaseLabelCount('bitswap-request', [context.connectionId, TELEMETRY_TYPE_DATA])
+        // telemetry.increaseLabelCount('bitswap-request', [context.connectionId, TELEMETRY_TYPE_DATA])
         block.type = BLOCK_TYPE_DATA
         dataBlocks.push(block)
         continue
       }
       if (block.wantType === Entry.WantType.Have && context.protocol === BITSWAP_V_120) {
-        telemetry.increaseLabelCount('bitswap-request', [context.connectionId, TELEMETRY_TYPE_INFO])
+        // telemetry.increaseLabelCount('bitswap-request', [context.connectionId, TELEMETRY_TYPE_INFO])
         block.type = BLOCK_TYPE_INFO
         infoBlocks.push(block)
         continue

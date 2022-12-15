@@ -12,11 +12,11 @@ metrics:
 #      labels:
 #        - connection
 #        - request
-    bitswap-request:
-      description: Total requests, by type and connection
-      labels:
-        - connection
-        - type
+#    bitswap-request:
+#      description: Total requests, by type and connection
+#      labels:
+#        - connection
+#        - type
     bitswap-block:
       description: Block request, by type (info, data) and result (hits, canceled, error, misses)
       labels:

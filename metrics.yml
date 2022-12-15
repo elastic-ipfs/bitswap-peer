@@ -1,5 +1,5 @@
 ---
-component: bitswap-peer
+component: bitswap
 metrics:
   gauge:
     bitswap-active-connections:
@@ -45,5 +45,12 @@ metrics:
       description: BitSwap Total Entries served
     bitswap-block-error:
       description: Block error (on parsing)
-version: 0.1.0
-buildDate: "20220307.1423"
+  
+  process:
+    elu: 
+      name: bitswap-elu
+      description: Bitswap Event Loop Utilization
+      interval: 500
+
+version: 0.2.0
+buildDate: "20221215.1423"

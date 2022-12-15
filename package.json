@@ -16,13 +16,12 @@
     "@aws-sdk/client-sqs": "3.231.0",
     "@aws-sdk/node-http-handler": "3.226.0",
     "@chainsafe/libp2p-noise": "10.2.0",
-    "@dnlup/doc": "4.0.1",
     "@libp2p/mplex": "7.1.0",
     "@libp2p/peer-id": "1.1.17",
     "@libp2p/peer-id-factory": "1.0.19",
     "@libp2p/websockets": "5.0.1",
     "dotenv": "16.0.3",
-    "e-ipfs-core-lib": "0.4.0",
+    "e-ipfs-core-lib": "0.5.0",
     "it-length-prefixed": "8.0.3",
     "it-pipe": "2.0.5",
     "libp2p": "0.41.0",
@@ -53,9 +52,9 @@
     "libp2p-tcp": "0.17.2",
     "lint-staged": "13.1.0",
     "pino-pretty": "9.1.1",
-    "sinon": "15.0.0",
+    "sinon": "15.0.1",
     "tap": "16.3.2",
-    "undici": "5.13.0"
+    "undici": "5.14.0"
   },
   "engines": {
     "node": "18.12"

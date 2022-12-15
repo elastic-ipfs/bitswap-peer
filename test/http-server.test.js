@@ -38,6 +38,12 @@ t.test('httpServer', async t => {
     t.equal(server.address().port, config.httpPort)
   })
 
+  t.test('should not start the service twice', async t => {
+    const sameServer = await httpServer.startServer({ port: config.httpPort })
+    t.same({ hostname: server.address().address, port: server.address().port },
+      { hostname: sameServer.address().address, port: sameServer.address().port })
+  })
+
   t.test('should return 200 on /liveness', async t => {
     setReadiness({ s3: true, dynamo: true })
 
@@ -75,6 +81,12 @@ t.test('httpServer', async t => {
   t.test('should get not found accessing readiness tweak', async t => {
     const res = await doHttpRequest('/readiness/tweak', server)
     t.equal(res.statusCode, 404)
+  })
+
+  t.test('should get load state', async t => {
+    const res = await doHttpRequest('/load', server)
+
+    t.equal(res.statusCode, 200)
   })
 })
 

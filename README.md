@@ -52,7 +52,11 @@ _Variables in bold are required._
 | P2P_CONNECTION_HANDLER_MAX_INBOUND_STREAMS | `1024` | p2p handler max incoming streams limit at the same time on each connection |
 | P2P_CONNECTION_HANDLER_MAX_OUTBOUND_STREAMS | `1024` | p2p handler max outgoing streams limit at the same time on each connection |
 | P2P_CONNECTION_TAGGED_PEERS_VALUE | `100` | p2p tagged peers default value, see [tagged peers](#tagged-peers). |
-| TELEMETRY_PORT        | `3001`        | The telemetry port number for the OpenTelemetry server to listen on.     |
+| READINESS_MAX_CONNECTIONS || TODO |
+| READINESS_MAX_PENDING_REQUEST_BLOCKS || |
+| READINESS_MAX_EVENT_LOOP_UTILIZATION || |
+| READINESS_MAX_RESPONSE_DURATION || |
+| HTTP_PORT        | `3001`        | The telemetry port number for the OpenTelemetry server to listen on.     |
 | NODE_DEBUG            |               | If it contains `aws-ipfs`, debug mode is enabled.                        |
 | LOG_LEVEL            | `info` | Logging level. |
 | LOG_PRETTY            | `false` | Enable pretty logging. |

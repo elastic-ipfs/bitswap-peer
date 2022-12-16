@@ -46,7 +46,13 @@ export function makeConfig () {
 
     peerAnnounceAddr: process.env.PEER_ANNOUNCE_ADDR,
     port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
-    httpPort: process.env.HTTP_PORT ? parseInt(process.env.PORT) : 3001,
+    httpPort: process.env.HTTP_PORT ? parseInt(process.env.HTTP_PORT) : 3001,
+
+    // readiness
+    readinessMaxConnections: process.env.READINESS_MAX_CONNECTIONS ? parseInt(process.env.READINESS_MAX_CONNECTIONS) : 200,
+    readinessMaxPendingRequestBlocks: process.env.READINESS_MAX_PENDING_REQUEST_BLOCKS ? parseInt(process.env.READINESS_MAX_PENDING_REQUEST_BLOCKS) : 1e3,
+    readinessMaxEventLoopUtilization: process.env.READINESS_MAX_EVENT_LOOP_UTILIZATION ? parseInt(process.env.READINESS_MAX_EVENT_LOOP_UTILIZATION) : 0.5, // 0 to 1
+    readinessMaxResponseDuration: process.env.READINESS_MAX_RESPONSE_DURATION ? parseInt(process.env.READINESS_MAX_RESPONSE_DURATION) : 5e3, // 5 sec
 
     // p2p
     p2pConnectionMaxConnections: process.env.P2P_CONNECTION_MAX_CONNECTIONS ? parseInt(process.env.P2P_CONNECTION_MAX_CONNECTIONS) : 10e3,

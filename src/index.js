@@ -8,10 +8,6 @@ import { getPeerId } from './peer-id.js'
 import { createConnectionConfig } from './util.js'
 
 async function boot () {
-  const readinessConfig = {
-    // TODO
-  }
-
   try {
     const awsClient = await createAwsClient(config, logger)
 

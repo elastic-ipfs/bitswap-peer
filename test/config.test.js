@@ -37,6 +37,10 @@ t.test('config - defaults', async t => {
     peerAnnounceAddr: undefined,
     port: 3000,
     httpPort: 3001,
+    readinessMaxConnections: 200,
+    readinessMaxPendingRequestBlocks: 1000,
+    readinessMaxEventLoopUtilization: 0.5,
+    readinessMaxResponseDuration: 5000,
     p2pConnectionMaxConnections: 10000,
     p2pConnectionMinConnections: 0,
     p2pConnectionPollInterval: 2000,
@@ -90,6 +94,10 @@ t.test('config - all by env vars', async t => {
   process.env.PEER_ANNOUNCE_ADDR = '/dns4/elastic-dev.dag.house/tcp/443/wss'
   process.env.PORT = '3123'
   process.env.HTTP_PORT = '3258'
+  process.env.READINESS_MAX_CONNECTIONS = '1'
+  process.env.READINESS_MAX_PENDING_REQUEST_BLOCKS = '1'
+  process.env.READINESS_MAX_EVENT_LOOP_UTILIZATION = '0.1'
+  process.env.READINESS_MAX_RESPONSE_DURATION = '1'
   process.env.P2P_CONNECTION_MAX_CONNECTIONS = '99999'
   process.env.P2P_CONNECTION_MIN_CONNECTIONS = '1'
   process.env.P2P_CONNECTION_POLL_INTERVAL = '1000'
@@ -143,7 +151,11 @@ t.test('config - all by env vars', async t => {
     peerIdS3Region: 'aws-s3',
     peerAnnounceAddr: '/dns4/elastic-dev.dag.house/tcp/443/wss',
     port: 3123,
-    httpPort: 3123,
+    httpPort: 3258,
+    readinessMaxConnections: 1,
+    readinessMaxPendingRequestBlocks: 1,
+    readinessMaxEventLoopUtilization: 0,
+    readinessMaxResponseDuration: 1,
     p2pConnectionMaxConnections: 99999,
     p2pConnectionMinConnections: 1,
     p2pConnectionPollInterval: 1000,

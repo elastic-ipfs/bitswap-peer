@@ -3,7 +3,7 @@ import t from 'tap'
 import { get } from 'http'
 import { httpServer } from '../src/http-server.js'
 import config from '../src/config.js'
-import * as helper from './utils/helper.js'
+import { telemetry } from '../src/telemetry.js'
 
 function doHttpRequest (path, server) {
   return new Promise((resolve, reject) => {
@@ -59,12 +59,20 @@ t.test('httpServer', async t => {
     t.equal(res.statusCode, 404)
   })
 
-  t.todo('should return 200 on /readiness', async t => {
+  t.test('should return 200 on /readiness', async t => {
+    telemetry.resetAll()
+    telemetry.setGauge('bitswap-active-connections', config.readinessMaxConnections - 1)
+    telemetry.setGauge('bitswap-pending-entries', config.readinessMaxPendingRequestBlocks - 1)
+    telemetry.setGauge('bitswap-elu', config.readinessMaxEventLoopUtilization - 0.1)
+    telemetry.trackDuration('bitswap-request-duration', async () => {})
+
     const res = await doHttpRequest('/readiness', server)
     t.equal(res.statusCode, 200)
   })
 
-  t.todo('should get readiness error state, returns 503', async t => {
+  t.test('should get readiness error state, returns 503', async t => {
+    telemetry.resetAll()
+    telemetry.setGauge('bitswap-active-connections', config.readinessMaxConnections + 1)
     const res = await doHttpRequest('/readiness', server)
     t.equal(res.statusCode, 503)
   })

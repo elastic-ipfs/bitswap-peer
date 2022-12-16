@@ -15,24 +15,6 @@ import LRU from 'lru-cache'
 const blockInfoCache = config.cacheBlockInfo ? new LRUCache(config.cacheBlockInfoSize) : null
 const blockDataCache = config.cacheBlockData ? new LRUCache(config.cacheBlockDataSize) : null
 
-const readinessState = {
-  dynamo: true,
-  s3: true
-}
-
-export function getReadiness () {
-  return readinessState
-}
-
-/**
- * allow to set readiness state, for testing purpose only
- * @see README#readiness
- */
-export function setReadiness (state) {
-  if (state.dynamo !== undefined) { readinessState.dynamo = state.dynamo }
-  if (state.s3 !== undefined) { readinessState.s3 = state.s3 }
-}
-
 async function searchCarInDynamoV1 ({
   awsClient,
   table = config.linkTableV1,
@@ -150,11 +132,9 @@ async function fetchBlockData ({ block, logger, awsClient }) {
     block.data = { content, found: true }
     telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_DATA, TELEMETRY_RESULT_HITS])
     config.cacheBlockData && blockDataCache.set(cacheKey, content)
-    readinessState.s3 = true
     return
   } catch (error) {
     telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_DATA, TELEMETRY_RESULT_ERROR])
-    readinessState.s3 = false
   }
 
   block.data = { notFound: true }
@@ -200,10 +180,8 @@ async function fetchBlockInfo ({ block, logger, awsClient }) {
       config.cacheBlockInfo && blockInfoCache.set(block.key, info)
       return
     }
-    readinessState.dynamo = true
   } catch (error) {
     telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_INFO, TELEMETRY_RESULT_ERROR])
-    readinessState.dynamo = false
   }
 
   block.info = { notFound: true }

@@ -3,12 +3,11 @@ import { createServer } from 'node:http'
 import { URL } from 'node:url'
 import { logger } from './logging.js'
 import { checkReadiness } from './health-check.js'
-import { setReadiness } from './storage.js'
 import { telemetry } from './telemetry.js'
 import { version } from './util.js'
 
 class HttpServer {
-  startServer ({ port, awsClient, readinessConfig, allowReadinessTweak }) {
+  startServer ({ port }) {
     if (this.server) {
       return this.server
     }
@@ -21,28 +20,10 @@ class HttpServer {
           res.end()
           break
         case '/readiness': {
-          checkReadiness({ awsClient, readinessConfig, allowReadinessTweak, logger })
+          checkReadiness({ logger })
             .then(httpStatus => {
               res.writeHead(httpStatus).end()
             })
-          break
-        }
-        case '/readiness/tweak': {
-          if (!allowReadinessTweak) {
-            res.writeHead(404).end()
-            break
-          }
-          try {
-            const dynamo = url.searchParams.get('dynamo')
-            const s3 = url.searchParams.get('s3')
-            setReadiness({
-              dynamo: dynamo ? dynamo === 'true' : undefined,
-              s3: s3 ? s3 === 'true' : undefined
-            })
-            res.writeHead(200).end()
-          } catch {
-            res.writeHead(400).end()
-          }
           break
         }
         case '/load': {

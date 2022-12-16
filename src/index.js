@@ -9,16 +9,7 @@ import { createConnectionConfig } from './util.js'
 
 async function boot () {
   const readinessConfig = {
-    dynamo: {
-      table: config.linkTableV1,
-      keyName: config.linkTableBlockKey,
-      keyValue: 'readiness'
-    },
-    s3: {
-      region: config.peerIdS3Region,
-      bucket: config.peerIdS3Bucket,
-      key: config.peerIdJsonFile
-    }
+    // TODO
   }
 
   try {
@@ -32,12 +23,6 @@ async function boot () {
       peerIdJsonPath: config.peerIdJsonPath
     })
 
-    await awsClient.dynamoQueryBySortKey({
-      table: readinessConfig.dynamo.table,
-      keyName: readinessConfig.dynamo.keyName,
-      keyValue: readinessConfig.dynamo.keyValue
-    })
-
     const taggedPeers = await awsClient.dynamoGetItem({
       table: config.dynamoConfigTable,
       keyName: config.dynamoConfigTableKey,
@@ -46,9 +31,7 @@ async function boot () {
 
     await httpServer.startServer({
       port: config.httpPort,
-      awsClient,
-      readinessConfig,
-      allowReadinessTweak: config.allowReadinessTweak
+      awsClient
     })
 
     process.nextTick(() => startService({

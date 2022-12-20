@@ -11,7 +11,6 @@ import { handle, createContext } from './handler.js'
 import { telemetry } from './telemetry.js'
 import { logger as defaultLogger } from './logging.js'
 import { createPeerIdFromMultihash } from './peer-id.js'
-import inspect from './inspect/index.js'
 
 // TODO validate all the params
 function validateParams ({ taggedPeers, logger }) {
@@ -147,7 +146,6 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
       try {
         telemetry.increaseCount('bitswap-connections')
         telemetry.increaseGauge('bitswap-active-connections')
-        inspect.metrics.increase('connections')
       } catch (err) {
         logger.warn({ err, remotePeer: connection.remotePeer }, 'Error while peer connecting')
       }
@@ -157,7 +155,6 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
     service.connectionManager.addEventListener('peer:disconnect', connection => {
       try {
         telemetry.decreaseGauge('bitswap-active-connections')
-        inspect.metrics.decrease('connections')
       } catch (err) {
         logger.warn({ err, remotePeer: connection.remotePeer }, 'Error while peer disconnecting')
       }

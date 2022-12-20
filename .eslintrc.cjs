@@ -6,6 +6,7 @@ module.exports = {
     },
     "rules": {
         "curly": [2, "all"],
-        "import/no-named-default": 0
+        "import/no-named-default": 0,
+        "no-new": 0
     }
 }

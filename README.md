@@ -54,7 +54,6 @@ _Variables in bold are required._
 | P2P_CONNECTION_TAGGED_PEERS_VALUE | `100` | p2p tagged peers default value, see [tagged peers](#tagged-peers). |
 | TELEMETRY_PORT        | `3001`        | The telemetry port number for the OpenTelemetry server to listen on.     |
 | ALLOW_READINESS_TWEAK | `false`       | Allow to tewak readiness state - for dev and testing only. |
-| ALLOW_INSPECTION      | `false`       | Allow inspection functionalities - for dev and testing only. |
 | NODE_DEBUG            |               | If it contains `aws-ipfs`, debug mode is enabled.                        |
 | LOG_LEVEL            | `info` | Logging level. |
 | LOG_PRETTY            | `false` | Enable pretty logging. |

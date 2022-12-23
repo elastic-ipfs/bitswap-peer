@@ -10,3 +10,4 @@ jobs:
     permissions:
       packages: write
     uses: elastic-ipfs/bitswap-peer/.github/workflows/shared-build.yaml@main
+# Deploys to staging, and prod, must be done manually through deployment repo

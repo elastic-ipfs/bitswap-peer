@@ -114,7 +114,12 @@ The list is accepted as `all-or-nothing`, to avoid runtime issues; so if a singl
 
 The `/readiness` endpoint on the http server is used by the load balancer to determine if the service is healthy or not.
 
-TODO
+TODO!
+
+- readiness values are: ... see metrics
+- env vars to set limits
+- reset on `/metrics` call - request duration?
+
 
 ## Issues
 

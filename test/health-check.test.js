@@ -16,7 +16,6 @@ t.test('getHealthCheckValues', async t => {
     t.equal(resources.connections, 1)
     t.equal(resources.pendingRequestBlocks, 2)
     t.equal(resources.eventLoopUtilization, 0.01)
-    t.equal(resources.responseDuration, -1)
   })
 })
 

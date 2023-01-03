@@ -55,7 +55,6 @@ _Variables in bold are required._
 | READINESS_MAX_CONNECTIONS | `25` | Limit for readiness on active connections |
 | READINESS_MAX_PENDING_REQUEST_BLOCKS | `5000` | Limit for readiness on pending request blocks |
 | READINESS_MAX_EVENT_LOOP_UTILIZATION | `0.5` | Limit for readiness on Event Loop Utilization |
-| READINESS_MAX_RESPONSE_DURATION | `5000` | Limit for readiness on response time, defautl 5 seconds |
 | HTTP_PORT        | `3001`        | The telemetry port number for the OpenTelemetry server to listen on.     |
 | NODE_DEBUG            |               | If it contains `aws-ipfs`, debug mode is enabled.                        |
 | LOG_LEVEL            | `info` | Logging level. |
@@ -118,8 +117,6 @@ TODO!
 
 - readiness values are: ... see metrics
 - env vars to set limits
-- reset on `/metrics` call - request duration?
-
 
 ## Issues
 

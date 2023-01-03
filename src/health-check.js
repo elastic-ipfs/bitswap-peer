@@ -8,8 +8,7 @@ export function getHealthCheckValues () {
   return {
     connections: telemetry.getGaugeValue('bitswap-active-connections'),
     pendingRequestBlocks: telemetry.getGaugeValue('bitswap-pending-entries'),
-    eventLoopUtilization: telemetry.getGaugeValue('bitswap-elu'),
-    responseDuration: telemetry.getHistogramValue('bitswap-request-duration') ?? -1
+    eventLoopUtilization: telemetry.getGaugeValue('bitswap-elu')
   }
 }
 
@@ -34,12 +33,6 @@ export function checkReadiness (logger) {
   if (resources.eventLoopUtilization > config.readinessMaxEventLoopUtilization) {
     logger.warn({ eventLoopUtilization: resources.eventLoopUtilization, maxEventLoopUtilization: config.readinessMaxEventLoopUtilization },
       'Service is not ready due to max event loop utilization')
-    return false
-  }
-
-  if (resources.responseDuration > config.readinessMaxResponseDuration) {
-    logger.warn({ responseDuration: resources.pendingRequestBlocks, maxResponseDuration: config.readinessMaxResponseDuration },
-      'Service is not ready due to max response duration')
     return false
   }
 

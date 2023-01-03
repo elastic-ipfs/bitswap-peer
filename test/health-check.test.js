@@ -70,21 +70,4 @@ t.test('checkReadiness', async t => {
     t.equal(logger.messages.warn.length, 1)
     t.equal(logger.messages.warn[0][1], 'Service is not ready due to max event loop utilization')
   })
-
-  t.test('should be not ready on long response duration', async t => {
-    telemetry.resetAll()
-    telemetry.setGauge('bitswap-active-connections', 0)
-    telemetry.setGauge('bitswap-pending-entries', 0)
-    telemetry.setGauge('bitswap-elu', 0)
-    const originalGetHistogramValue = telemetry.getHistogramValue
-    telemetry.getHistogramValue = () => config.readinessMaxResponseDuration + 1
-
-    const logger = helper.spyLogger()
-
-    t.equal(checkReadiness(logger), false)
-    t.equal(logger.messages.warn.length, 1)
-    t.equal(logger.messages.warn[0][1], 'Service is not ready due to max response duration')
-
-    telemetry.getHistogramValue = originalGetHistogramValue
-  })
 })

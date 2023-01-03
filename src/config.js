@@ -52,7 +52,6 @@ export function makeConfig () {
     readinessMaxConnections: process.env.READINESS_MAX_CONNECTIONS ? parseInt(process.env.READINESS_MAX_CONNECTIONS) : 25,
     readinessMaxPendingRequestBlocks: process.env.READINESS_MAX_PENDING_REQUEST_BLOCKS ? parseInt(process.env.READINESS_MAX_PENDING_REQUEST_BLOCKS) : 5e3,
     readinessMaxEventLoopUtilization: process.env.READINESS_MAX_EVENT_LOOP_UTILIZATION ? parseInt(process.env.READINESS_MAX_EVENT_LOOP_UTILIZATION) : 0.5, // 0 to 1
-    readinessMaxResponseDuration: process.env.READINESS_MAX_RESPONSE_DURATION ? parseInt(process.env.READINESS_MAX_RESPONSE_DURATION) : 5e3, // 5 sec
 
     // p2p
     p2pConnectionMaxConnections: process.env.P2P_CONNECTION_MAX_CONNECTIONS ? parseInt(process.env.P2P_CONNECTION_MAX_CONNECTIONS) : 10e3,

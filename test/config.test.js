@@ -40,7 +40,6 @@ t.test('config - defaults', async t => {
     readinessMaxConnections: 25,
     readinessMaxPendingRequestBlocks: 5000,
     readinessMaxEventLoopUtilization: 0.5,
-    readinessMaxResponseDuration: 5000,
     p2pConnectionMaxConnections: 10000,
     p2pConnectionMinConnections: 0,
     p2pConnectionPollInterval: 2000,
@@ -97,7 +96,6 @@ t.test('config - all by env vars', async t => {
   process.env.READINESS_MAX_CONNECTIONS = '1'
   process.env.READINESS_MAX_PENDING_REQUEST_BLOCKS = '1'
   process.env.READINESS_MAX_EVENT_LOOP_UTILIZATION = '0.1'
-  process.env.READINESS_MAX_RESPONSE_DURATION = '1'
   process.env.P2P_CONNECTION_MAX_CONNECTIONS = '99999'
   process.env.P2P_CONNECTION_MIN_CONNECTIONS = '1'
   process.env.P2P_CONNECTION_POLL_INTERVAL = '1000'
@@ -155,7 +153,6 @@ t.test('config - all by env vars', async t => {
     readinessMaxConnections: 1,
     readinessMaxPendingRequestBlocks: 1,
     readinessMaxEventLoopUtilization: 0,
-    readinessMaxResponseDuration: 1,
     p2pConnectionMaxConnections: 99999,
     p2pConnectionMinConnections: 1,
     p2pConnectionPollInterval: 1000,

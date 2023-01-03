@@ -25,11 +25,6 @@ async function boot () {
       keyValue: config.dynamoConfigTableTaggedPeersKey
     })
 
-    await httpServer.startServer({
-      port: config.httpPort,
-      awsClient
-    })
-
     process.nextTick(() => startService({
       awsClient,
       port: config.port,
@@ -38,6 +33,11 @@ async function boot () {
       connectionConfig: createConnectionConfig(config),
       taggedPeers: JSON.parse(taggedPeers.value)
     }))
+
+    await httpServer.startServer({
+      port: config.httpPort,
+      awsClient
+    })
   } catch (err) {
     logger.fatal({ err }, 'Cannot start the service')
   }

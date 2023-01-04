@@ -49,9 +49,9 @@ export function makeConfig () {
     httpPort: process.env.HTTP_PORT ? parseInt(process.env.HTTP_PORT) : 3001,
 
     // readiness
-    readinessMaxConnections: process.env.READINESS_MAX_CONNECTIONS ? parseInt(process.env.READINESS_MAX_CONNECTIONS) : 25,
+    readinessMaxConnections: process.env.READINESS_MAX_CONNECTIONS ? parseInt(process.env.READINESS_MAX_CONNECTIONS) : 30,
     readinessMaxPendingRequestBlocks: process.env.READINESS_MAX_PENDING_REQUEST_BLOCKS ? parseInt(process.env.READINESS_MAX_PENDING_REQUEST_BLOCKS) : 5e3,
-    readinessMaxEventLoopUtilization: process.env.READINESS_MAX_EVENT_LOOP_UTILIZATION ? parseInt(process.env.READINESS_MAX_EVENT_LOOP_UTILIZATION) : 0.5, // 0 to 1
+    readinessMaxEventLoopUtilization: process.env.READINESS_MAX_EVENT_LOOP_UTILIZATION ? parseFloat(process.env.READINESS_MAX_EVENT_LOOP_UTILIZATION) : 0.7, // 0 to 1
 
     // p2p
     p2pConnectionMaxConnections: process.env.P2P_CONNECTION_MAX_CONNECTIONS ? parseInt(process.env.P2P_CONNECTION_MAX_CONNECTIONS) : 10e3,

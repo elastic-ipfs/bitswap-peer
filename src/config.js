@@ -46,7 +46,12 @@ export function makeConfig () {
 
     peerAnnounceAddr: process.env.PEER_ANNOUNCE_ADDR,
     port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
-    httpPort: process.env.HTTP_PORT ? parseInt(process.env.PORT) : 3001,
+    httpPort: process.env.HTTP_PORT ? parseInt(process.env.HTTP_PORT) : 3001,
+
+    // readiness
+    readinessMaxConnections: process.env.READINESS_MAX_CONNECTIONS ? parseInt(process.env.READINESS_MAX_CONNECTIONS) : 30,
+    readinessMaxPendingRequestBlocks: process.env.READINESS_MAX_PENDING_REQUEST_BLOCKS ? parseInt(process.env.READINESS_MAX_PENDING_REQUEST_BLOCKS) : 5e3,
+    readinessMaxEventLoopUtilization: process.env.READINESS_MAX_EVENT_LOOP_UTILIZATION ? parseFloat(process.env.READINESS_MAX_EVENT_LOOP_UTILIZATION) : 0.7, // 0 to 1
 
     // p2p
     p2pConnectionMaxConnections: process.env.P2P_CONNECTION_MAX_CONNECTIONS ? parseInt(process.env.P2P_CONNECTION_MAX_CONNECTIONS) : 10e3,
@@ -71,9 +76,7 @@ export function makeConfig () {
     dynamoMaxRetries: process.env.DYNAMO_MAX_RETRIES ? parseInt(process.env.DYNAMO_MAX_RETRIES) : 3,
     dynamoRetryDelay: process.env.DYNAMO_RETRY_DELAY ? parseInt(process.env.DYNAMO_RETRY_DELAY) : 100, // ms
     s3MaxRetries: process.env.S3_MAX_RETRIES ? parseInt(process.env.S3_MAX_RETRIES) : 3,
-    s3RetryDelay: process.env.S3_RETRY_DELAY ? parseInt(process.env.S3_RETRY_DELAY) : 100, // ms
-
-    allowReadinessTweak: process.env.ALLOW_READINESS_TWEAK === 'true'
+    s3RetryDelay: process.env.S3_RETRY_DELAY ? parseInt(process.env.S3_RETRY_DELAY) : 100 // ms
   }
 }
 

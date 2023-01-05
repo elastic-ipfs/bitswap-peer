@@ -52,8 +52,10 @@ _Variables in bold are required._
 | P2P_CONNECTION_HANDLER_MAX_INBOUND_STREAMS | `1024` | p2p handler max incoming streams limit at the same time on each connection |
 | P2P_CONNECTION_HANDLER_MAX_OUTBOUND_STREAMS | `1024` | p2p handler max outgoing streams limit at the same time on each connection |
 | P2P_CONNECTION_TAGGED_PEERS_VALUE | `100` | p2p tagged peers default value, see [tagged peers](#tagged-peers). |
-| TELEMETRY_PORT        | `3001`        | The telemetry port number for the OpenTelemetry server to listen on.     |
-| ALLOW_READINESS_TWEAK | `false`       | Allow to tewak readiness state - for dev and testing only. |
+| READINESS_MAX_CONNECTIONS | `30` | Limit for readiness on active connections |
+| READINESS_MAX_PENDING_REQUEST_BLOCKS | `5000` | Limit for readiness on pending request blocks |
+| READINESS_MAX_EVENT_LOOP_UTILIZATION | `0.7` | Limit for readiness on Event Loop Utilization |
+| HTTP_PORT        | `3001`        | The telemetry port number for the OpenTelemetry server to listen on.     |
 | NODE_DEBUG            |               | If it contains `aws-ipfs`, debug mode is enabled.                        |
 | LOG_LEVEL            | `info` | Logging level. |
 | LOG_PRETTY            | `false` | Enable pretty logging. |
@@ -110,22 +112,13 @@ The list is accepted as `all-or-nothing`, to avoid runtime issues; so if a singl
 ### Readiness
 
 The `/readiness` endpoint on the http server is used by the load balancer to determine if the service is healthy or not.
-The readiness state is set by the last DynamoDB an S3 request, and it's served instantly when called.
-In case of state of error, the `/readiness` will perform calls to the DynamoDB and S3 services and will return the result state.
 
-For testing purposes only, it's possible to set the readiness state by enabling `ALLOW_READINESS_TWEAK` and calling the `/readiness/tweak` endpoint passing the readiness state, for example:
+Readiness considers:
+- amount of active connections `bitswap-active-connections`
+- pending request blocks `bitswap-pending-entries`
+- event loop utilization (ELU) `bitswap-elu`
 
-```bash
-ALLOW_READINESS_TWEAK=true node src/index.js
-```
-
-so the state can be set calling
-
-```bash
-curl http://localhost:3001/readiness/tweak?dynamo=false&s3=true
-```
-
-will set the state of DynamoDB to error, and the following call to `/readiness` will return the error state
+They are gathered on telemetry as gauges, and never resetted.
 
 ## Issues
 

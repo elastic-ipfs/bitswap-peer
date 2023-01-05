@@ -34,8 +34,8 @@ async function getPeerId ({ awsClient, peerIdS3Region, peerIdS3Bucket, peerIdJso
     logger.info('peerId loaded from JSON ' + peerIdJsonPath)
     return peer
   } catch (err) {
-    logger.error({ err }, 'cant load peer file from ' + peerIdJsonPath)
-    return createEd25519PeerId()
+    logger.fatal({ err }, 'cant load peer file from ' + peerIdJsonPath)
+    throw new Error('cant load peer file from ' + peerIdJsonPath)
   }
 }
 

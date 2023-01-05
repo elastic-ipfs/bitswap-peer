@@ -1,41 +1,40 @@
+import config from './config.js'
+import { telemetry } from './telemetry.js'
 
-import { getReadiness, setReadiness } from './storage.js'
+/**
+ * `bitswap-request-duration` is been reset every telemetry.export call (in /metrics)
+ */
+export function getHealthCheckValues () {
+  return {
+    connections: telemetry.getGaugeValue('bitswap-active-connections'),
+    pendingRequestBlocks: telemetry.getGaugeValue('bitswap-pending-entries'),
+    eventLoopUtilization: telemetry.getGaugeValue('bitswap-elu')
+  }
+}
 
-const SUCCESS_CODE = 200
-const ERROR_CODE = 503
+/**
+ * called every 1 second
+ */
+export function checkReadiness (logger) {
+  const resources = getHealthCheckValues()
 
-export async function checkReadiness ({ awsClient, readinessConfig, allowReadinessTweak, logger }) {
-  const state = getReadiness()
-
-  if (state.s3 && state.dynamo) {
-    return SUCCESS_CODE
+  if (resources.connections > config.readinessMaxConnections) {
+    logger.warn({ connections: resources.connections, maxConnections: config.readinessMaxConnections },
+      'Service is not ready due to max connections')
+    return false
   }
 
-  if (allowReadinessTweak) {
-    // note success is already returned above, with or without allowReadinessTweak
-    return ERROR_CODE
+  if (resources.pendingRequestBlocks > config.readinessMaxPendingRequestBlocks) {
+    logger.warn({ pendingRequestBlocks: resources.pendingRequestBlocks, maxPendingRequestBlocks: config.readinessMaxPendingRequestBlocks },
+      'Service is not ready due to max pending request blocks')
+    return false
   }
 
-  try {
-    logger.info('Readiness Probe Check')
-    await Promise.all([
-      awsClient.dynamoQueryBySortKey({
-        table: readinessConfig.dynamo.table,
-        keyName: readinessConfig.dynamo.keyName,
-        keyValue: readinessConfig.dynamo.keyValue
-      }),
-      awsClient.s3Fetch({
-        region: readinessConfig.s3.region,
-        bucket: readinessConfig.s3.bucket,
-        key: readinessConfig.s3.key
-      })
-    ])
-
-    logger.info('Readiness Probe Succeed')
-    setReadiness({ s3: true, dynamo: true })
-    return SUCCESS_CODE
-  } catch (err) {
-    logger.error({ err }, 'Readiness Probe Failed')
-    return ERROR_CODE
+  if (resources.eventLoopUtilization > config.readinessMaxEventLoopUtilization) {
+    logger.warn({ eventLoopUtilization: resources.eventLoopUtilization, maxEventLoopUtilization: config.readinessMaxEventLoopUtilization },
+      'Service is not ready due to max event loop utilization')
+    return false
   }
+
+  return true
 }

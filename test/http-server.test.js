@@ -2,9 +2,8 @@
 import t from 'tap'
 import { get } from 'http'
 import { httpServer } from '../src/http-server.js'
-import { getReadiness, setReadiness } from '../src/storage.js'
 import config from '../src/config.js'
-import * as helper from './utils/helper.js'
+import { telemetry } from '../src/telemetry.js'
 
 function doHttpRequest (path, server) {
   return new Promise((resolve, reject) => {
@@ -45,8 +44,6 @@ t.test('httpServer', async t => {
   })
 
   t.test('should return 200 on /liveness', async t => {
-    setReadiness({ s3: true, dynamo: true })
-
     const res = await doHttpRequest('/liveness', server)
     t.equal(res.statusCode, 200)
   })
@@ -57,86 +54,32 @@ t.test('httpServer', async t => {
     // TODO fix assert content
   })
 
+  t.test('should not found path returns 404', async t => {
+    const res = await doHttpRequest('/thisPathDoesNotExist', server)
+    t.equal(res.statusCode, 404)
+  })
+
   t.test('should return 200 on /readiness', async t => {
-    setReadiness({ s3: true, dynamo: true })
+    telemetry.resetAll()
+    telemetry.setGauge('bitswap-active-connections', config.readinessMaxConnections - 1)
+    telemetry.setGauge('bitswap-pending-entries', config.readinessMaxPendingRequestBlocks - 1)
+    telemetry.setGauge('bitswap-elu', config.readinessMaxEventLoopUtilization - 0.1)
+    telemetry.trackDuration('bitswap-request-duration', async () => {})
 
     const res = await doHttpRequest('/readiness', server)
     t.equal(res.statusCode, 200)
   })
 
-  t.test('should not found path returns 404', async t => {
-    setReadiness({ s3: true, dynamo: true })
-
-    const res = await doHttpRequest('/thisPathDoesNotExist', server)
-    t.equal(res.statusCode, 404)
-  })
-
   t.test('should get readiness error state, returns 503', async t => {
-    setReadiness({ s3: false, dynamo: false })
-
+    telemetry.resetAll()
+    telemetry.setGauge('bitswap-active-connections', config.readinessMaxConnections + 1)
     const res = await doHttpRequest('/readiness', server)
     t.equal(res.statusCode, 503)
-  })
-
-  t.test('should get not found accessing readiness tweak', async t => {
-    const res = await doHttpRequest('/readiness/tweak', server)
-    t.equal(res.statusCode, 404)
   })
 
   t.test('should get load state', async t => {
     const res = await doHttpRequest('/load', server)
 
     t.equal(res.statusCode, 200)
-  })
-})
-
-t.test('httpServer with readiness tweak', async t => {
-  let server
-  t.before(async () => {
-    server = await httpServer.startServer({
-      port: await helper.getFreePort(),
-      allowReadinessTweak: true
-    })
-  })
-
-  t.teardown(async () => {
-    httpServer.close()
-  })
-
-  t.test('should access to /readiness/tweak', async t => {
-    const res = await doHttpRequest('/readiness/tweak', server)
-    t.equal(res.statusCode, 200)
-  })
-
-  t.test('should access to /readiness/tweak setting dynamo', async t => {
-    setReadiness({ s3: true, dynamo: true })
-
-    const res = await doHttpRequest('/readiness/tweak?dynamo=false', server)
-
-    t.equal(res.statusCode, 200)
-    t.same(getReadiness(), { dynamo: false, s3: true })
-  })
-
-  t.test('should access to /readiness/tweak setting dynamo and s3', async t => {
-    setReadiness({ s3: true, dynamo: true })
-
-    const res = await doHttpRequest('/readiness/tweak?dynamo=false&s3=false', server)
-
-    t.equal(res.statusCode, 200)
-    t.same(getReadiness(), { dynamo: false, s3: false })
-  })
-
-  t.test('should set state on /readiness/tweak and get it from /readiness (ok)', async t => {
-    await doHttpRequest('/readiness/tweak?dynamo=true&s3=true', server)
-
-    const res = await doHttpRequest('/readiness', server)
-    t.equal(res.statusCode, 200)
-  })
-
-  t.test('should set state on /readiness/tweak and get it from /readiness (error)', async t => {
-    await doHttpRequest('/readiness/tweak?dynamo=false&s3=false', server)
-
-    const res = await doHttpRequest('/readiness', server)
-    t.equal(res.statusCode, 503)
   })
 })

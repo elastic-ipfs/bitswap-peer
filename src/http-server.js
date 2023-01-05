@@ -2,13 +2,15 @@
 import { createServer } from 'node:http'
 import { URL } from 'node:url'
 import { logger } from './logging.js'
-import { checkReadiness } from './health-check.js'
-import { setReadiness } from './storage.js'
+import { getHealthCheckValues, checkReadiness } from './health-check.js'
 import { telemetry } from './telemetry.js'
 import { version } from './util.js'
 
+const SUCCESS_CODE = 200
+const ERROR_CODE = 503
+
 class HttpServer {
-  startServer ({ port, awsClient, readinessConfig, allowReadinessTweak }) {
+  startServer ({ port }) {
     if (this.server) {
       return this.server
     }
@@ -21,28 +23,8 @@ class HttpServer {
           res.end()
           break
         case '/readiness': {
-          checkReadiness({ awsClient, readinessConfig, allowReadinessTweak, logger })
-            .then(httpStatus => {
-              res.writeHead(httpStatus).end()
-            })
-          break
-        }
-        case '/readiness/tweak': {
-          if (!allowReadinessTweak) {
-            res.writeHead(404).end()
-            break
-          }
-          try {
-            const dynamo = url.searchParams.get('dynamo')
-            const s3 = url.searchParams.get('s3')
-            setReadiness({
-              dynamo: dynamo ? dynamo === 'true' : undefined,
-              s3: s3 ? s3 === 'true' : undefined
-            })
-            res.writeHead(200).end()
-          } catch {
-            res.writeHead(400).end()
-          }
+          res.writeHead(checkReadiness(logger) ? SUCCESS_CODE : ERROR_CODE)
+            .end()
           break
         }
         case '/load': {
@@ -50,14 +32,7 @@ class HttpServer {
             connection: 'close',
             'content-type': 'application/json'
           })
-
-          const resources = {
-            connections: telemetry.getGaugeValue('bitswap-active-connections'),
-            pendingRequestBlocks: telemetry.getGaugeValue('bitswap-pending-entries'),
-            eventLoopUtilization: telemetry.getGaugeValue('bitswap-elu'),
-            // note: duration it's been reset every /metrics call
-            responseDuration: telemetry.getHistogramValue('bitswap-request-duration') ?? -1
-          }
+          const resources = getHealthCheckValues()
 
           res.end(JSON.stringify(resources))
           break

@@ -37,6 +37,9 @@ t.test('config - defaults', async t => {
     peerAnnounceAddr: undefined,
     port: 3000,
     httpPort: 3001,
+    readinessMaxConnections: 30,
+    readinessMaxPendingRequestBlocks: 5000,
+    readinessMaxEventLoopUtilization: 0.7,
     p2pConnectionMaxConnections: 10000,
     p2pConnectionMinConnections: 0,
     p2pConnectionPollInterval: 2000,
@@ -55,8 +58,7 @@ t.test('config - defaults', async t => {
     dynamoMaxRetries: 3,
     dynamoRetryDelay: 50,
     s3MaxRetries: 3,
-    s3RetryDelay: 50,
-    allowReadinessTweak: false
+    s3RetryDelay: 50
   })
 })
 
@@ -91,6 +93,9 @@ t.test('config - all by env vars', async t => {
   process.env.PEER_ANNOUNCE_ADDR = '/dns4/elastic-dev.dag.house/tcp/443/wss'
   process.env.PORT = '3123'
   process.env.HTTP_PORT = '3258'
+  process.env.READINESS_MAX_CONNECTIONS = '1'
+  process.env.READINESS_MAX_PENDING_REQUEST_BLOCKS = '1'
+  process.env.READINESS_MAX_EVENT_LOOP_UTILIZATION = '0.1'
   process.env.P2P_CONNECTION_MAX_CONNECTIONS = '99999'
   process.env.P2P_CONNECTION_MIN_CONNECTIONS = '1'
   process.env.P2P_CONNECTION_POLL_INTERVAL = '1000'
@@ -110,7 +115,6 @@ t.test('config - all by env vars', async t => {
   process.env.DYNAMO_RETRY_DELAY = '500'
   process.env.S3_MAX_RETRIES = '7'
   process.env.S3_RETRY_DELAY = '600'
-  process.env.ALLOW_READINESS_TWEAK = 'true'
 
   t.same(makeConfig(), {
     maxBlockDataSize: 987,
@@ -145,7 +149,10 @@ t.test('config - all by env vars', async t => {
     peerIdS3Region: 'aws-s3',
     peerAnnounceAddr: '/dns4/elastic-dev.dag.house/tcp/443/wss',
     port: 3123,
-    httpPort: 3123,
+    httpPort: 3258,
+    readinessMaxConnections: 1,
+    readinessMaxPendingRequestBlocks: 1,
+    readinessMaxEventLoopUtilization: 0.1,
     p2pConnectionMaxConnections: 99999,
     p2pConnectionMinConnections: 1,
     p2pConnectionPollInterval: 1000,
@@ -164,7 +171,6 @@ t.test('config - all by env vars', async t => {
     dynamoMaxRetries: 6,
     dynamoRetryDelay: 500,
     s3MaxRetries: 7,
-    s3RetryDelay: 600,
-    allowReadinessTweak: true
+    s3RetryDelay: 600
   })
 })

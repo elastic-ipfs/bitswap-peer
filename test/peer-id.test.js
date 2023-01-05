@@ -28,7 +28,7 @@ t.test('getPeerId - download the peerId from S3', async t => {
   t.equal(peerId.toString(), peerIdFromJson.toString())
 })
 
-t.test('getPeerId - creates a new PeerId if download fails', async t => {
+t.test('getPeerId - get error on invalid peerId file', async t => {
   const { awsClient } = await mockAwsClient(config)
   awsClient.agent = createMockAgent()
 
@@ -38,9 +38,7 @@ t.test('getPeerId - creates a new PeerId if download fails', async t => {
   awsClient.agent
     .get(`https://${peerIdS3Bucket}.s3.${peerIdS3Region}.amazonaws.com`)
     .intercept({ method: 'GET', path: `/${peerIdJsonFile}` })
-    .reply(200, 'INVALID')
+    .reply(200, '{}')
 
-  const peerId = await getPeerId({ awsClient, peerIdS3Region, peerIdS3Bucket, peerIdJsonFile, peerIdJsonPath })
-  const peerIdFromJson = await createFromJSON(JSON.parse(rawPeer))
-  t.not(peerId.toString(), peerIdFromJson.toString())
+  await t.rejects(getPeerId({ awsClient, peerIdS3Region, peerIdS3Bucket, peerIdJsonFile, peerIdJsonPath }))
 })

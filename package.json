@@ -13,7 +13,7 @@
     "lint": "eslint src test utils"
   },
   "dependencies": {
-    "@aws-sdk/client-sqs": "3.231.0",
+    "@aws-sdk/client-sqs": "3.252.0",
     "@aws-sdk/node-http-handler": "3.226.0",
     "@chainsafe/libp2p-noise": "10.2.0",
     "@libp2p/mplex": "7.1.0",
@@ -22,7 +22,7 @@
     "@libp2p/websockets": "5.0.1",
     "dotenv": "16.0.3",
     "e-ipfs-core-lib": "0.5.1",
-    "it-length-prefixed": "8.0.3",
+    "it-length-prefixed": "8.0.4",
     "it-pipe": "2.0.5",
     "libp2p": "0.41.0",
     "lru-cache": "7.14.1",
@@ -31,30 +31,30 @@
     "piscina": "3.2.0",
     "protobufjs": "7.1.2",
     "sodium-native": "3.4.1",
-    "undici": "5.14.0",
+    "undici": "5.15.1",
     "xml-js": "1.6.11"
   },
   "devDependencies": {
-    "@commitlint/cli": "17.3.0",
-    "@commitlint/config-conventional": "17.3.0",
+    "@commitlint/cli": "17.4.2",
+    "@commitlint/config-conventional": "17.4.2",
     "@ipld/car": "5.0.1",
     "@ipld/dag-pb": "3.0.1",
     "c8": "7.12.0",
-    "eslint": "8.29.0",
+    "eslint": "8.32.0",
     "eslint-config-standard": "17.0.0",
-    "eslint-plugin-import": "2.26.0",
+    "eslint-plugin-import": "2.27.5",
     "eslint-plugin-node": "11.1.0",
     "eslint-plugin-promise": "6.1.1",
     "get-port": "6.1.2",
-    "husky": "8.0.2",
+    "husky": "8.0.3",
     "ipfs-car": "0.9.1",
     "libp2p-gossipsub": "0.13.0",
     "libp2p-tcp": "0.17.2",
     "lint-staged": "13.1.0",
     "pino-pretty": "9.1.1",
     "sinon": "15.0.1",
-    "tap": "16.3.2",
-    "undici": "5.14.0"
+    "tap": "16.3.4",
+    "undici": "5.15.1"
   },
   "engines": {
     "node": "18.12"

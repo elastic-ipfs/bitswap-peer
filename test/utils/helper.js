@@ -20,7 +20,7 @@ import { Message, RawMessage } from 'e-ipfs-core-lib'
 import { startService } from '../../src/service.js'
 import { createConnectionConfig } from '../../src/util.js'
 
-async function createClient(service, protocol, muxers = ['yamux', 'mplex']) {
+async function createClient (service, protocol, muxers = ['yamux', 'mplex']) {
   const streamMuxers = []
   if (muxers.includes('yamux')) {
     streamMuxers.push(yamux({ client: true }))
@@ -51,11 +51,11 @@ async function createClient(service, protocol, muxers = ['yamux', 'mplex']) {
   return { stream, receiver, client }
 }
 
-async function getFreePort() {
+async function getFreePort () {
   return getPort()
 }
 
-async function setup({ protocol, awsClient, muxers = ['yamux', 'mplex'] }) {
+async function setup ({ protocol, awsClient, muxers = ['yamux', 'mplex'] }) {
   const peerId = await createEd25519PeerId()
   const port = await getFreePort()
   const logger = spyLogger()
@@ -67,14 +67,14 @@ async function setup({ protocol, awsClient, muxers = ['yamux', 'mplex'] }) {
   return { service, client, connection, receiver, logger }
 }
 
-async function teardown(client, service, connection) {
+async function teardown (client, service, connection) {
   await connection.close()
   await client.stop()
   await service.stop()
 }
 
 // TODO remove hard timeouts
-async function receiveMessages(receiver, protocol, timeout = 1000, limit = 1, raw = false) {
+async function receiveMessages (receiver, protocol, timeout = 1000, limit = 1, raw = false) {
   let timeoutHandle
   const responses = []
 
@@ -116,7 +116,7 @@ async function receiveMessages(receiver, protocol, timeout = 1000, limit = 1, ra
   })
 }
 
-function getPresence(t, response, cid) {
+function getPresence (t, response, cid) {
   const presences = response.blockPresences.filter(b => b.cid.equals(cid))
 
   t.equal(presences.length, 1)
@@ -124,29 +124,29 @@ function getPresence(t, response, cid) {
   return presences[0]
 }
 
-function hasDAGBlock(t, response, link, times) {
+function hasDAGBlock (t, response, link, times) {
   const found = response.blocks.filter(b => safeGetDAGLinks(b)?.[0]?.Name === link)
 
   t.equal(found.length, times)
 }
 
-function hasRawBlock(t, response, content, times) {
+function hasRawBlock (t, response, content, times) {
   const blocks = response.blocks.filter(b => Buffer.from(b.data).toString('utf8') === content)
 
   t.equal(blocks.length, times)
 }
 
-async function hasBlockWithHash(t, response, multihash, hasNot, times) {
+async function hasBlockWithHash (t, response, multihash, hasNot, times) {
   const hashes = await Promise.all(response.blocks.map(b => sha256.digest(b.data)))
 
   t.equal(hashes.filter(h => equals(h, multihash)).length, hasNot ? 0 : times)
 }
 
-async function hasSingleBlockWithHash(t, response, multihash, hasNot) {
+async function hasSingleBlockWithHash (t, response, multihash, hasNot) {
   await hasBlockWithHash(t, response, multihash, hasNot, 1)
 }
 
-function safeGetDAGLinks(block) {
+function safeGetDAGLinks (block) {
   try {
     return Object.values(dagPB.decode(block).Links)
   } catch (err) {
@@ -154,11 +154,11 @@ function safeGetDAGLinks(block) {
   }
 }
 
-function decodeCidToKey(cid) {
+function decodeCidToKey (cid) {
   return base58.encode(CID.decode(cid).multihash.bytes)
 }
 
-function decodeMessage(message) {
+function decodeMessage (message) {
   const { blockPresences: blocksInfo, payload: blocksData } = RawMessage.decode(message)
 
   return {
@@ -173,11 +173,11 @@ function decodeMessage(message) {
   }
 }
 
-function dummyLogger() {
+function dummyLogger () {
   return { fatal: noop, error: noop, warn: noop, info: noop, debug: noop }
 }
 
-function spyLogger() {
+function spyLogger () {
   const spy = { messages: {} }
   for (const l of ['fatal', 'error', 'error', 'warn', 'info', 'debug']) {
     spy.messages[l] = []
@@ -186,7 +186,7 @@ function spyLogger() {
   return spy
 }
 
-function noop() { }
+function noop () { }
 
 export {
   dummyLogger,

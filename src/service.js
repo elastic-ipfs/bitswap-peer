@@ -14,7 +14,7 @@ import { logger as defaultLogger } from './logging.js'
 import { createPeerIdFromMultihash } from './peer-id.js'
 
 // TODO validate all the params
-function validateParams({ taggedPeers, logger }) {
+function validateParams ({ taggedPeers, logger }) {
   if (!taggedPeers) {
     // TODO move to debug
     logger.info('taggedPeers are empty')
@@ -51,7 +51,7 @@ function validateParams({ taggedPeers, logger }) {
   return { taggedPeers: peers }
 }
 
-async function startService({ peerId, port, peerAnnounceAddr, awsClient, connectionConfig, logger = defaultLogger, taggedPeers } = {}) {
+async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connectionConfig, logger = defaultLogger, taggedPeers } = {}) {
   try {
     const validatedParams = validateParams({ taggedPeers, logger })
     const service = await createLibp2p({

@@ -391,3 +391,75 @@ t.test(`${protocol} - closes streams properly`, async t => {
 
   await teardown(client, service, connection)
 })
+
+t.test(
+  `${protocol} - should work with client using mplex muxer only`,
+  async t => {
+    const { awsClient } = await mockAWS(config)
+    const { client, service, connection, receiver } = await setup({ protocol, awsClient, muxers: ['mplex'] })
+
+    const wantList = new WantList(
+      [
+        new Entry(cid1, 1, false, Entry.WantType.Block, true),
+        new Entry(cid2, 1, false, Entry.WantType.Block, true),
+        new Entry(cid3, 1, false, Entry.WantType.Block, true),
+        new Entry(cid4, 1, false, Entry.WantType.Block, true)
+      ],
+      false
+    )
+
+    const request = new Message(wantList, [], [], 0)
+    await connection.send(request.encode(protocol))
+
+    const [response] = await receiveMessages(receiver, protocol)
+    await teardown(client, service, connection)
+
+    t.equal(response.blocks.length, 2)
+    t.equal(response.blockPresences.length, 2)
+
+    const cid1Blocks = response.blocks.filter(b => Buffer.from(b.data).toString('utf8') === cid1Content)
+    t.equal(cid1Blocks.length, 1)
+
+    const cid2Blocks = response.blocks.filter(b => safeGetDAGLinks(b.data)?.[0]?.Name === cid2Link)
+    t.equal(cid2Blocks.length, 1)
+
+    t.equal(getPresence(t, response, cid3).type, BlockPresence.Type.DontHave)
+    t.equal(getPresence(t, response, cid4).type, BlockPresence.Type.DontHave)
+  }
+)
+
+t.test(
+  `${protocol} - should work with client using yamux muxer only`,
+  async t => {
+    const { awsClient } = await mockAWS(config)
+    const { client, service, connection, receiver } = await setup({ protocol, awsClient, muxers: ['yamux'] })
+
+    const wantList = new WantList(
+      [
+        new Entry(cid1, 1, false, Entry.WantType.Block, true),
+        new Entry(cid2, 1, false, Entry.WantType.Block, true),
+        new Entry(cid3, 1, false, Entry.WantType.Block, true),
+        new Entry(cid4, 1, false, Entry.WantType.Block, true)
+      ],
+      false
+    )
+
+    const request = new Message(wantList, [], [], 0)
+    await connection.send(request.encode(protocol))
+
+    const [response] = await receiveMessages(receiver, protocol)
+    await teardown(client, service, connection)
+
+    t.equal(response.blocks.length, 2)
+    t.equal(response.blockPresences.length, 2)
+
+    const cid1Blocks = response.blocks.filter(b => Buffer.from(b.data).toString('utf8') === cid1Content)
+    t.equal(cid1Blocks.length, 1)
+
+    const cid2Blocks = response.blocks.filter(b => safeGetDAGLinks(b.data)?.[0]?.Name === cid2Link)
+    t.equal(cid2Blocks.length, 1)
+
+    t.equal(getPresence(t, response, cid3).type, BlockPresence.Type.DontHave)
+    t.equal(getPresence(t, response, cid4).type, BlockPresence.Type.DontHave)
+  }
+)

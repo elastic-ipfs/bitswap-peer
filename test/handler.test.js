@@ -14,6 +14,7 @@ import { mockBlockInfoSource, mockBlockDataSource, createMockAgent, mockAwsClien
 
 process.env.CACHE_BLOCK_INFO = 'true'
 process.env.CACHE_BLOCK_DATA = 'true'
+config.dynamoTableFallbackV0 = false
 
 function dummyPeer (id = 'the-dummy-peer-id') {
   return { string: id }
@@ -146,9 +147,7 @@ t.test('handle', async t => {
   })
 
   t.test('should handle a request in multiple batches concurretly', async t => {
-    t.plan(4)
     const cid = CID.parse('bafkreifiqpnpysanizxoatqnnwuynply5mp52ily2bdjg4r5uoupsxkcxy')
-    const key = 'zQmZgTpJUbrss357x1D14Uo43JATwd7LhkZNbreqXVGFMmD'
 
     const contextSpy = await spyContext({
       blocks: [
@@ -162,8 +161,8 @@ t.test('handle', async t => {
         new Entry(cid, 1, false, Entry.WantType.Block, true)
       ]
     })
-    mockBlockInfoSource({ awsClient: contextSpy.awsClient, key, info: { offset: 0, length: 128, car: 'region/bucket/abc' } })
-    mockBlockDataSource({ awsClient: contextSpy.awsClient, region: 'region', bucket: 'bucket', key: 'abc', offset: 0, length: 128, data: 'abc...' })
+    mockBlockInfoSource({ times: 8, awsClient: contextSpy.awsClient, key: cidToKey(cid), info: { offset: 0, length: 128, car: 'region/bucket/abc1' } })
+    mockBlockDataSource({ times: 4, awsClient: contextSpy.awsClient, region: 'region', bucket: 'bucket', key: 'abc1', offset: 0, length: 128, data: 'abc...' })
 
     const loggerSpy = helper.spyLogger()
     const connectionSpy = contextSpy.connection
@@ -209,8 +208,11 @@ t.test('handle', async t => {
 
     mockBlockInfoSource({ awsClient: contextsSpy[0].awsClient, key: cidToKey(cid1), info: { offset: 0, length: 128, car: 'region/bucket/cid1-car' } })
     mockBlockInfoSource({ awsClient: contextsSpy[0].awsClient, key: cidToKey(cid2), info: { offset: 100, length: 128, car: 'region/bucket/cid2-car' } })
+    mockBlockInfoSource({ awsClient: contextsSpy[0].awsClient, key: cidToKey(cid3) })
+    mockBlockInfoSource({ awsClient: contextsSpy[0].awsClient, key: cidToKey(cid4) })
     mockBlockDataSource({ awsClient: contextsSpy[0].awsClient, region: 'region', bucket: 'bucket', key: 'cid2-car', offset: 100, length: 128, data: 'cid2-content' })
 
+    mockBlockInfoSource({ awsClient: contextsSpy[1].awsClient, key: cidToKey(cid4) })
     mockBlockInfoSource({ awsClient: contextsSpy[1].awsClient, key: cidToKey(cid5), info: { offset: 123, length: 465, car: 'region/bucket/cid5-car' } })
     mockBlockDataSource({ awsClient: contextsSpy[1].awsClient, region: 'region', bucket: 'bucket', key: 'cid5-car', offset: 123, length: 456, data: 'cid5-content' })
     mockBlockInfoSource({ awsClient: contextsSpy[1].awsClient, key: cidToKey(cid6), info: { offset: 0, length: 128, car: 'region/bucket/cid6-car' } })
@@ -381,6 +383,27 @@ t.test('handle', async t => {
     t.equal(loggerSpy.messages.warn.length, 0)
     t.equal(loggerSpy.messages.warn.length, 0)
     t.equal(loggerSpy.messages.error.length, 0)
+  })
+
+  t.test('should not respond to blocks when there are errors on storage', async t => {
+    const cid = CID.parse('bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi')
+
+    const contextSpy = await spyContext({
+      blocks: [
+        new Entry(cid, 1, false, Entry.WantType.Have, true),
+        new Entry(cid, 1, false, Entry.WantType.Block, true),
+      ]
+    })
+
+    const loggerSpy = helper.spyLogger()
+    const connectionSpy = contextSpy.connection
+
+    await handle({ context: contextSpy, logger: loggerSpy, batchSize: 1 })
+
+    t.equal(connectionSpy.send.callCount, 0)
+    t.equal(connectionSpy.close.callCount, 1, 'should close the peer connection')
+    t.equal(loggerSpy.messages.error.length, 0)
+    t.equal(loggerSpy.messages.warn.length, 0)
   })
 
   // !TODO error on batchResponse after a few batches

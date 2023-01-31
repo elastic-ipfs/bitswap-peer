@@ -56,6 +56,7 @@ async function searchCarInDynamoV1 ({
     }
   }
 
+  if (!config.dynamoTableFallbackV0) { return }
   const fallback = await searchCarInDynamoV0({ awsClient, blockKey, retries, retryDelay })
   if (fallback) {
     logger.error({ block: { [keyName]: blockKey }, car: fallback.car }, 'block not found in V1 table but found in V0 table')
@@ -117,7 +118,7 @@ async function fetchBlockData ({ block, logger, awsClient }) {
   }
 
   if (!block.info?.car) {
-    block.data = { notFound: true }
+    block.data = block.info?.error ? { error: true } : { notFound: true }
     telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_DATA, TELEMETRY_RESULT_MISSES])
     return
   }
@@ -200,13 +201,14 @@ async function fetchBlockInfo ({ block, logger, awsClient }) {
       config.cacheBlockInfo && blockInfoCache.set(block.key, info)
       return
     }
+    block.info = { notFound: true }
     readinessState.dynamo = true
   } catch (error) {
+    block.info = { error: true }
     telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_INFO, TELEMETRY_RESULT_ERROR])
     readinessState.dynamo = false
   }
 
-  block.info = { notFound: true }
   telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_INFO, TELEMETRY_RESULT_MISSES])
 }
 

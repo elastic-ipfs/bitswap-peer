@@ -23,6 +23,7 @@ export function makeConfig () {
     blocksTableV1: process.env.DYNAMO_BLOCKS_TABLE_V1 ?? 'v1-blocks',
     carsTableV1: process.env.DYNAMO_CARS_TABLE_V1 ?? 'v1-cars',
     linkTableV1: process.env.DYNAMO_LINK_TABLE_V1 ?? 'v1-blocks-cars-position',
+    dynamoTableFallbackV0: true,
 
     dynamoConfigTableKey: 'key',
     dynamoConfigTableTaggedPeersKey: 'tagged-peers',

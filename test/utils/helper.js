@@ -3,6 +3,7 @@ import { createLibp2p } from 'libp2p'
 import { webSockets } from '@libp2p/websockets'
 import { noise } from '@chainsafe/libp2p-noise'
 import { mplex } from '@libp2p/mplex'
+import { yamux } from '@chainsafe/libp2p-yamux'
 import * as dagPB from '@ipld/dag-pb'
 import { createEd25519PeerId } from '@libp2p/peer-id-factory'
 import { EventEmitter } from 'events'
@@ -19,11 +20,19 @@ import { Message, RawMessage } from 'e-ipfs-core-lib'
 import { startService } from '../../src/service.js'
 import { createConnectionConfig } from '../../src/util.js'
 
-async function createClient (service, protocol) {
+async function createClient (service, protocol, muxers = ['yamux', 'mplex']) {
+  const streamMuxers = []
+  if (muxers.includes('yamux')) {
+    streamMuxers.push(yamux({ client: true }))
+  }
+  if (muxers.includes('mplex')) {
+    streamMuxers.push(mplex())
+  }
+
   const client = await createLibp2p({
     transports: [webSockets()],
     connectionEncryption: [noise({ crypto: noiseCrypto })],
-    streamMuxers: [mplex()]
+    streamMuxers
   })
 
   await client.peerStore.addressBook.set(service.peerId, service.getMultiaddrs())
@@ -46,13 +55,13 @@ async function getFreePort () {
   return getPort()
 }
 
-async function setup ({ protocol, awsClient }) {
+async function setup ({ protocol, awsClient, muxers = ['yamux', 'mplex'] }) {
   const peerId = await createEd25519PeerId()
   const port = await getFreePort()
   const logger = spyLogger()
   const connectionConfig = createConnectionConfig(config)
   const { service } = await startService({ peerId, port, awsClient, logger, connectionConfig })
-  const { stream, receiver, client } = await createClient(service, protocol)
+  const { stream, receiver, client } = await createClient(service, protocol, muxers)
   const connection = new Connection(stream)
 
   return { service, client, connection, receiver, logger }

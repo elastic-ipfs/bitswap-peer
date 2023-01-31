@@ -3,6 +3,7 @@ import { createLibp2p } from 'libp2p'
 import { webSockets } from '@libp2p/websockets'
 import { noise } from '@chainsafe/libp2p-noise'
 import { mplex } from '@libp2p/mplex'
+import { yamux } from '@chainsafe/libp2p-yamux'
 
 import { noiseCrypto } from './noise-crypto.js'
 import { Message, protocols } from 'e-ipfs-core-lib'
@@ -61,11 +62,14 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
       },
       transports: [webSockets()],
       connectionEncryption: [noise({ crypto: noiseCrypto })],
-      streamMuxers: [mplex({
-        maxInboundStreams: connectionConfig.mplex.maxInboundStreams,
-        maxOutboundStreams: connectionConfig.mplex.maxOutboundStreams,
-        maxStreamBufferSize: connectionConfig.mplex.maxStreamBufferSize
-      })],
+      streamMuxers: [
+        mplex({
+          maxInboundStreams: connectionConfig.mplex.maxInboundStreams,
+          maxOutboundStreams: connectionConfig.mplex.maxOutboundStreams,
+          maxStreamBufferSize: connectionConfig.mplex.maxStreamBufferSize
+        }),
+        yamux({ client: false })
+      ],
       connectionManager: {
         maxConnections: connectionConfig.p2p.maxConnections,
         minConnections: connectionConfig.p2p.minConnections,

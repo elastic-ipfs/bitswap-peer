@@ -26,7 +26,7 @@ _Variables in bold are required._
 | DYNAMO_CARS_TABLE_V1  | `v1-cars`     | The DynamoDB table where store CAR files informations to.                |
 | DYNAMO_LINK_TABLE_V1  | `v1-blocks-cars-position` | The DynamoDB table with CARs-blocks links.                   |
 | DYNAMO_CONFIG_TABLE  | `config` | The DynamoDB table with configurations, see [tagged peers](#tagged-peers). |
-| DYNAMO_MAX_RETRIES    | 3             | DynamoDB max attempts in case of query failure.                          |
+| DYNAMO_MAX_RETRIES    | 5             | DynamoDB max attempts in case of query failure.                          |
 | DYNAMO_RETRY_DELAY    | 500           | DynamoDB delay between attempts in case of failure, in milliseconds.     |
 | S3_MAX_RETRIES        | 3             | S3 max attempts in case of failure.                                      |
 | S3_RETRY_DELAY        | 500           | S3 delay between attempts in case of failure, in milliseconds.           |

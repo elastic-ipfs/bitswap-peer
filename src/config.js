@@ -68,7 +68,7 @@ export function makeConfig () {
     // tagged peers
     p2pConnectionTaggedPeersValue: process.env.P2P_CONNECTION_TAGGED_PEERS_VALUE ? parseInt(process.env.P2P_CONNECTION_TAGGED_PEERS_VALUE) : 100,
 
-    dynamoMaxRetries: process.env.DYNAMO_MAX_RETRIES ? parseInt(process.env.DYNAMO_MAX_RETRIES) : 3,
+    dynamoMaxRetries: process.env.DYNAMO_MAX_RETRIES ? parseInt(process.env.DYNAMO_MAX_RETRIES) : 5,
     dynamoRetryDelay: process.env.DYNAMO_RETRY_DELAY ? parseInt(process.env.DYNAMO_RETRY_DELAY) : 100, // ms
     s3MaxRetries: process.env.S3_MAX_RETRIES ? parseInt(process.env.S3_MAX_RETRIES) : 3,
     s3RetryDelay: process.env.S3_RETRY_DELAY ? parseInt(process.env.S3_RETRY_DELAY) : 100, // ms

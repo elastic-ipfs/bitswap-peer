@@ -52,7 +52,7 @@ t.test('config - defaults', async t => {
     p2pConnectionHandlerMaxInboundStreams: 1024,
     p2pConnectionHandlerMaxOutboundStreams: 1024,
     p2pConnectionTaggedPeersValue: 100,
-    dynamoMaxRetries: 3,
+    dynamoMaxRetries: 5,
     dynamoRetryDelay: 50,
     s3MaxRetries: 3,
     s3RetryDelay: 50,

@@ -139,7 +139,7 @@ t.test('searchCarInDynamoV1', async t => {
     })
     t.equal(logger.messages.info.length, 0)
     t.equal(logger.messages.error[0][1], 'block not found in V1 table but found in V0 table')
-  })  
+  })
 })
 
 t.test('fetchBlocksData', async t => {

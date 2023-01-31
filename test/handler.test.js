@@ -391,7 +391,7 @@ t.test('handle', async t => {
     const contextSpy = await spyContext({
       blocks: [
         new Entry(cid, 1, false, Entry.WantType.Have, true),
-        new Entry(cid, 1, false, Entry.WantType.Block, true),
+        new Entry(cid, 1, false, Entry.WantType.Block, true)
       ]
     })
 

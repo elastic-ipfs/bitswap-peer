@@ -23,6 +23,7 @@ export function makeConfig () {
     blocksTableV1: process.env.DYNAMO_BLOCKS_TABLE_V1 ?? 'v1-blocks',
     carsTableV1: process.env.DYNAMO_CARS_TABLE_V1 ?? 'v1-cars',
     linkTableV1: process.env.DYNAMO_LINK_TABLE_V1 ?? 'v1-blocks-cars-position',
+    dynamoTableFallbackV0: true,
 
     dynamoConfigTableKey: 'key',
     dynamoConfigTableTaggedPeersKey: 'tagged-peers',
@@ -68,7 +69,7 @@ export function makeConfig () {
     // tagged peers
     p2pConnectionTaggedPeersValue: process.env.P2P_CONNECTION_TAGGED_PEERS_VALUE ? parseInt(process.env.P2P_CONNECTION_TAGGED_PEERS_VALUE) : 100,
 
-    dynamoMaxRetries: process.env.DYNAMO_MAX_RETRIES ? parseInt(process.env.DYNAMO_MAX_RETRIES) : 3,
+    dynamoMaxRetries: process.env.DYNAMO_MAX_RETRIES ? parseInt(process.env.DYNAMO_MAX_RETRIES) : 5,
     dynamoRetryDelay: process.env.DYNAMO_RETRY_DELAY ? parseInt(process.env.DYNAMO_RETRY_DELAY) : 100, // ms
     s3MaxRetries: process.env.S3_MAX_RETRIES ? parseInt(process.env.S3_MAX_RETRIES) : 3,
     s3RetryDelay: process.env.S3_RETRY_DELAY ? parseInt(process.env.S3_RETRY_DELAY) : 100, // ms

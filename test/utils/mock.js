@@ -78,11 +78,13 @@ function mockBlockInfoSource ({ awsClient, key, info, times = 1 }) {
     table: config.linkTableV1,
     keyName: config.linkTableBlockKey,
     key,
-    response: [{
-      offset: { N: info.offset },
-      length: { N: info.length },
-      carpath: { S: info.car }
-    }],
+    response: info
+      ? [{
+          offset: { N: info.offset },
+          length: { N: info.length },
+          carpath: { S: info.car }
+        }]
+      : [],
     times
   })
 }

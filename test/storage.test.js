@@ -249,15 +249,17 @@ t.test('fetchBlocksData', async t => {
     t.equal(logger.messages.error.length, 1)
   })
 
-  t.test('should get not found on block non-existings blocks', async t => {
+  t.test('should get not found on non-existings blocks', async t => {
     const { awsClient, logger } = await mockAwsClient(config)
     awsClient.agent = createMockAgent()
 
     const blocks = [{ key: '123' }, { key: '456' }, { key: '789' }]
 
-    mockBlockInfoSource({ awsClient, key: blocks[0].key, info: {} })
+    mockBlockInfoSource({ awsClient, key: blocks[0].key })
     mockBlockInfoSource({ awsClient, key: blocks[1].key, info: { offset: 14, length: 2, car: 'region/bucket/abc' } })
     mockBlockInfoSource({ awsClient, key: blocks[2].key, info: { offset: 14, length: 2, car: 'region/bucket/abc' } })
+
+    mockDynamoItem({ pool: awsClient.agent.get(awsClient.dynamoUrl), key: blocks[0].key, table: config.blocksTable, keyName: config.blocksTablePrimaryKey })
 
     mockBlockDataSource({ awsClient, region: 'region', bucket: 'bucket', key: 'abc', offset: 14, length: 2, data: 'aa' })
     mockBlockDataSource({ awsClient, region: 'region', bucket: 'bucket', key: 'abc', offset: 14, length: 2, data: 'aa' })
@@ -348,9 +350,11 @@ t.test('fetchBlocksInfo', async t => {
 
     const blocks = [{ key: '123' }, { key: '456' }, { key: '789' }]
 
-    mockBlockInfoSource({ awsClient, key: blocks[0].key, info: {} })
+    mockBlockInfoSource({ awsClient, key: blocks[0].key })
     mockBlockInfoSource({ awsClient, key: blocks[1].key, info: { offset: 214, length: 2, car: 'region/bucket/abc' } })
     mockBlockInfoSource({ awsClient, key: blocks[2].key, info: { offset: 14, length: 2, car: 'region/bucket/abc' } })
+
+    mockDynamoItem({ pool: awsClient.agent.get(awsClient.dynamoUrl), key: blocks[0].key, table: config.blocksTable, keyName: config.blocksTablePrimaryKey })
 
     await fetchBlocksInfo({ awsClient, blocks, logger })
 

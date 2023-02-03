@@ -6,4 +6,8 @@ COPY src /app/src
 COPY metrics.yml package.json package-lock.json /app/
 RUN npm ci --production
 
+RUN addgroup allusers && adduser bitswap --ingroup allusers --shell /bin/sh
+
+USER bitswap
+
 CMD [ "node", "src/index.js" ]

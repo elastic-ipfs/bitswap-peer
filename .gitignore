@@ -8,6 +8,7 @@ coverage
 node_modules
 .vscode
 
+local/docker
 test/e2e/track
 
 test-aws-identity-token

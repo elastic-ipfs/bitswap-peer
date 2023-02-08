@@ -1,0 +1,60 @@
+version: '3.8'
+services:
+  dynamodb-local:
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    image: "amazon/dynamodb-local:latest"
+    container_name: dynamodb-local
+    ports:
+      - "8000:8000"
+    volumes:
+      - "./docker/dynamodb:/home/dynamodblocal/data"
+    working_dir: /home/dynamodblocal
+    networks:
+      - my_net
+  s3-local:
+    image: minio/minio:latest
+    container_name: s3-local
+    ports:
+      - 9000:9000
+      - 9001:9001
+    volumes:
+      - "./docker/minio/data:/data"
+      - "./docker/minio/config:/root/.minio"
+    environment:
+      MINIO_DOMAIN: "minio.local"
+      MINIO_ROOT_USER: "DUMMYIDEXAMPLE"
+      MINIO_ROOT_PASSWORD: "DUMMYIDEXAMPLE"
+      MINIO_REGION: us-west-2
+    command: server /data --console-address ":9001" -address ":9000"
+    hostname: minio.local
+    networks:
+      my_net:
+        aliases:
+          - minio.local
+          - local-dotstorage-0.minio.local
+  # indexer-lambda-rie:
+  #   image: "elastic-ipfs/indexer-lambda:local"
+  #   container_name: indexer-lambda-rie
+  #   ports:
+  #     - "9090:8080"
+  #   volumes:
+  #     - "$HOME/.aws-lambda-rie:/aws-lambda"
+  #   environment:
+  #     LOG_LEVEL: debug
+  #     LOG_PRETTY: 1
+  #     AWS_REGION: us-west-2
+  #     AWS_ACCESS_KEY_ID: DUMMYIDEXAMPLE
+  #     AWS_SECRET_ACCESS_KEY: DUMMYIDEXAMPLE
+  #     DYNAMO_ENDPOINT_URL: http://dynamodb-local:8000
+  #     DYNAMO_BLOCKS_TABLE: local-ep-v1-blocks
+  #     DYNAMO_CARS_TABLE: local-ep-v1-cars
+  #     DYNAMO_LINK_TABLE: local-ep-v1-blocks-cars-position
+  #     #SNS_EVENTS_TOPIC: TODO
+  #     #SQS_PUBLISHING_QUEUE_URL: TODO
+  #     S3_ENDPOINT_URL: http://minio.local:9000
+  #   entrypoint: /aws-lambda/aws-lambda-rie /usr/local/bin/aws-lambda-ric index.handler
+  #   networks:
+  #     - my_net
+
+networks:
+  my_net:

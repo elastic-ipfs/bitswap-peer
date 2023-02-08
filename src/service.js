@@ -5,6 +5,7 @@ import { noise } from '@chainsafe/libp2p-noise'
 import { mplex } from '@libp2p/mplex'
 import { yamux } from '@chainsafe/libp2p-yamux'
 
+import config from './config.js'
 import { noiseCrypto } from './noise-crypto.js'
 import { Message, protocols } from 'e-ipfs-core-lib'
 import { Connection } from './networking.js'
@@ -125,6 +126,19 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
 
             try {
               const context = createContext({ service, peerId: dial.remotePeer, protocol, wantlist: message.wantlist, awsClient, connectionId })
+
+              if (config.logRequests) {
+                for (const wanted of message.wantlist.entries) {
+                  logger.info({
+                    connectionId,
+                    remoteAddress: dial.remoteAddr,
+                    remotePeer: dial.remotePeer,
+                    cid: wanted.cid.toString(),
+                    wantlistSize: message.wantlist.entries.length
+                  }, 'Received request from peer')
+                }
+              }
+
               process.nextTick(handle, { context, logger })
             } catch (err) {
               logger.error({ err }, 'Error creating context')

@@ -73,7 +73,8 @@ export function makeConfig () {
     s3MaxRetries: process.env.S3_MAX_RETRIES ? parseInt(process.env.S3_MAX_RETRIES) : 3,
     s3RetryDelay: process.env.S3_RETRY_DELAY ? parseInt(process.env.S3_RETRY_DELAY) : 100, // ms
 
-    allowReadinessTweak: process.env.ALLOW_READINESS_TWEAK === 'true'
+    allowReadinessTweak: process.env.ALLOW_READINESS_TWEAK === 'true',
+    logRequests: process.env.LOG_REQUESTS === 'true'
   }
 }
 

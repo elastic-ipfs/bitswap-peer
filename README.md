@@ -57,6 +57,7 @@ _Variables in bold are required._
 | NODE_DEBUG            |               | If it contains `aws-ipfs`, debug mode is enabled.                        |
 | LOG_LEVEL            | `info` | Logging level. |
 | LOG_PRETTY            | `false` | Enable pretty logging. |
+| LOG_REQUESTS            | `false` | Log requests for all CIDs requested by a peer. |
 
 Also check [AWS specifics configuration](https://github.com/elastic-ipfs/elastic-ipfs/blob/main/aws.md).
 

@@ -131,8 +131,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
                 for (const wanted of message.wantlist.entries) {
                   logger.info({
                     connectionId,
-                    remoteAddress: dial.remoteAddr,
-                    remotePeer: dial.remotePeer,
+                    requestingPeer: dial.remotePeer,
                     cid: wanted.cid.toString(),
                     wantlistSize: message.wantlist.entries.length
                   }, 'Received request from peer')

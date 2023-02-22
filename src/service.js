@@ -124,7 +124,14 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
             }
 
             try {
-              const context = createContext({ service, peerId: dial.remotePeer, protocol, wantlist: message.wantlist, awsClient, connectionId })
+              const context = createContext({
+                service,
+                peerId: dial.remotePeer,
+                protocol,
+                wantlist: message.wantlist,
+                awsClient,
+                connectionId
+              })
               process.nextTick(handle, { context, logger })
             } catch (err) {
               logger.error({ err }, 'Error creating context')

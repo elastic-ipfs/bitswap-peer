@@ -194,14 +194,38 @@ t.test('handle', async t => {
 
     await handle({ context: contextSpy, logger: loggerSpy, batchSize: 1 })
 
-    t.equal(connectionSpy.send.callCount, 2) // Only two sends in the 4 block messages
+    t.equal(connectionSpy.send.callCount, 0) // Blocks requested and cancelled before processed
+    t.equal(connectionSpy.close.callCount, 1, 'should close the peer connection')
+    t.equal(loggerSpy.messages.error.length, 0)
+    t.equal(loggerSpy.messages.warn.length, 0)
+  })
+
+  t.test('should handle a request in multiple batches concurrently only canceling specific type', async t => {
+    const cid = CID.parse('bafkreifiqpnpysanizxoatqnnwuynply5mp52ily2bdjg4r5uoupsxkcxy')
+
+    const contextSpy = await spyContext({
+      blocks: [
+        new Entry(cid, 1, false, Entry.WantType.Have, true),
+        new Entry(cid, 1, false, Entry.WantType.Block, true),
+        new Entry(cid, 1, true, Entry.WantType.Have, true)
+      ]
+    })
+    mockBlockInfoSource({ times: 4, awsClient: contextSpy.awsClient, key: cidToKey(cid), info: { offset: 0, length: 128, car: 'region/bucket/abc1' } })
+    mockBlockDataSource({ times: 2, awsClient: contextSpy.awsClient, region: 'region', bucket: 'bucket', key: 'abc1', offset: 0, length: 128, data: 'abc...' })
+
+    const loggerSpy = helper.spyLogger()
+    const connectionSpy = contextSpy.connection
+
+    await handle({ context: contextSpy, logger: loggerSpy, batchSize: 1 })
+
+    t.equal(connectionSpy.send.callCount, 1) // Blocks requested and cancelled in same message
     t.equal(connectionSpy.close.callCount, 1, 'should close the peer connection')
     t.equal(loggerSpy.messages.error.length, 0)
     t.equal(loggerSpy.messages.warn.length, 0)
   })
 
   t.test('should handle multiple requests at the same time on the same peer', async t => {
-    t.plan(27)
+    t.plan(26)
     const contextsSpy = [
       await spyContext({
         blocks: [
@@ -307,17 +331,13 @@ t.test('handle', async t => {
     ])
 
     t.equal(response.blocksInfo.length, 2)
-    t.equal(response.blocksData.length, 2)
+    t.equal(response.blocksData.length, 1)
 
     t.ok(responseContainsInfo(response, cid7, BlockPresence.Type.Have))
     t.ok(responseContainsInfo(response, cid9, BlockPresence.Type.Have))
     t.ok(responseContainsData(response, {
       cid: 'bafkreihtgll4nt4euynqnkjrg3vclmmmvo7srby4qul6pc4uiiayorplmu',
       data: 'cid8-content'
-    }))
-    t.ok(responseContainsData(response, {
-      cid: 'bafkreia6rl74tk7lwetxgol4pjbknva4474ecxkx7vlhviz7xpsfascqhu',
-      data: 'cid1-content'
     }))
     }
 

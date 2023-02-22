@@ -146,7 +146,7 @@ t.test('handle', async t => {
     t.equal(loggerSpy.messages.warn.length, 0)
   })
 
-  t.test('should handle a request in multiple batches concurretly', async t => {
+  t.test('should handle a request in multiple batches concurrently', async t => {
     const cid = CID.parse('bafkreifiqpnpysanizxoatqnnwuynply5mp52ily2bdjg4r5uoupsxkcxy')
 
     const contextSpy = await spyContext({
@@ -170,6 +170,31 @@ t.test('handle', async t => {
     await handle({ context: contextSpy, logger: loggerSpy, batchSize: 1 })
 
     t.equal(connectionSpy.send.callCount, 8)
+    t.equal(connectionSpy.close.callCount, 1, 'should close the peer connection')
+    t.equal(loggerSpy.messages.error.length, 0)
+    t.equal(loggerSpy.messages.warn.length, 0)
+  })
+
+  t.test('should handle a request in multiple batches concurrently not sending cancelled entries', async t => {
+    const cid = CID.parse('bafkreifiqpnpysanizxoatqnnwuynply5mp52ily2bdjg4r5uoupsxkcxy')
+
+    const contextSpy = await spyContext({
+      blocks: [
+        new Entry(cid, 1, false, Entry.WantType.Have, true),
+        new Entry(cid, 1, false, Entry.WantType.Block, true),
+        new Entry(cid, 1, true, Entry.WantType.Have, true),
+        new Entry(cid, 1, true, Entry.WantType.Block, true)
+      ]
+    })
+    mockBlockInfoSource({ times: 4, awsClient: contextSpy.awsClient, key: cidToKey(cid), info: { offset: 0, length: 128, car: 'region/bucket/abc1' } })
+    mockBlockDataSource({ times: 2, awsClient: contextSpy.awsClient, region: 'region', bucket: 'bucket', key: 'abc1', offset: 0, length: 128, data: 'abc...' })
+
+    const loggerSpy = helper.spyLogger()
+    const connectionSpy = contextSpy.connection
+
+    await handle({ context: contextSpy, logger: loggerSpy, batchSize: 1 })
+
+    t.equal(connectionSpy.send.callCount, 2) // Only two sends in the 4 block messages
     t.equal(connectionSpy.close.callCount, 1, 'should close the peer connection')
     t.equal(loggerSpy.messages.error.length, 0)
     t.equal(loggerSpy.messages.warn.length, 0)

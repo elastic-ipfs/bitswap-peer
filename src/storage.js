@@ -4,7 +4,7 @@ import LRUCache from 'mnemonist/lru-cache.js'
 import config from './config.js'
 import { logger } from './logging.js'
 import { telemetry } from './telemetry.js'
-import { TELEMETRY_TYPE_DATA, TELEMETRY_TYPE_INFO, TELEMETRY_RESULT_CANCELED, TELEMETRY_RESULT_ERROR, TELEMETRY_RESULT_HITS, TELEMETRY_RESULT_MISSES } from './constants.js'
+import { TELEMETRY_TYPE_DATA, TELEMETRY_TYPE_INFO, TELEMETRY_RESULT_ERROR, TELEMETRY_RESULT_HITS, TELEMETRY_RESULT_MISSES } from './constants.js'
 
 // TODO when the v0 tables will not be used anymore, following dependencies will be removed
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs'
@@ -106,11 +106,6 @@ async function fetchBlocksData ({ blocks, logger, awsClient }) {
 }
 
 async function fetchBlockData ({ block, logger, awsClient }) {
-  if (block.cancel) {
-    telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_DATA, TELEMETRY_RESULT_CANCELED])
-    return
-  }
-
   if (!block.key) {
     logger.error({ block }, 'invalid block, missing key')
     telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_DATA, TELEMETRY_RESULT_ERROR])
@@ -171,11 +166,6 @@ async function fetchBlocksInfo ({ blocks, logger, awsClient }) {
 }
 
 async function fetchBlockInfo ({ block, logger, awsClient }) {
-  if (block.cancel) {
-    telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_INFO, TELEMETRY_RESULT_CANCELED])
-    return
-  }
-
   if (!block.key) {
     logger.error({ block }, 'invalid block, missing key')
     telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_INFO, TELEMETRY_RESULT_ERROR])

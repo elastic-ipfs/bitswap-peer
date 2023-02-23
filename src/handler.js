@@ -4,7 +4,7 @@ import { fetchBlocksData, fetchBlocksInfo } from './storage.js'
 import { telemetry } from './telemetry.js'
 import { connectPeer } from './networking.js'
 import { sizeofBlockInfo } from './util.js'
-import { TELEMETRY_TYPE_DATA, TELEMETRY_TYPE_INFO } from './constants.js'
+import { TELEMETRY_TYPE_DATA, TELEMETRY_TYPE_INFO, TELEMETRY_RESULT_CANCELED } from './constants.js'
 
 function createContext ({ service, peerId, protocol, wantlist, awsClient, connection, connectionId }) {
   const context = {
@@ -100,6 +100,15 @@ async function batchFetch (blocks, context, logger) {
         continue
       }
       block.key = key
+
+      // Skip block cancel
+      if (block.cancel) {
+        const type = block.wantType === Entry.WantType.Block
+          ? TELEMETRY_TYPE_DATA
+          : TELEMETRY_TYPE_INFO
+        telemetry.increaseLabelCount('bitswap-block', [type, TELEMETRY_RESULT_CANCELED])
+        continue
+      }
 
       if (block.wantType === Entry.WantType.Block) {
         // telemetry.increaseLabelCount('bitswap-request', [context.connectionId, TELEMETRY_TYPE_DATA])

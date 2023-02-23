@@ -103,7 +103,10 @@ async function batchFetch (blocks, context, logger) {
 
       // Skip block cancel
       if (block.cancel) {
-        telemetry.increaseLabelCount('bitswap-block', [TELEMETRY_TYPE_INFO, TELEMETRY_RESULT_CANCELED])
+        const type = block.wantType === Entry.WantType.Block
+          ? TELEMETRY_TYPE_DATA
+          : TELEMETRY_TYPE_INFO
+        telemetry.increaseLabelCount('bitswap-block', [type, TELEMETRY_RESULT_CANCELED])
         continue
       }
 

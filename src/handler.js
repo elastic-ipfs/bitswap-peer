@@ -6,7 +6,7 @@ import { connectPeer } from './networking.js'
 import { sizeofBlockInfo } from './util.js'
 import { TELEMETRY_TYPE_DATA, TELEMETRY_TYPE_INFO, TELEMETRY_RESULT_CANCELED } from './constants.js'
 
-function createContext ({ service, peerId, protocol, wantlist, awsClient, connection, connectionId }) {
+function createContext ({ service, peerId, protocol, wantlist, awsClient, connection, connectionId, inProcessingWantBlocks, inProcessingWantHaves }) {
   const context = {
     state: 'ok',
     connection,
@@ -21,8 +21,8 @@ function createContext ({ service, peerId, protocol, wantlist, awsClient, connec
     batchesTodo: 0,
     batchesDone: 0,
     connectionId,
-    inProcessingWantBlocks: new Map(),
-    inProcessingWantHaves: new Map()
+    inProcessingWantBlocks,
+    inProcessingWantHaves
   }
   return context
 }

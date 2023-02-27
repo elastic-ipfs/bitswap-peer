@@ -32,11 +32,14 @@ async function spyContext ({ blocks, protocol = BITSWAP_V_120, peerId }) {
     close: sinon.spy(),
     removeAllListeners: sinon.spy()
   }
+  const inProcessingWantBlocks = new Map()
+  const inProcessingWantHaves = new Map()
+
   const peer = peerId || dummyPeer()
 
   const { awsClient } = await mockAwsClient(config)
   awsClient.agent = createMockAgent()
-  const context = createContext({ awsClient, service, peerId: peer, wantlist: new WantList(blocks), protocol, connection: connectionSpy })
+  const context = createContext({ awsClient, service, peerId: peer, wantlist: new WantList(blocks), protocol, connection: connectionSpy, inProcessingWantBlocks, inProcessingWantHaves })
   return context
 }
 

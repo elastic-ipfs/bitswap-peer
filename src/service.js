@@ -108,6 +108,8 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
       service.handle(protocol, async ({ connection: dial, stream }) => {
         try {
           const connection = new Connection(stream)
+          const inProcessingWantBlocks = new Map()
+          const inProcessingWantHaves = new Map()
 
           const hrTime = process.hrtime()
           const connectionId = hrTime[0] * 1000000000 + hrTime[1]
@@ -130,7 +132,9 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
                 protocol,
                 wantlist: message.wantlist,
                 awsClient,
-                connectionId
+                connectionId,
+                inProcessingWantBlocks,
+                inProcessingWantHaves
               })
               process.nextTick(handle, { context, logger })
             } catch (err) {

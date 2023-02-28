@@ -6,7 +6,7 @@ import { connectPeer } from './networking.js'
 import { sizeofBlockInfo } from './util.js'
 import { TELEMETRY_TYPE_DATA, TELEMETRY_TYPE_INFO, TELEMETRY_RESULT_CANCELED } from './constants.js'
 
-function createContext ({ service, peerId, protocol, wantlist, awsClient, connection, connectionId, inProcessingWantBlocks, inProcessingWantHaves }) {
+function createContext ({ service, peerId, protocol, wantlist, awsClient, connection, connectionId, canceled }) {
   const context = {
     state: 'ok',
     connection,
@@ -21,8 +21,7 @@ function createContext ({ service, peerId, protocol, wantlist, awsClient, connec
     batchesTodo: 0,
     batchesDone: 0,
     connectionId,
-    inProcessingWantBlocks,
-    inProcessingWantHaves
+    canceled
   }
   return context
 }
@@ -56,8 +55,8 @@ function handle ({ context, logger, batchSize = config.blocksBatchSize }) {
         // normalize wantlist into different wantlist operations
         const normalizedWantlist = getNormalizedWantlist(wantlist, context, logger)
 
-        // Set state of processing blocks
-        setProcessingBlocks(normalizedWantlist, context)
+        // Set state of processing blocks in canceled state
+        updateCanceledState(normalizedWantlist, context)
 
         process.nextTick(async () => {
           // catch async error in libp2p connection
@@ -72,9 +71,6 @@ function handle ({ context, logger, batchSize = config.blocksBatchSize }) {
               await batchResponse({ blocks: fetched, context, logger })
             }
           } catch (err) {
-            // Cleanup in processing blocks
-            clearProcessingBlocks(normalizedWantlist, context)
-
             // TODO remove? probably not needed
             logger.error({ err }, 'error on handler#nextTick end response')
           }
@@ -190,10 +186,8 @@ async function batchResponse ({ blocks, context, logger }) {
     let message = new Message()
     for (let i = 0; i < blocks.length; i++) {
       const block = blocks[i]
-      const inProcessingMap = getInProcessingMap(block, context)
-      const inProcessingBlock = inProcessingMap.get(block.key)
-
-      if (!inProcessingBlock?.cancel) {
+      const canceledItem = context.canceled.get(block.key)
+      if (!canceledItem || canceledItem !== block.type) {
         const size = messageSize[block.type](block)
 
         // maxMessageSize MUST BE larger than a single block info/data
@@ -204,10 +198,13 @@ async function batchResponse ({ blocks, context, logger }) {
 
         message.push(block, size, context.protocol)
         sentMetrics[block.type](block, size)
-      }
+      } else {
+        const size = messageSize[block.type](block)
+        telemetry.increaseLabelCount('bitswap-block-success-cancel', [block.type])
+        telemetry.increaseLabelCount('bitswap-cancel-size', [block.type], size)
 
-      // Delete in processing blocks
-      inProcessingMap.delete(block.key)
+        context.canceled.delete(block.key)
+      }
     }
 
     await message.send(context)
@@ -220,53 +217,22 @@ async function batchResponse ({ blocks, context, logger }) {
   }
 }
 
-function setProcessingBlocks (wantList, context) {
+function updateCanceledState (wantList, context) {
   const { wantedBlocks, wantedHave, canceled } = wantList
-  const now = Date.now()
 
+  // Removed previous canceled blocks
+  wantedBlocks.forEach(block => {
+    context.canceled.delete(block.key)
+  })
+
+  wantedHave.forEach(block => {
+    context.canceled.delete(block.key)
+  })
+
+  // Add new canceled blocks
   canceled.forEach(block => {
-    const inProcessing = getInProcessingMap(block, context)
-
-    if (inProcessing.has(block.key)) {
-      inProcessing.set(block.key, {
-        cancel: now
-      })
-    }
+    context.canceled.set(block.key, block.wantType)
   })
-
-  // Add new blocks in process
-  wantedBlocks.forEach(block => {
-    const inProcessing = getInProcessingMap(block, context)
-
-    inProcessing.set(block.key, {})
-  })
-
-  wantedHave.forEach(block => {
-    const inProcessing = getInProcessingMap(block, context)
-
-    inProcessing.set(block.key, {})
-  })
-}
-
-function clearProcessingBlocks (wantList, context) {
-  const { wantedBlocks, wantedHave } = wantList
-
-  // Clear blocks in process
-  wantedBlocks.forEach(block => {
-    const inProcessing = getInProcessingMap(block, context)
-    inProcessing.delete(block.key)
-  })
-
-  wantedHave.forEach(block => {
-    const inProcessing = getInProcessingMap(block, context)
-    inProcessing.set(block.key)
-  })
-}
-
-function getInProcessingMap (block, context) {
-  return block.wantType === Entry.WantType.Block
-    ? context.inProcessingWantBlocks
-    : context.inProcessingWantHaves
 }
 
 // end response, close connection

@@ -31,6 +31,7 @@
     "pino": "8.8.0",
     "piscina": "3.2.0",
     "protobufjs": "7.2.0",
+    "quick-lru": "^6.1.1",
     "sodium-native": "4.0.1",
     "undici": "5.16.0",
     "xml-js": "1.6.11"

@@ -4,6 +4,7 @@ import { webSockets } from '@libp2p/websockets'
 import { noise } from '@chainsafe/libp2p-noise'
 import { mplex } from '@libp2p/mplex'
 // import { yamux } from '@chainsafe/libp2p-yamux'
+import LRU from 'quick-lru'
 
 import { noiseCrypto } from './noise-crypto.js'
 import { Message, protocols } from 'e-ipfs-core-lib'
@@ -108,8 +109,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
       service.handle(protocol, async ({ connection: dial, stream }) => {
         try {
           const connection = new Connection(stream)
-          const inProcessingWantBlocks = new Map()
-          const inProcessingWantHaves = new Map()
+          const canceled = new LRU({ maxSize: 200 })
 
           const hrTime = process.hrtime()
           const connectionId = hrTime[0] * 1000000000 + hrTime[1]
@@ -133,8 +133,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
                 wantlist: message.wantlist,
                 awsClient,
                 connectionId,
-                inProcessingWantBlocks,
-                inProcessingWantHaves
+                canceled
               })
               process.nextTick(handle, { context, logger })
             } catch (err) {
@@ -145,9 +144,15 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
           // When the incoming duplex stream finishes sending, close for writing.
           // Note: we never write to this stream - responses are always sent on
           // another multiplexed stream.
-          connection.on('end:receive', () => connection.close())
+          connection.on('end:receive', () => {
+            // GC canceled LRU on finish
+            canceled.clear()
+            connection.close()
+          })
 
           connection.on('error', err => {
+            // GC canceled LRU on error
+            canceled.clear()
             logger.error({ err, dial, stream, protocol }, 'Connection error')
           })
         } catch (err) {

@@ -2,6 +2,7 @@
 import t from 'tap'
 import sinon from 'sinon'
 import { CID } from 'multiformats/cid'
+import LRU from 'quick-lru'
 
 import config from '../src/config.js'
 import { cidToKey, BITSWAP_V_120, Entry, BlockPresence, WantList } from 'e-ipfs-core-lib'
@@ -32,14 +33,13 @@ async function spyContext ({ blocks, protocol = BITSWAP_V_120, peerId }) {
     close: sinon.spy(),
     removeAllListeners: sinon.spy()
   }
-  const inProcessingWantBlocks = new Map()
-  const inProcessingWantHaves = new Map()
+  const canceled = new LRU({ maxSize: 200 })
 
   const peer = peerId || dummyPeer()
 
   const { awsClient } = await mockAwsClient(config)
   awsClient.agent = createMockAgent()
-  const context = createContext({ awsClient, service, peerId: peer, wantlist: new WantList(blocks), protocol, connection: connectionSpy, inProcessingWantBlocks, inProcessingWantHaves })
+  const context = createContext({ awsClient, service, peerId: peer, wantlist: new WantList(blocks), protocol, connection: connectionSpy, canceled })
   return context
 }
 
@@ -197,7 +197,29 @@ t.test('handle', async t => {
 
     await handle({ context: contextSpy, logger: loggerSpy, batchSize: 1 })
 
-    t.equal(connectionSpy.send.callCount, 0) // Blocks requested and cancelled before processed
+    t.equal(connectionSpy.send.callCount, 2) // Only two sends in the 4 block messages
+  })
+
+  t.test('should handle a request with single batch canceling requested items', async t => {
+    const cid = CID.parse('bafkreifiqpnpysanizxoatqnnwuynply5mp52ily2bdjg4r5uoupsxkcxy')
+
+    const contextSpy = await spyContext({
+      blocks: [
+        new Entry(cid, 1, false, Entry.WantType.Have, true),
+        new Entry(cid, 1, false, Entry.WantType.Block, true),
+        new Entry(cid, 1, true, Entry.WantType.Have, true),
+        new Entry(cid, 1, true, Entry.WantType.Block, true)
+      ]
+    })
+    mockBlockInfoSource({ times: 4, awsClient: contextSpy.awsClient, key: cidToKey(cid), info: { offset: 0, length: 128, car: 'region/bucket/abc1' } })
+    mockBlockDataSource({ times: 2, awsClient: contextSpy.awsClient, region: 'region', bucket: 'bucket', key: 'abc1', offset: 0, length: 128, data: 'abc...' })
+
+    const loggerSpy = helper.spyLogger()
+    const connectionSpy = contextSpy.connection
+
+    await handle({ context: contextSpy, logger: loggerSpy, batchSize: 4 })
+
+    t.equal(connectionSpy.send.callCount, 1) // Blocks requested and cancelled in same message
     t.equal(connectionSpy.close.callCount, 1, 'should close the peer connection')
     t.equal(loggerSpy.messages.error.length, 0)
     t.equal(loggerSpy.messages.warn.length, 0)
@@ -334,7 +356,7 @@ t.test('handle', async t => {
     ])
 
     t.equal(response.blocksInfo.length, 2)
-    t.equal(response.blocksData.length, 1)
+    t.equal(response.blocksData.length, 2)
 
     t.ok(responseContainsInfo(response, cid7, BlockPresence.Type.Have))
     t.ok(responseContainsInfo(response, cid9, BlockPresence.Type.Have))

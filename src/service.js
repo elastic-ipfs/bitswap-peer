@@ -67,7 +67,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
           maxInboundStreams: connectionConfig.mplex.maxInboundStreams,
           maxOutboundStreams: connectionConfig.mplex.maxOutboundStreams,
           maxStreamBufferSize: connectionConfig.mplex.maxStreamBufferSize
-        }),
+        })
         // yamux({ client: false })
       ],
       connectionManager: {

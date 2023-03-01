@@ -4,7 +4,7 @@ import { webSockets } from '@libp2p/websockets'
 import { noise } from '@chainsafe/libp2p-noise'
 import { mplex } from '@libp2p/mplex'
 // import { yamux } from '@chainsafe/libp2p-yamux'
-import LRU from 'quick-lru'
+import LRU from 'lru-cache'
 
 import { noiseCrypto } from './noise-crypto.js'
 import { Message, protocols } from 'e-ipfs-core-lib'
@@ -109,7 +109,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
       service.handle(protocol, async ({ connection: dial, stream }) => {
         try {
           const connection = new Connection(stream)
-          const canceled = new LRU({ maxSize: 200 })
+          const canceled = new LRU({ max: 200 })
 
           const hrTime = process.hrtime()
           const connectionId = hrTime[0] * 1000000000 + hrTime[1]

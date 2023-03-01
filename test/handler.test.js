@@ -2,7 +2,7 @@
 import t from 'tap'
 import sinon from 'sinon'
 import { CID } from 'multiformats/cid'
-import LRU from 'quick-lru'
+import LRU from 'lru-cache'
 
 import config from '../src/config.js'
 import { cidToKey, BITSWAP_V_120, Entry, BlockPresence, WantList } from 'e-ipfs-core-lib'
@@ -33,7 +33,7 @@ async function spyContext ({ blocks, protocol = BITSWAP_V_120, peerId }) {
     close: sinon.spy(),
     removeAllListeners: sinon.spy()
   }
-  const canceled = new LRU({ maxSize: 200 })
+  const canceled = new LRU({ max: 200 })
 
   const peer = peerId || dummyPeer()
 

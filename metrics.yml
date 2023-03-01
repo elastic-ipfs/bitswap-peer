@@ -31,6 +31,14 @@ metrics:
       description: Amount of data sent, by type (info, data), in bytes
       labels:
         - type
+    bitswap-cancel-size:
+     description: Block total size for canceled requests
+     labels:
+        - type
+    bitswap-block-success-cancel:
+      description: Block canceled requests
+      labels:
+        - type
   durations:
     bitswap-request-duration:
       description: Execution time for a request

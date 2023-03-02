@@ -147,7 +147,7 @@ t.test('config - all by env vars', async t => {
     peerIdS3Region: 'aws-s3',
     peerAnnounceAddr: '/dns4/elastic-dev.dag.house/tcp/443/wss',
     port: 3123,
-    httpPort: 3123,
+    httpPort: 3258,
     p2pConnectionMaxConnections: 99999,
     p2pConnectionMinConnections: 1,
     p2pConnectionPollInterval: 1000,

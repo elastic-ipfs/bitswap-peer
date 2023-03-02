@@ -47,7 +47,7 @@ export function makeConfig () {
 
     peerAnnounceAddr: process.env.PEER_ANNOUNCE_ADDR,
     port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
-    httpPort: process.env.HTTP_PORT ? parseInt(process.env.PORT) : 3001,
+    httpPort: process.env.HTTP_PORT ? parseInt(process.env.HTTP_PORT) : 3001,
 
     // p2p
     p2pConnectionMaxConnections: process.env.P2P_CONNECTION_MAX_CONNECTIONS ? parseInt(process.env.P2P_CONNECTION_MAX_CONNECTIONS) : 10e3,

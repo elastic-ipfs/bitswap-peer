@@ -187,7 +187,14 @@ async function batchResponse ({ blocks, context, logger }) {
     for (let i = 0; i < blocks.length; i++) {
       const block = blocks[i]
       const canceledItem = context.canceled.get(block.key)
-      if (!canceledItem || canceledItem !== block.type) {
+
+      if (canceledItem === block.wantType) {
+        const size = messageSize[block.type](block)
+        telemetry.increaseLabelCount('bitswap-block-success-cancel', [block.type])
+        telemetry.increaseLabelCount('bitswap-cancel-size', [block.type], size)
+
+        context.canceled.delete(block.key)
+      } else {
         const size = messageSize[block.type](block)
 
         // maxMessageSize MUST BE larger than a single block info/data
@@ -198,12 +205,6 @@ async function batchResponse ({ blocks, context, logger }) {
 
         message.push(block, size, context.protocol)
         sentMetrics[block.type](block, size)
-      } else {
-        const size = messageSize[block.type](block)
-        telemetry.increaseLabelCount('bitswap-block-success-cancel', [block.type])
-        telemetry.increaseLabelCount('bitswap-cancel-size', [block.type], size)
-
-        context.canceled.delete(block.key)
       }
     }
 

@@ -145,8 +145,6 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
           // Note: we never write to this stream - responses are always sent on
           // another multiplexed stream.
           connection.on('end:receive', () => {
-            // GC canceled LRU on finish
-            canceled.clear()
             connection.close()
           })
 

@@ -60,5 +60,5 @@ metrics:
       description: Bitswap Event Loop Utilization
       interval: 500
 
-version: 0.2.0
-buildDate: "20221215.1423"
+version: 0.2.1
+buildDate: "20230302.0953"

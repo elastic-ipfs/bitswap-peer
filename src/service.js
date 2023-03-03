@@ -101,6 +101,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
       }
     }
 
+    const cancelsPerPeer = new Map()
     service.addEventListener('error', err => {
       logger.warn({ err }, 'libp2p error event')
     })
@@ -109,7 +110,11 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
       service.handle(protocol, async ({ connection: dial, stream }) => {
         try {
           const connection = new Connection(stream)
-          const canceled = new LRU({ max: 200 })
+          let canceled = cancelsPerPeer.get(dial.remotePeer.toString())
+          if (!canceled) {
+            canceled = new LRU({ max: 200 })
+            cancelsPerPeer.set(dial.remotePeer.toString(), canceled)
+          }
 
           const hrTime = process.hrtime()
           const connectionId = hrTime[0] * 1000000000 + hrTime[1]
@@ -165,16 +170,19 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
         telemetry.increaseCount('bitswap-connections')
         telemetry.increaseGauge('bitswap-active-connections')
       } catch (err) {
-        logger.warn({ err, remotePeer: connection.remotePeer }, 'Error while peer connecting')
+        logger.warn({ err, remotePeer: connection.detail.remotePeer.toString() }, 'Error while peer connecting')
       }
     })
 
     // TODO move to networking
     service.connectionManager.addEventListener('peer:disconnect', connection => {
+      cancelsPerPeer.delete(
+        connection.detail.remotePeer.toString()
+      )
       try {
         telemetry.decreaseGauge('bitswap-active-connections')
       } catch (err) {
-        logger.warn({ err, remotePeer: connection.remotePeer }, 'Error while peer disconnecting')
+        logger.warn({ err, remotePeer: connection.detail.remotePeer.toString() }, 'Error while peer disconnecting')
       }
     })
 

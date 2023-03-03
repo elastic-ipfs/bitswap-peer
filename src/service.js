@@ -110,7 +110,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
       service.handle(protocol, async ({ connection: dial, stream }) => {
         try {
           const connection = new Connection(stream)
-          const canceled = cancelsPerPeer.get(dial.remotePeer.toString())
+          const canceled = cancelsPerPeer.get(dial.remotePeer.toString()) || new LRU({ max: 200 })
 
           const hrTime = process.hrtime()
           const connectionId = hrTime[0] * 1000000000 + hrTime[1]

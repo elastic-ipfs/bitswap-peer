@@ -110,7 +110,11 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
       service.handle(protocol, async ({ connection: dial, stream }) => {
         try {
           const connection = new Connection(stream)
-          const canceled = cancelsPerPeer.get(dial.remotePeer.toString()) || new LRU({ max: 200 })
+          let canceled = cancelsPerPeer.get(dial.remotePeer.toString())
+          if (!canceled) {
+            canceled = new LRU({ max: 200 })
+            cancelsPerPeer.set(dial.remotePeer.toString(), canceled)
+          }
 
           const hrTime = process.hrtime()
           const connectionId = hrTime[0] * 1000000000 + hrTime[1]
@@ -162,11 +166,6 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
 
     // TODO move to networking
     service.connectionManager.addEventListener('peer:connect', connection => {
-      cancelsPerPeer.set(
-        connection.detail.remotePeer.toString(),
-        new LRU({ max: 200 })
-      )
-
       try {
         telemetry.increaseCount('bitswap-connections')
         telemetry.increaseGauge('bitswap-active-connections')

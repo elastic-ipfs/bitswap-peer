@@ -197,7 +197,7 @@ t.test('handle', async t => {
 
     await handle({ context: contextSpy, logger: loggerSpy, batchSize: 1 })
 
-    t.equal(connectionSpy.send.callCount, 2) // Only two sends in the 4 block messages
+    t.equal(connectionSpy.send.callCount, 1) // Only one sends in the 4 block messages given other gets canceled
   })
 
   t.test('should handle a request with single batch canceling requested items', async t => {
@@ -356,7 +356,7 @@ t.test('handle', async t => {
     ])
 
     t.equal(response.blocksInfo.length, 2)
-    t.equal(response.blocksData.length, 2)
+    t.equal(response.blocksData.length, 1)
 
     t.ok(responseContainsInfo(response, cid7, BlockPresence.Type.Have))
     t.ok(responseContainsInfo(response, cid9, BlockPresence.Type.Have))

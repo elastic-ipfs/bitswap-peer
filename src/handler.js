@@ -184,15 +184,20 @@ async function batchResponse ({ blocks, context, logger }) {
 
   try {
     let message = new Message()
+    logger.info({ keyList: context.canceled.keyList }, 'check keyList')
     for (let i = 0; i < blocks.length; i++) {
       const block = blocks[i]
       const canceledItem = context.canceled.get(block.key)
+
+      logger.info({ key: block.key, type: block.type, wantType: block.wantType }, 'check')
+      logger.info({ canceled: canceledItem }, 'canceled')
 
       if (canceledItem === block.wantType) {
         const size = messageSize[block.type](block)
         telemetry.increaseLabelCount('bitswap-block-success-cancel', [block.type])
         telemetry.increaseLabelCount('bitswap-cancel-size', [block.type], size)
 
+        logger.info({ key: block.key }, 'delete')
         context.canceled.delete(block.key)
       } else {
         const size = messageSize[block.type](block)

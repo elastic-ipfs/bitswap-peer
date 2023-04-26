@@ -187,15 +187,20 @@ async function batchResponse ({ blocks, context, logger }) {
     for (let i = 0; i < blocks.length; i++) {
       const block = blocks[i]
       const canceledItem = context.canceled.get(block.key)
+      const size = messageSize[block.type](block)
 
       if (canceledItem === block.wantType) {
-        const size = messageSize[block.type](block)
         telemetry.increaseLabelCount('bitswap-block-success-cancel', [block.type])
         telemetry.increaseLabelCount('bitswap-cancel-size', [block.type], size)
 
         context.canceled.delete(block.key)
       } else {
-        const size = messageSize[block.type](block)
+        telemetry.increaseLabelCount('bitswap-sent-cid-prefix', [
+          block.cid.version,
+          block.cid.code,
+          block.cid.multihash.code,
+          block.cid.multihash.size
+        ])
 
         // maxMessageSize MUST BE larger than a single block info/data
         if (message.size() + size > config.maxMessageSize) {

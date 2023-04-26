@@ -31,6 +31,13 @@ metrics:
       description: Amount of data sent, by type (info, data), in bytes
       labels:
         - type
+    bitswap-sent-cid-prefix:
+      description: CID prefix information of sent blocks (CID version, IPLD code, multihash code, multihash size)
+      labels:
+        - version
+        - code
+        - mh_code
+        - mh_size
     bitswap-cancel-size:
      description: Block total size for canceled requests
      labels:
@@ -60,5 +67,5 @@ metrics:
       description: Bitswap Event Loop Utilization
       interval: 500
 
-version: 0.2.1
-buildDate: "20230302.0953"
+version: 0.3.0
+buildDate: "20230426.1252"

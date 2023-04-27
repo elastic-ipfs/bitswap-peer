@@ -277,7 +277,7 @@ const sentMetrics = {
   }
 }
 
-const IpldCodecs = { 85: 'raw', 112: 'dag-pb', 113: 'dag-cbor' }
+const IpldCodecs = { 85: 'raw', 112: 'dag-pb', 113: 'dag-cbor', 297: 'dag-json' }
 const MultihashCodecs = { 18: 'sha256', 45600: 'blake2b256' }
 const HashSizes = { 256: '256' }
 

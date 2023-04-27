@@ -195,13 +195,15 @@ async function batchResponse ({ blocks, context, logger }) {
 
         context.canceled.delete(block.key)
       } else {
-        const prefix = getPrefixMetricData(block.cid)
-        telemetry.increaseLabelCount('bitswap-sent-cid-prefix', [
-          prefix.version,
-          prefix.code,
-          prefix.multihash.code,
-          prefix.multihash.size
-        ])
+        if (block.type === BLOCK_TYPE_DATA) {
+          const prefix = getPrefixMetricData(block.cid)
+          telemetry.increaseLabelCount('bitswap-sent-cid-prefix', [
+            prefix.version,
+            prefix.code,
+            prefix.multihash.code,
+            prefix.multihash.size
+          ])
+        }
 
         // maxMessageSize MUST BE larger than a single block info/data
         if (message.size() + size > config.maxMessageSize) {

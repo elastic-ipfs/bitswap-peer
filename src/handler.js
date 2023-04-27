@@ -195,11 +195,12 @@ async function batchResponse ({ blocks, context, logger }) {
 
         context.canceled.delete(block.key)
       } else {
+        const prefix = getPrefixMetricData(block.cid)
         telemetry.increaseLabelCount('bitswap-sent-cid-prefix', [
-          block.cid.version,
-          block.cid.code,
-          block.cid.multihash.code,
-          block.cid.multihash.size
+          prefix.version,
+          prefix.code,
+          prefix.multihash.code,
+          prefix.multihash.size
         ])
 
         // maxMessageSize MUST BE larger than a single block info/data
@@ -273,6 +274,22 @@ const sentMetrics = {
   },
   [BLOCK_TYPE_INFO]: (block, size) => {
     block.info?.found && telemetry.increaseLabelCount('bitswap-sent', [TELEMETRY_TYPE_INFO], size)
+  }
+}
+
+const IpldCodecs = { 85: 'raw', 112: 'dag-pb', 113: 'dag-cbor', 297: 'dag-json' }
+const MultihashCodecs = { 18: 'sha256', 45600: 'blake2b256' }
+const HashSizes = { 256: '256' }
+
+/** @param {import('multiformats').CID} cid */
+function getPrefixMetricData (cid) {
+  return {
+    version: cid.version.toString(),
+    code: IpldCodecs[cid.code] || 'other',
+    multihash: {
+      code: MultihashCodecs[cid.multihash.code] || 'other',
+      size: HashSizes[cid.multihash.size] || 'other'
+    }
   }
 }
 

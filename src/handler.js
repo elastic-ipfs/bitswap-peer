@@ -278,8 +278,8 @@ const sentMetrics = {
 }
 
 const IpldCodecs = { 85: 'raw', 112: 'dag-pb', 113: 'dag-cbor', 297: 'dag-json' }
-const MultihashCodecs = { 18: 'sha256', 45600: 'blake2b256' }
-const HashSizes = { 256: '256' }
+const MultihashCodecs = { 18: 'sha2-256', 45600: 'blake2b-256' }
+const HashSizes = { 32: '32' }
 
 /** @param {import('multiformats').CID} cid */
 function getPrefixMetricData (cid) {

@@ -14,9 +14,6 @@ on:
         required: false
         default: true
     outputs:
-      package_version:
-        description: package_version
-        value: ${{ jobs.build.outputs.package_version }}
       build_date:
         description: build_date
         value: ${{ jobs.build.outputs.build_date }}
@@ -70,7 +67,6 @@ jobs:
         push: ${{ inputs.docker_push }}
         context: .
         tags: |
-          ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.PACKAGE_VERSION }}-${{ inputs.docker_image_version_suffix_label }}
           ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.BUILD_DATE }}-${{ inputs.docker_image_version_suffix_label }}
           ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ inputs.docker_image_version_suffix_label }}
         labels: |
@@ -83,7 +79,6 @@ jobs:
         push: ${{ inputs.docker_push }}
         context: .
         tags: |
-          ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.PACKAGE_VERSION }}
           ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:${{ env.BUILD_DATE }}
           ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}/app:latest
         labels: |
@@ -91,5 +86,4 @@ jobs:
     - name: Set output variables
       id: setOutput
       run: |
-        echo "package_version=${{ env.PACKAGE_VERSION }}" >> $GITHUB_OUTPUT
         echo "build_date=${{ env.BUILD_DATE }}" >> $GITHUB_OUTPUT

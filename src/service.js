@@ -13,6 +13,8 @@ import { handle, createContext } from './handler.js'
 import { telemetry } from './telemetry.js'
 import { logger as defaultLogger } from './logging.js'
 import { createPeerIdFromMultihash } from './peer-id.js'
+import { denylistFilter } from './deny.js'
+import { truncateWantlist } from './limit.js'
 
 // TODO validate all the params
 function validateParams ({ taggedPeers, logger }) {
@@ -120,7 +122,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
           const connectionId = hrTime[0] * 1000000000 + hrTime[1]
 
           // Open a send connection to the peer
-          connection.on('data', data => {
+          connection.on('data', async data => {
             let message
 
             try {
@@ -129,13 +131,22 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
               logger.warn({ err }, 'Cannot decode received data')
               return
             }
+            
+            // limit the number of cids we'll process from a single message. they can ask again.
+            let wantlist = truncateWantlist(message.wantlist.entries, 500)
+
+            try {
+              wantlist = await denylistFilter(wantlist)
+            } catch (err) {
+              logger.error({ err }, 'Error filtering by denylist')
+            }
 
             try {
               const context = createContext({
                 service,
                 peerId: dial.remotePeer,
                 protocol,
-                wantlist: message.wantlist,
+                wantlist,
                 awsClient,
                 connectionId,
                 canceled

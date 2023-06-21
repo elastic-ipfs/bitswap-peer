@@ -25,8 +25,8 @@ export async function denylistFilter (wantlist, logger, denylistUrl) {
 
   // skip cancels and thing we already know are denied.
   for (const entry of wantlist) {
-    if (entry.cancel || denylistCache.get(cidToKey(entry.cid))) { 
-      continue 
+    if (entry.cancel || denylistCache.get(cidToKey(entry.cid))) {
+      continue
     }
     batch.push(entry.cid.toString())
   }

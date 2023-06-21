@@ -2,6 +2,7 @@ import retry from 'p-retry'
 import { fetch } from 'undici'
 import LRUCache from 'mnemonist/lru-cache.js'
 import { cidToKey } from 'e-ipfs-core-lib'
+import { CID } from 'multiformats/cid'
 
 /**
  * 46 bytes per multihash * 200k = ~9.2MB (nodes have 2-4GB available)
@@ -11,11 +12,11 @@ const denylistCache = new LRUCache(200_000)
 
 /**
  * Remove items that should not be served, determined by the denylist api
- * @param {{cancel: boolean, cid: CID[]}} wantlist
+ * @param {{cancel: boolean, cid: CID}[]} wantlist
  * @param {{error: () => void}} logger
- * @param {string} denylistUrl
+ * @param {URL} denylistUrl - e.g https://denylist.dag.haus
  */
-export async function denylistFilter (wantlist, logger, denylistUrl = 'https://denylist.dag.haus') {
+export async function denylistFilter (wantlist, logger, denylistUrl) {
   /**
    * cids to ask the denylist about
    * @type {string[]}
@@ -24,8 +25,9 @@ export async function denylistFilter (wantlist, logger, denylistUrl = 'https://d
 
   // skip cancels and thing we already know are denied.
   for (const entry of wantlist) {
-    if (entry.cancel) { continue }
-    if (denylistCache.get(cidToKey(entry.cid))) { continue }
+    if (entry.cancel || denylistCache.get(cidToKey(entry.cid))) { 
+      continue 
+    }
     batch.push(entry.cid.toString())
   }
 
@@ -44,8 +46,8 @@ export async function denylistFilter (wantlist, logger, denylistUrl = 'https://d
 
     if (res.ok) {
       const denylist = new Set(await res.json())
-      for (const cid of denylist.keys()) {
-        denylistCache.set(cidToKey(cid), true)
+      for (const cidStr of denylist.values()) {
+        denylistCache.set(cidToKey(CID.parse(cidStr)), true)
       }
       // all `cancel`s go through, and items not on the denylist
       return wantlist.filter(entry => entry.cancel || !denylist.has(entry.cid.toString()))
@@ -53,8 +55,9 @@ export async function denylistFilter (wantlist, logger, denylistUrl = 'https://d
   } catch (err) {
     logger.error({ err }, 'denylist check failed')
   }
+  console.log('from cache')
 
   // we know the denylist api can hit rate limits so we 'fail open' here,
   // with a fallback to our local cache.
-  return wantlist.filter(entry => entry.cancel || !denylistCache.has(entry.cid.toString()))
+  return wantlist.filter(entry => entry.cancel || !denylistCache.get(cidToKey(entry.cid)))
 }

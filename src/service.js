@@ -54,7 +54,7 @@ function validateParams ({ taggedPeers, logger }) {
   return { taggedPeers: peers }
 }
 
-async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connectionConfig, logger = defaultLogger, taggedPeers } = {}) {
+async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connectionConfig, logger = defaultLogger, taggedPeers, denylistUrl } = {}) {
   try {
     const validatedParams = validateParams({ taggedPeers, logger })
     const service = await createLibp2p({
@@ -136,7 +136,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
             let wantlist = truncateWantlist(message.wantlist.entries, 500)
 
             try {
-              wantlist = await denylistFilter(wantlist, logger)
+              wantlist = await denylistFilter(wantlist, logger, denylistUrl)
             } catch (err) {
               logger.error({ err }, 'Error filtering by denylist')
             }

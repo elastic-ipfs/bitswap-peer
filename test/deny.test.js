@@ -24,7 +24,16 @@ t.test('denylistFilter', async () => {
     cancel: false
   }))
 
-  const filteredList = await denylistFilter(entries, { error: console.error }, denylistUrl)
+  const filteredList = await denylistFilter(entries, { error: console.error }, new URL(denylistUrl))
   const expected = entries.slice(1)
   t.same(filteredList, expected, 'should filter out items on denylist')
+
+  // denylist api request fails
+  mock.get(denylistUrl).intercept({
+    method: 'POST',
+    path: '/'
+  }).reply(429, 'TOO MUCH REQ!')
+
+  const filteredFromCache = await denylistFilter(entries, { error: console.error }, new URL(denylistUrl))
+  t.same(filteredFromCache, entries.slice(1), 'should filter out items from denylist cache')
 })

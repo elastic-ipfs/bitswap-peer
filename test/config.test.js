@@ -57,7 +57,8 @@ t.test('config - defaults', async t => {
     dynamoRetryDelay: 50,
     s3MaxRetries: 3,
     s3RetryDelay: 50,
-    allowReadinessTweak: false
+    allowReadinessTweak: false,
+    denylistUrl: undefined
   })
 })
 
@@ -112,6 +113,7 @@ t.test('config - all by env vars', async t => {
   process.env.S3_MAX_RETRIES = '7'
   process.env.S3_RETRY_DELAY = '600'
   process.env.ALLOW_READINESS_TWEAK = 'true'
+  process.env.DENYLIST_URL = 'http://example.org'
 
   t.same(makeConfig(), {
     maxBlockDataSize: 987,
@@ -167,6 +169,7 @@ t.test('config - all by env vars', async t => {
     dynamoRetryDelay: 500,
     s3MaxRetries: 7,
     s3RetryDelay: 600,
-    allowReadinessTweak: true
+    allowReadinessTweak: true,
+    denylistUrl: new URL('http://example.org')
   })
 })

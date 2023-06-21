@@ -76,7 +76,7 @@ export function makeConfig () {
 
     allowReadinessTweak: process.env.ALLOW_READINESS_TWEAK === 'true',
 
-    denylistUrl: new URL(process.env.DENYLIST_URL ?? 'https://denylist.dag.haus')
+    denylistUrl: process.env.DENYLIST_URL ? new URL(process.env.DENYLIST_URL) : undefined
   }
 }
 

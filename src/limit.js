@@ -4,7 +4,7 @@
  * @param {Entry[]} entries
  * @param {number} max
  */
-export function truncateWantlist (entries, max = 500) {
+export function truncateWantlist (entries = [], max = 500) {
   // boxo aims to send less than 16KiB messages...
   if (entries.length <= max) { return entries }
 

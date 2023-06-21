@@ -12,11 +12,15 @@ const denylistCache = new LRUCache(200_000)
 
 /**
  * Remove items that should not be served, determined by the denylist api
- * @param {{cancel: boolean, cid: CID}[]} wantlist
+ * @param {{cancel: boolean, cid: CID}[]} entries
  * @param {{error: () => void}} logger
- * @param {URL} denylistUrl - e.g https://denylist.dag.haus
+ * @param {URL?} denylistUrl - https://denylist.dag.haus or undefined to disable denylist filtering
  */
-export async function denylistFilter (wantlist, logger, denylistUrl) {
+export async function denylistFilter (entries, logger, denylistUrl) {
+  if (!denylistUrl) {
+    return entries
+  }
+
   /**
    * cids to ask the denylist about
    * @type {string[]}
@@ -24,7 +28,7 @@ export async function denylistFilter (wantlist, logger, denylistUrl) {
   const batch = []
 
   // skip cancels and thing we already know are denied.
-  for (const entry of wantlist) {
+  for (const entry of entries) {
     if (entry.cancel || denylistCache.get(cidToKey(entry.cid))) {
       continue
     }
@@ -50,14 +54,13 @@ export async function denylistFilter (wantlist, logger, denylistUrl) {
         denylistCache.set(cidToKey(CID.parse(cidStr)), true)
       }
       // all `cancel`s go through, and items not on the denylist
-      return wantlist.filter(entry => entry.cancel || !denylist.has(entry.cid.toString()))
+      return entries.filter(entry => entry.cancel || !denylist.has(entry.cid.toString()))
     }
   } catch (err) {
     logger.error({ err }, 'denylist check failed')
   }
-  console.log('from cache')
 
   // we know the denylist api can hit rate limits so we 'fail open' here,
   // with a fallback to our local cache.
-  return wantlist.filter(entry => entry.cancel || !denylistCache.get(cidToKey(entry.cid)))
+  return entries.filter(entry => entry.cancel || !denylistCache.get(cidToKey(entry.cid)))
 }

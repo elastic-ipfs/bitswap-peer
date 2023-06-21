@@ -131,12 +131,12 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
               logger.warn({ err }, 'Cannot decode received data')
               return
             }
-            
+
             // limit the number of cids we'll process from a single message. they can ask again.
             let wantlist = truncateWantlist(message.wantlist.entries, 500)
 
             try {
-              wantlist = await denylistFilter(wantlist)
+              wantlist = await denylistFilter(wantlist, logger)
             } catch (err) {
               logger.error({ err }, 'Error filtering by denylist')
             }

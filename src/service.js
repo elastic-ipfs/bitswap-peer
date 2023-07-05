@@ -140,7 +140,7 @@ async function startService ({ peerId, port, peerAnnounceAddr, awsClient, connec
               const count = wantlist.entries.length
               wantlist.entries = await denylistFilter(wantlist.entries, logger, denylistUrl)
               const diff = count - wantlist.entries.length
-              if (diff > 0 ) {
+              if (diff > 0) {
                 telemetry.increaseCount('bitswap-denied', diff)
               }
             } catch (err) {

@@ -57,6 +57,7 @@ _Variables in bold are required._
 | NODE_DEBUG            |               | If it contains `aws-ipfs`, debug mode is enabled.                        |
 | LOG_LEVEL            | `info` | Logging level. |
 | LOG_PRETTY            | `false` | Enable pretty logging. |
+| DENYLIST_URL | `https://denylist.dag.haus` | URL for cid checking api. |
 
 Also check [AWS specifics configuration](https://github.com/elastic-ipfs/elastic-ipfs/blob/main/aws.md).
 

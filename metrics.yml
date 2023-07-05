@@ -60,12 +60,14 @@ metrics:
       description: BitSwap Total Entries served
     bitswap-block-error:
       description: Block error (on parsing)
-  
+    bitswap-denied:
+      description: Count of CIDs found on denylist
+
   process:
     elu: 
       name: bitswap-elu
       description: Bitswap Event Loop Utilization
       interval: 500
 
-version: 0.3.0
-buildDate: "20230426.1252"
+version: 0.4.0
+buildDate: "20230706.1402"

@@ -1,6 +1,6 @@
 {
   "name": "bitswap-peer",
-  "version": "0.18.2",
+  "version": "0.19.3",
   "description": "Elastic IPFS BitSwap Peer",
   "homepage": "https://github.com/elastic-ipfs/bitswap-peer",
   "license": "(Apache-2.0 AND MIT)",
@@ -28,6 +28,8 @@
     "libp2p": "0.42.2",
     "lru-cache": "7.14.1",
     "mnemonist": "0.39.5",
+    "multiformats": "^10.0.3",
+    "p-retry": "^5.1.2",
     "pino": "8.8.0",
     "piscina": "3.2.0",
     "protobufjs": "7.2.0",

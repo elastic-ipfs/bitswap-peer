@@ -31,6 +31,13 @@ metrics:
       description: Amount of data sent, by type (info, data), in bytes
       labels:
         - type
+    bitswap-sent-cid-prefix:
+      description: CID prefix information of sent blocks (CID version, IPLD code, multihash code, multihash size)
+      labels:
+        - version
+        - code
+        - mh_code
+        - mh_size
     bitswap-cancel-size:
      description: Block total size for canceled requests
      labels:
@@ -53,12 +60,14 @@ metrics:
       description: BitSwap Total Entries served
     bitswap-block-error:
       description: Block error (on parsing)
-  
+    bitswap-denied:
+      description: Count of CIDs found on denylist
+
   process:
     elu: 
       name: bitswap-elu
       description: Bitswap Event Loop Utilization
       interval: 500
 
-version: 0.2.1
-buildDate: "20230302.0953"
+version: 0.4.0
+buildDate: "20230706.1402"
